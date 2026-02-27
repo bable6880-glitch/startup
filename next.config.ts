@@ -4,7 +4,9 @@ const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
   serverExternalPackages: ["firebase-admin"],
-   domains: ['res.cloudinary.com']
+  images: {
+    domains: ['res.cloudinary.com'],  // ✅ must be INSIDE images: {}
+  },
 };
 
 export default nextConfig;
