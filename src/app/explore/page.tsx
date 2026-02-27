@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import KitchenCard, { KitchenCardSkeleton } from "@/components/ui/KitchenCard";
 import SearchBar from "@/components/ui/SearchBar";
+import { listKitchens } from "@/services/kitchen.service";
+import { kitchenQuerySchema } from "@/lib/validations/kitchen";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -11,31 +13,38 @@ export const metadata: Metadata = {
 type Props = { searchParams: Promise<Record<string, string | undefined>> };
 
 async function fetchKitchens(params: Record<string, string | undefined>) {
-    const qs = new URLSearchParams();
-    if (params.city) qs.set("city", params.city);
-    if (params.q) qs.set("cuisine", params.q); // map search query to cuisine filter
-    if (params.cuisine) qs.set("cuisine", params.cuisine);
-    if (params.minRating) qs.set("minRating", params.minRating);
-    if (params.maxPrice) qs.set("maxPrice", params.maxPrice);
-    if (params.sort) qs.set("sort", params.sort);
-    qs.set("page", params.page || "1");
-    qs.set("limit", "12");
+    try {
+        // Build the query object the same way the API route does
+        const queryParams: Record<string, string | undefined> = {
+            city: params.city,
+            cuisine: params.q || params.cuisine, // map search query to cuisine filter
+            minRating: params.minRating,
+            maxPrice: params.maxPrice,
+            sort: params.sort,
+            page: params.page || "1",
+            limit: "12",
+        };
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-    const res = await fetch(`${baseUrl}/api/kitchens?${qs.toString()}`, {
-        cache: "no-store",
-    });
+        // Parse & validate with the same schema the API uses
+        const parsed = kitchenQuerySchema.safeParse(queryParams);
+        if (!parsed.success) {
+            return { kitchens: [], total: 0, page: 1, limit: 12 };
+        }
 
-    if (!res.ok) return { data: [], pagination: { page: 1, limit: 12, total: 0 } };
-    return res.json();
+        // Call the service directly — no HTTP round-trip
+        return await listKitchens(parsed.data);
+    } catch (error) {
+        console.error("[Explore] Failed to fetch kitchens:", error);
+        return { kitchens: [], total: 0, page: 1, limit: 12 };
+    }
 }
 
 async function KitchenGrid({ searchParams }: { searchParams: Record<string, string | undefined> }) {
     const result = await fetchKitchens(searchParams);
-    const kitchens = result.data || [];
-    const pagination = result.pagination || { page: 1, limit: 12, total: 0 };
+    const kitchenList = result.kitchens || [];
+    const pagination = { page: result.page, limit: result.limit, total: result.total };
 
-    if (kitchens.length === 0) {
+    if (kitchenList.length === 0) {
         return (
             <div className="text-center py-20">
                 <span className="text-5xl block mb-4">🔍</span>
@@ -53,11 +62,11 @@ async function KitchenGrid({ searchParams }: { searchParams: Record<string, stri
     return (
         <>
             <p className="mb-6 text-sm text-neutral-500 dark:text-neutral-400">
-                Showing {kitchens.length} of {pagination.total} kitchens
+                Showing {kitchenList.length} of {pagination.total} kitchens
             </p>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {kitchens.map((k: Record<string, unknown>) => (
+                {kitchenList.map((k: Record<string, unknown>) => (
                     <KitchenCard
                         key={k.id as string}
                         id={k.id as string}
