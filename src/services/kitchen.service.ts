@@ -69,7 +69,10 @@ export async function getKitchenById(kitchenId: string) {
                 },
             });
 
-            if (!kitchen) throw new NotFoundError("Kitchen");
+            if (!kitchen) {
+                console.error(`[Kitchen Service] Kitchen not found for ID: ${kitchenId}`);
+                throw new NotFoundError("Kitchen");
+            }
             return kitchen;
         }
     );

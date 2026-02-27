@@ -3,6 +3,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MapLazy } from "@/components/map/MapLazy";
 import { ReportButton } from "@/components/kitchen/ReportButton";
+import { getKitchenById, getKitchenBySlug } from "@/services/kitchen.service";
+import { getMealsByKitchen } from "@/services/menu.service";
+import { getKitchenReviews } from "@/services/review.service";
+import { reviewQuerySchema } from "@/lib/validations/review";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -35,42 +39,63 @@ type ReviewData = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { id } = await params;
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-    const res = await fetch(`${baseUrl}/api/kitchens/${id}`, { next: { revalidate: 300 } });
-    if (!res.ok) return { title: "Kitchen Not Found" };
-    const { data } = await res.json();
-    return {
-        title: data.name,
-        description: data.description || `Order from ${data.name} in ${data.city}. Authentic home-cooked meals.`,
-    };
+    try {
+        const kitchen = await getKitchenById(id);
+        return {
+            title: kitchen.name,
+            description: kitchen.description || `Order from ${kitchen.name} in ${kitchen.city}. Authentic home-cooked meals.`,
+        };
+    } catch {
+        return { title: "Kitchen Not Found" };
+    }
 }
 
 export const revalidate = 300;
 
-// ─── Data Fetchers ──────────────────────────────────────────────────────────
+// ─── Data Fetchers (direct service calls — no HTTP round-trip) ──────────────
 
-async function getKitchen(id: string) {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-    const res = await fetch(`${baseUrl}/api/kitchens/${id}`, { next: { revalidate: 300 } });
-    if (!res.ok) return null;
-    const { data } = await res.json();
-    return data;
+async function getKitchen(idOrSlug: string) {
+    try {
+        // Try UUID lookup first
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(idOrSlug)) {
+            try {
+                return await getKitchenById(idOrSlug);
+            } catch (err) {
+                console.warn(`[Kitchen Page] UUID lookup failed for: ${idOrSlug}, falling back to slug...`);
+            }
+        }
+
+        // Fallback to Slug lookup
+        try {
+            return await getKitchenBySlug(idOrSlug);
+        } catch (err) {
+            console.error(`[Kitchen Page] Both ID and Slug lookup failed for: ${idOrSlug}`);
+            return null;
+        }
+    } catch (error) {
+        console.error(`[Kitchen Page] Unexpected error fetching kitchen ${idOrSlug}:`, error);
+        return null;
+    }
 }
 
-async function getMenu(id: string): Promise<MealData[]> {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-    const res = await fetch(`${baseUrl}/api/kitchens/${id}/menu`, { next: { revalidate: 300 } });
-    if (!res.ok) return [];
-    const { data } = await res.json();
-    return data || [];
+async function getMenu(id: string) {
+    try {
+        return await getMealsByKitchen(id);
+    } catch (error) {
+        console.error(`[Kitchen Page] Failed to fetch menu for ${id}:`, error);
+        return [];
+    }
 }
 
 async function getReviews(id: string): Promise<{ reviews: ReviewData[]; total: number }> {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-    const res = await fetch(`${baseUrl}/api/kitchens/${id}/reviews?limit=10`, { next: { revalidate: 60 } });
-    if (!res.ok) return { reviews: [], total: 0 };
-    const result = await res.json();
-    return { reviews: result.data || [], total: result.pagination?.total || 0 };
+    try {
+        const parsed = reviewQuerySchema.parse({ limit: "10" });
+        const result = await getKitchenReviews(id, parsed);
+        return { reviews: result.reviews as ReviewData[], total: result.total };
+    } catch {
+        return { reviews: [], total: 0 };
+    }
 }
 
 // ─── Meal Card ──────────────────────────────────────────────────────────────
@@ -207,8 +232,8 @@ async function KitchenContent({ id }: { id: string }) {
 
                     {/* Hero */}
                     <div className="relative h-48 sm:h-64 rounded-2xl overflow-hidden bg-gradient-to-br from-primary-100 to-primary-50 dark:from-neutral-700 dark:to-neutral-800">
-                        {kitchen.coverImage ? (
-                            <img src={kitchen.coverImage} alt={kitchen.name} className="h-full w-full object-cover" />
+                        {kitchen.coverImageUrl ? (
+                            <img src={kitchen.coverImageUrl} alt={kitchen.name} className="h-full w-full object-cover" />
                         ) : (
                             <div className="flex items-center justify-center h-full">
                                 <span className="text-7xl opacity-30">🍱</span>
@@ -243,24 +268,6 @@ async function KitchenContent({ id }: { id: string }) {
                             </p>
                         )}
 
-                        <div className="mt-4 flex items-center gap-6 text-sm text-neutral-500 dark:text-neutral-400">
-                            {kitchen.operatingHours && (
-                                <div className="flex items-center gap-1.5">
-                                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    {kitchen.operatingHours}
-                                </div>
-                            )}
-                            <div className="flex items-center gap-1.5">
-                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                {kitchen.priceRange || "Affordable"}
-                            </div>
-                        </div>
-
-                        {/* Rating */}
                         <div className="mt-4 flex items-center gap-3">
                             <div className="flex items-center gap-1.5 rounded-lg bg-accent-50 px-3 py-1.5 dark:bg-accent-900/20">
                                 <svg className="h-4 w-4 text-accent-500" fill="currentColor" viewBox="0 0 20 20">
@@ -271,7 +278,7 @@ async function KitchenContent({ id }: { id: string }) {
                                 </span>
                             </div>
                             <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                                {kitchen.totalReviews || 0} reviews
+                                {kitchen.reviewCount || 0} reviews
                             </span>
                         </div>
 
@@ -331,7 +338,7 @@ async function KitchenContent({ id }: { id: string }) {
                         </h2>
                         {menu.length > 0 ? (
                             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                                {menu.map((m) => (
+                                {menu.map((m: any) => (
                                     <MealItem key={m.id} meal={m} kitchenId={kitchen.id} kitchenName={kitchen.name} />
                                 ))}
                             </div>
@@ -349,7 +356,7 @@ async function KitchenContent({ id }: { id: string }) {
                         </h2>
                         {reviewData.reviews.length > 0 ? (
                             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                                {reviewData.reviews.map((r) => (
+                                {reviewData.reviews.map((r: any) => (
                                     <ReviewCard key={r.id} review={r} />
                                 ))}
                             </div>

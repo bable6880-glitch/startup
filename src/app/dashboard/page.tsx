@@ -98,8 +98,10 @@ function DashboardContent() {
                         if (res.ok) {
                             const menuData = await res.json();
                             setStats((prev) => ({ ...prev, totalMeals: (menuData.data || []).length }));
+                        } else {
+                            console.error(`[Dashboard] Failed to fetch menu for kitchen ${kitchenId}:`, res.status);
                         }
-                    })
+                    }).catch(err => console.error(`[Dashboard] Network error fetching menu:`, err))
                 );
 
                 // Analytics fetch (needs kitchenId + token)
@@ -112,6 +114,8 @@ function DashboardContent() {
                             setTopBuyers(analyticsData.data?.topBuyers || []);
                             setTopFood(analyticsData.data?.topFood || []);
                             setAnalyticsMonth(analyticsData.data?.month || "");
+                        } else {
+                            console.warn(`[Dashboard] Analytics fetch failed: ${res.status}`);
                         }
                     }).catch(() => { /* analytics non-critical */ })
                 );
