@@ -18,7 +18,7 @@ const DEFAULT_LIMIT = 60;
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
 
 const ALLOWED_ORIGINS = [
-    process.env.NEXTAUTH_URL || "http://localhost:3000",
+    process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"),
     // Add production URL here
 ];
 

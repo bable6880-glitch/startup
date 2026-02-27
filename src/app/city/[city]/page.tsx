@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export const revalidate = 300;
 
 async function CityKitchens({ city }: { city: string }) {
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     const res = await fetch(`${baseUrl}/api/kitchens?city=${city}&limit=20`, {
         next: { revalidate: 300 },
     });

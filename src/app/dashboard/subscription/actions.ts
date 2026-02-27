@@ -34,7 +34,8 @@ async function getSellerContext() {
     // Build a minimal request-like object for getAuthUser
     const headers = new Headers();
     headers.set("Authorization", `Bearer ${token}`);
-    const pseudoRequest = new NextRequest("http://localhost:3000", { headers });
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    const pseudoRequest = new NextRequest(baseUrl, { headers });
 
     const user = await getAuthUser(pseudoRequest);
     if (!user || (user.role !== "COOK" && user.role !== "ADMIN")) {

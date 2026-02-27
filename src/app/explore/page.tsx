@@ -21,7 +21,7 @@ async function fetchKitchens(params: Record<string, string | undefined>) {
     qs.set("page", params.page || "1");
     qs.set("limit", "12");
 
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     const res = await fetch(`${baseUrl}/api/kitchens?${qs.toString()}`, {
         cache: "no-store",
     });
@@ -88,8 +88,8 @@ async function KitchenGrid({ searchParams }: { searchParams: Record<string, stri
                                 key={page}
                                 href={`/explore?${params.toString()}`}
                                 className={`flex h-10 w-10 items-center justify-center rounded-lg text-sm font-medium transition-colors ${page === currentPage
-                                        ? "bg-primary-500 text-white shadow-sm"
-                                        : "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700"
+                                    ? "bg-primary-500 text-white shadow-sm"
+                                    : "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700"
                                     }`}
                             >
                                 {page}
@@ -144,8 +144,8 @@ export default async function ExplorePage({ searchParams }: Props) {
                             key={cuisine}
                             href={`/explore?${qs.toString()}`}
                             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${isActive
-                                    ? "bg-primary-500 text-white shadow-sm"
-                                    : "bg-white border border-neutral-200 text-neutral-600 hover:border-primary-300 hover:text-primary-600 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300"
+                                ? "bg-primary-500 text-white shadow-sm"
+                                : "bg-white border border-neutral-200 text-neutral-600 hover:border-primary-300 hover:text-primary-600 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300"
                                 }`}
                         >
                             {cuisine}

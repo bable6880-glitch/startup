@@ -258,7 +258,7 @@ export async function createSubscriptionCheckout(
     const stripePriceId = priceIdMap[planType];
 
     // If no Stripe price ID configured, create a one-time checkout
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
     if (!stripePriceId) {
         // Fallback: create a one-time payment session with the plan amount

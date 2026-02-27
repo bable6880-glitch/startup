@@ -35,7 +35,7 @@ type ReviewData = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { id } = await params;
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     const res = await fetch(`${baseUrl}/api/kitchens/${id}`, { next: { revalidate: 300 } });
     if (!res.ok) return { title: "Kitchen Not Found" };
     const { data } = await res.json();
@@ -50,7 +50,7 @@ export const revalidate = 300;
 // ─── Data Fetchers ──────────────────────────────────────────────────────────
 
 async function getKitchen(id: string) {
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     const res = await fetch(`${baseUrl}/api/kitchens/${id}`, { next: { revalidate: 300 } });
     if (!res.ok) return null;
     const { data } = await res.json();
@@ -58,7 +58,7 @@ async function getKitchen(id: string) {
 }
 
 async function getMenu(id: string): Promise<MealData[]> {
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     const res = await fetch(`${baseUrl}/api/kitchens/${id}/menu`, { next: { revalidate: 300 } });
     if (!res.ok) return [];
     const { data } = await res.json();
@@ -66,7 +66,7 @@ async function getMenu(id: string): Promise<MealData[]> {
 }
 
 async function getReviews(id: string): Promise<{ reviews: ReviewData[]; total: number }> {
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
     const res = await fetch(`${baseUrl}/api/kitchens/${id}/reviews?limit=10`, { next: { revalidate: 60 } });
     if (!res.ok) return { reviews: [], total: 0 };
     const result = await res.json();
