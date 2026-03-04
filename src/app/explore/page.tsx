@@ -34,7 +34,10 @@ async function fetchKitchens(params: Record<string, string | undefined>) {
         // Call the service directly — no HTTP round-trip
         return await listKitchens(parsed.data);
     } catch (error) {
-        console.error("[Explore] Failed to fetch kitchens:", error);
+        console.error("[Explore] Failed to fetch kitchens:", {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+        });
         return { kitchens: [], total: 0, page: 1, limit: 12 };
     }
 }

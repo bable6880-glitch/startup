@@ -21,6 +21,22 @@ import {
 import { getAuthUser } from "@/lib/auth/get-auth-user";
 
 /**
+ * OPTIONS /api/kitchens
+ * Handle CORS preflight requests (required for Amplify + cross-origin clients)
+ */
+export async function OPTIONS() {
+    return new Response(null, {
+        status: 204,
+        headers: {
+            "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_BASE_URL || "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Max-Age": "86400",
+        },
+    });
+}
+
+/**
  * GET /api/kitchens
  * Public: Browse kitchens with filters.
  * Special: ?ownerId=me returns the authenticated user's kitchen(s).
@@ -53,7 +69,10 @@ export async function GET(request: NextRequest) {
             total: result.total,
         });
     } catch (error) {
-        console.error("[List Kitchens Error]", error);
+        console.error("[List Kitchens Error]", {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+        });
         return apiInternalError("Failed to fetch kitchens");
     }
 }

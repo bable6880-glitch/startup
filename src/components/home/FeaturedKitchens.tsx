@@ -24,7 +24,14 @@ export function FeaturedKitchens() {
     useEffect(() => {
         (async () => {
             try {
-                const res = await fetch("/api/kitchens?limit=6&sort=rating");
+                const baseUrl =
+                    process.env.NEXT_PUBLIC_BASE_URL ||
+                    (typeof window !== "undefined"
+                        ? window.location.origin
+                        : "http://localhost:3000");
+                const res = await fetch(`${baseUrl}/api/kitchens?limit=6&sort=rating`, {
+                    headers: { "Cache-Control": "no-store" },
+                });
                 if (res.ok) {
                     const data = await res.json();
                     setKitchens(data.data || []);

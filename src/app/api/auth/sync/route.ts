@@ -11,6 +11,22 @@ import {
 } from "@/lib/utils/api-response";
 
 /**
+ * OPTIONS /api/auth/sync
+ * Handle CORS preflight (required for Amplify + cross-origin mobile/web clients)
+ */
+export async function OPTIONS() {
+    return new Response(null, {
+        status: 204,
+        headers: {
+            "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_BASE_URL || "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Max-Age": "86400",
+        },
+    });
+}
+
+/**
  * POST /api/auth/sync
  * Sync Firebase user to Postgres on login.
  * Body: { idToken: string }
@@ -52,8 +68,11 @@ export async function POST(request: NextRequest) {
             return apiUnauthorized("Your account has been suspended");
         }
 
-        // ── Unexpected errors — only these are 500 ──
-        console.error("[Auth Sync] Unexpected error:", error);
+        // ── Unexpected errors ──
+        console.error("[Auth Sync] Unexpected error:", {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+        });
         return apiInternalError("Failed to sync user");
     }
 }

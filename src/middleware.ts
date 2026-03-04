@@ -14,16 +14,52 @@ const publicLimits: Record<string, number> = {
 };
 const DEFAULT_LIMIT = 60;
 
-// In-memory rate limiter (for Edge Runtime — use Redis in production via API)
+// In-memory rate limiter (per Lambda instance on Amplify)
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
 
-const ALLOWED_ORIGINS = [
-    process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"),
-    // Add production URL here
-];
+// ─── CORS Origins ─────────────────────────────────────────────────────────
+// Build the allowed origins list dynamically so it works across:
+//   • AWS Amplify (NEXT_PUBLIC_BASE_URL set in Amplify Console env vars)
+//   • Local development
+//   • Any future deployment without code changes
+function getAllowedOrigins(): string[] {
+    const origins: string[] = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+    ];
+
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    if (baseUrl) {
+        origins.push(baseUrl.replace(/\/$/, "")); // strip trailing slash
+    }
+
+    return origins;
+}
 
 const MAX_BODY_SIZE = 1_048_576; // 1MB
 
+// ─── CORS Header Helper ──────────────────────────────────────────────────────
+
+function addCorsHeaders(response: NextResponse, origin: string | null) {
+    const allowedOrigins = getAllowedOrigins();
+    const effectiveOrigin =
+        origin && allowedOrigins.includes(origin)
+            ? origin
+            : allowedOrigins[0]; // fallback to localhost in dev
+
+    response.headers.set("Access-Control-Allow-Origin", effectiveOrigin);
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+    response.headers.set(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    );
+    response.headers.set(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, X-Requested-With"
+    );
+    response.headers.set("Access-Control-Max-Age", "86400");
+    return response;
+}
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
 
@@ -35,32 +71,17 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
-    // ── 1. CORS ──
     const origin = request.headers.get("origin");
-    const response = NextResponse.next();
 
-    if (origin && ALLOWED_ORIGINS.includes(origin)) {
-        response.headers.set("Access-Control-Allow-Origin", origin);
-    }
-    response.headers.set(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, DELETE, OPTIONS"
-    );
-    response.headers.set(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Authorization"
-    );
-    response.headers.set("Access-Control-Max-Age", "86400");
-
-    // Handle preflight
+    // ── Handle CORS Preflight (OPTIONS) ──────────────────────────────────────
+    // Amplify's CDN may send preflight requests; we must respond with 204.
     if (request.method === "OPTIONS") {
-        return new NextResponse(null, {
-            status: 204,
-            headers: response.headers,
-        });
+        const preflightResponse = new NextResponse(null, { status: 204 });
+        addCorsHeaders(preflightResponse, origin);
+        return preflightResponse;
     }
 
-    // ── 2. Request Body Size Check ──
+    // ── 1. Request Body Size Check ────────────────────────────────────────────
     const contentLength = request.headers.get("content-length");
     if (contentLength && parseInt(contentLength) > MAX_BODY_SIZE) {
         return NextResponse.json(
@@ -75,7 +96,7 @@ export function middleware(request: NextRequest) {
         );
     }
 
-    // ── 3. Rate Limiting (In-Memory for Edge) ──
+    // ── 2. Rate Limiting (In-Memory per Lambda instance) ─────────────────────
     const clientIp =
         request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
         request.headers.get("x-real-ip") ||
@@ -83,20 +104,17 @@ export function middleware(request: NextRequest) {
 
     const rateLimitKey = `${clientIp}:${pathname.split("/").slice(0, 3).join("/")}`;
     const now = Date.now();
-
     const existing = requestCounts.get(rateLimitKey);
     const routePrefix = "/" + pathname.split("/").slice(1, 3).join("/");
     const limit = publicLimits[routePrefix] || DEFAULT_LIMIT;
 
     if (existing) {
         if (now > existing.resetAt) {
-            // Window expired — reset
             requestCounts.set(rateLimitKey, {
                 count: 1,
                 resetAt: now + RATE_LIMIT_WINDOW_MS,
             });
         } else if (existing.count >= limit) {
-            // Rate limited
             return NextResponse.json(
                 {
                     success: false,
@@ -127,17 +145,17 @@ export function middleware(request: NextRequest) {
         });
     }
 
-    // ── 4. Security Headers ──
+    // ── 3. Build response with CORS + Security headers ───────────────────────
+    const response = NextResponse.next();
+    addCorsHeaders(response, origin);
+
+    // Security headers
     response.headers.set("X-Content-Type-Options", "nosniff");
-    response.headers.set("X-Frame-Options", "DENY");
+    response.headers.set("X-Frame-Options", "SAMEORIGIN");
     response.headers.set("X-XSS-Protection", "1; mode=block");
     response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-    response.headers.set(
-        "Permissions-Policy",
-        "camera=(), microphone=(), geolocation=()"
-    );
 
-    // ── 5. Add Rate Limit Headers ──
+    // Rate limit info headers
     const currentCount = requestCounts.get(rateLimitKey);
     if (currentCount) {
         response.headers.set("X-RateLimit-Limit", limit.toString());
