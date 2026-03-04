@@ -6,7 +6,7 @@ frontend:
         - nvm install 20
         - nvm use 20
         - node -v
-        - npm ci --prefer-offline
+        - npm install --prefer-offline
     build:
       commands:
         - echo "NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL"
