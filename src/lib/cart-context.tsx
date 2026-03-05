@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import {
+    createContext,
+    useContext,
+    useState,
+    useCallback,
+    useEffect,
+    useMemo,
+    type ReactNode,
+} from "react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -19,82 +27,114 @@ export interface CartState {
 }
 
 interface CartContextType extends CartState {
-    addItem: (kitchenId: string, kitchenName: string, item: Omit<CartItem, "quantity">) => boolean;
+    /** Hydration complete — false during SSR / before useEffect runs */
+    hydrated: boolean;
+    /**
+     * Add an item to the cart.
+     * Throws `Error("MIXED_KITCHEN")` if the item is from a different kitchen
+     * than the current cart contents. The caller is responsible for catching
+     * this and offering the user a clear-cart confirmation dialog.
+     */
+    addItem: (kitchenId: string, kitchenName: string, item: Omit<CartItem, "quantity">) => void;
     removeItem: (mealId: string) => void;
     updateQuantity: (mealId: string, quantity: number) => void;
     clearCart: () => void;
+    /** Total price in PKR */
+    totalAmount: number;
+    /** Alias kept for consumers that still use `total` */
     total: number;
     itemCount: number;
 }
 
-const CartContext = createContext<CartContextType | null>(null);
+// ─── Storage ─────────────────────────────────────────────────────────────────
 
-const CART_KEY = "smart-tiffin-cart";
+const CART_KEY = "smart-tiffin-cart-v1";
 
-function loadCart(): CartState {
-    if (typeof window === "undefined") return { kitchenId: null, kitchenName: null, items: [] };
+const EMPTY_CART: CartState = { kitchenId: null, kitchenName: null, items: [] };
+
+function readFromStorage(): CartState {
     try {
         const raw = localStorage.getItem(CART_KEY);
-        if (raw) return JSON.parse(raw);
-    } catch { /* ignore */ }
-    return { kitchenId: null, kitchenName: null, items: [] };
+        if (raw) {
+            const parsed = JSON.parse(raw) as Partial<CartState>;
+            // Basic shape validation
+            if (Array.isArray(parsed.items)) return parsed as CartState;
+        }
+    } catch {
+        /* ignore storage errors */
+    }
+    return EMPTY_CART;
 }
 
-function saveCart(state: CartState) {
+function writeToStorage(state: CartState) {
     try {
         localStorage.setItem(CART_KEY, JSON.stringify(state));
-    } catch { /* ignore */ }
+    } catch {
+        /* ignore quota/security errors */
+    }
 }
 
-// ─── Provider ───────────────────────────────────────────────────────────────
+// ─── Context ─────────────────────────────────────────────────────────────────
+
+const CartContext = createContext<CartContextType | null>(null);
+
+// ─── Provider ────────────────────────────────────────────────────────────────
 
 export function CartProvider({ children }: { children: ReactNode }) {
-    const [cart, setCart] = useState<CartState>(loadCart);
+    // Start with empty cart on the server — hydrate from localStorage in effect
+    const [cart, setCart] = useState<CartState>(EMPTY_CART);
+    const [hydrated, setHydrated] = useState(false);
 
-    // Persist on change
+    // SSR-safe hydration: only touch localStorage after mount
     useEffect(() => {
-        saveCart(cart);
-    }, [cart]);
+        setCart(readFromStorage());
+        setHydrated(true);
+    }, []);
 
-    const addItem = useCallback((kitchenId: string, kitchenName: string, item: Omit<CartItem, "quantity">): boolean => {
-        let switched = false;
-        setCart((prev) => {
-            // If switching kitchens, clear old cart
-            if (prev.kitchenId && prev.kitchenId !== kitchenId) {
-                switched = true;
-                return {
-                    kitchenId,
-                    kitchenName,
-                    items: [{ ...item, quantity: 1 }],
-                };
-            }
+    // Persist every cart change (after hydration to avoid overwriting with empty)
+    useEffect(() => {
+        if (hydrated) {
+            writeToStorage(cart);
+        }
+    }, [cart, hydrated]);
 
-            const existing = prev.items.find((i) => i.mealId === item.mealId);
-            if (existing) {
+    // ── Mutating functions ────────────────────────────────────────────────────
+
+    const addItem = useCallback(
+        (kitchenId: string, kitchenName: string, item: Omit<CartItem, "quantity">) => {
+            setCart((prev) => {
+                // Mixed-kitchen guard — throw so the caller can show a dialog
+                if (prev.kitchenId && prev.kitchenId !== kitchenId && prev.items.length > 0) {
+                    throw new Error("MIXED_KITCHEN");
+                }
+
+                const existing = prev.items.find((i) => i.mealId === item.mealId);
+                if (existing) {
+                    return {
+                        ...prev,
+                        kitchenId,
+                        kitchenName,
+                        items: prev.items.map((i) =>
+                            i.mealId === item.mealId ? { ...i, quantity: i.quantity + 1 } : i
+                        ),
+                    };
+                }
+
                 return {
                     ...prev,
                     kitchenId,
                     kitchenName,
-                    items: prev.items.map((i) =>
-                        i.mealId === item.mealId ? { ...i, quantity: i.quantity + 1 } : i
-                    ),
+                    items: [...prev.items, { ...item, quantity: 1 }],
                 };
-            }
-
-            return {
-                ...prev,
-                kitchenId,
-                kitchenName,
-                items: [...prev.items, { ...item, quantity: 1 }],
-            };
-        });
-        return !switched;
-    }, []);
+            });
+        },
+        []
+    );
 
     const removeItem = useCallback((mealId: string) => {
         setCart((prev) => {
             const newItems = prev.items.filter((i) => i.mealId !== mealId);
-            if (newItems.length === 0) return { kitchenId: null, kitchenName: null, items: [] };
+            if (newItems.length === 0) return EMPTY_CART;
             return { ...prev, items: newItems };
         });
     }, []);
@@ -103,7 +143,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (quantity <= 0) {
             setCart((prev) => {
                 const newItems = prev.items.filter((i) => i.mealId !== mealId);
-                if (newItems.length === 0) return { kitchenId: null, kitchenName: null, items: [] };
+                if (newItems.length === 0) return EMPTY_CART;
                 return { ...prev, items: newItems };
             });
             return;
@@ -117,22 +157,40 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const clearCart = useCallback(() => {
-        setCart({ kitchenId: null, kitchenName: null, items: [] });
+        setCart(EMPTY_CART);
     }, []);
 
-    const total = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+    // ── Derived values (memoized) ─────────────────────────────────────────────
 
-    return (
-        <CartContext.Provider
-            value={{ ...cart, addItem, removeItem, updateQuantity, clearCart, total, itemCount }}
-        >
-            {children}
-        </CartContext.Provider>
+    const totalAmount = useMemo(
+        () => cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+        [cart.items]
     );
+
+    const itemCount = useMemo(
+        () => cart.items.reduce((sum, item) => sum + item.quantity, 0),
+        [cart.items]
+    );
+
+    const value = useMemo<CartContextType>(
+        () => ({
+            ...cart,
+            hydrated,
+            addItem,
+            removeItem,
+            updateQuantity,
+            clearCart,
+            totalAmount,
+            total: totalAmount, // backward-compat alias
+            itemCount,
+        }),
+        [cart, hydrated, addItem, removeItem, updateQuantity, clearCart, totalAmount, itemCount]
+    );
+
+    return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
-// ─── Hook ───────────────────────────────────────────────────────────────────
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useCart() {
     const ctx = useContext(CartContext);

@@ -12,9 +12,9 @@ const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: NextRequest) {
     try {
-        // Auth: check CRON_SECRET header
-        const authHeader = request.headers.get("authorization");
-        if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
+        // Auth: check x-cron-secret header
+        const cronSecret = request.headers.get("x-cron-secret");
+        if (!CRON_SECRET || cronSecret !== CRON_SECRET) {
             return apiUnauthorized("Invalid cron secret");
         }
 

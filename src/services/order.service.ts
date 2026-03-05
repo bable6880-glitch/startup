@@ -3,6 +3,7 @@ import { orders, orderItems, meals, kitchens } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import type { CreateOrderInput, UpdateOrderStatusInput } from "@/lib/validations/order";
 import { NotFoundError, AuthorizationError, ValidationError } from "@/lib/utils/errors";
+import { collectAndPublishEvent, RealtimeChannels } from "@/lib/redis/pubsub";
 
 // ─── Create Order ───────────────────────────────────────────────────────────
 
@@ -19,7 +20,6 @@ export async function createOrder(customerId: string, input: CreateOrderInput) {
     }
 
     // 2. Fetch meals and validate
-    const mealIds = input.items.map((i) => i.mealId);
     const mealRecords = await db.query.meals.findMany({
         where: and(eq(meals.kitchenId, input.kitchenId)),
     });
@@ -60,7 +60,13 @@ export async function createOrder(customerId: string, input: CreateOrderInput) {
 
     await db.insert(orderItems).values(itemValues);
 
-    // 5. Return order with kitchen contact info
+    // ── 5. Real-time Notification ───────────────────────────────────────────
+    await collectAndPublishEvent(RealtimeChannels.kitchen(input.kitchenId), {
+        type: "NEW_ORDER",
+        payload: { orderId: order.id, ...order, items: itemValues },
+    });
+
+    // ── 6. Return order with kitchen contact info ───────────────────────────
     return {
         ...order,
         items: itemValues,
@@ -160,6 +166,19 @@ export async function updateOrderStatus(
         .set(updateData)
         .where(eq(orders.id, orderId))
         .returning();
+
+    // ── Real-time Status Update ─────────────────────────────────────────────
+    // Notify customer
+    await collectAndPublishEvent(RealtimeChannels.customer(order.customerId), {
+        type: "ORDER_STATUS",
+        payload: { orderId, status: input.status },
+    });
+
+    // Also notify kitchen (to sync UI)
+    await collectAndPublishEvent(RealtimeChannels.kitchen(order.kitchenId), {
+        type: "ORDER_STATUS",
+        payload: { orderId, status: input.status },
+    });
 
     return updated;
 }

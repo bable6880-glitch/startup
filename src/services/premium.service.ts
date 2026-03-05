@@ -15,13 +15,7 @@ import {
     GRACE_PERIOD_DAYS,
     type SubscriptionPlanType,
 } from "@/lib/validations/subscription";
-import Stripe from "stripe";
-
-// ─── Stripe Client ──────────────────────────────────────────────────────────
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-12-18.acacia" as Stripe.LatestApiVersion,
-});
+import { stripe, type Stripe } from "@/lib/stripe";
 
 // ─── Cache Keys ─────────────────────────────────────────────────────────────
 

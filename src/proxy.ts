@@ -62,6 +62,7 @@ function addCorsHeaders(response: NextResponse, origin: string | null) {
 }
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
+// NOTE: Next.js requires this export to be named `middleware` regardless of filename.
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;

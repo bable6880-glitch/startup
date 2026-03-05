@@ -23,11 +23,17 @@ export type AuthUser = {
  */
 export async function getAuthUser(request: NextRequest): Promise<AuthUser | null> {
     try {
-        // Extract token from Authorization header
+        // Extract token from Authorization header or query param (for SSE)
+        let idToken: string | null = null;
         const authHeader = request.headers.get("authorization");
-        if (!authHeader?.startsWith("Bearer ")) return null;
 
-        const idToken = authHeader.slice(7);
+        if (authHeader?.startsWith("Bearer ")) {
+            idToken = authHeader.slice(7);
+        } else {
+            const { searchParams } = new URL(request.url);
+            idToken = searchParams.get("token");
+        }
+
         if (!idToken) return null;
 
         // Verify with Firebase Admin

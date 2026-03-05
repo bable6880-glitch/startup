@@ -324,9 +324,11 @@ function DashboardContent() {
                                                 Rs. {Number(order.totalAmount).toLocaleString()} · {order.status}
                                             </p>
                                         </div>
-                                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${order.status === "DELIVERED" ? "bg-accent-50 text-accent-700 dark:bg-accent-900/30 dark:text-accent-300" :
-                                            order.status === "PENDING" ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" :
-                                                "bg-neutral-100 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300"
+                                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${order.status === "COMPLETED" ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300" :
+                                                order.status === "PENDING" ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" :
+                                                    order.status === "ACCEPTED" ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" :
+                                                        order.status === "CANCELLED" ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300" :
+                                                            "bg-neutral-100 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300"
                                             }`}>
                                             {order.status}
                                         </span>
