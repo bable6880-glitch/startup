@@ -1,4 +1,4 @@
-import { cert, getApps, initializeApp, type App, type ServiceAccount } from "firebase-admin/app";
+import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
 
 // ─── Custom Auth Error ──────────────────────────────────────────────────────
@@ -27,27 +27,22 @@ let _auth: Auth | null = null;
 function getFirebaseAdmin(): Auth {
     if (_auth) return _auth;
 
-    const projectId = process.env.FIREBASE_PROJECT_ID;
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
-    if (!projectId || !clientEmail || !privateKey) {
+    if (!serviceAccountKey) {
         throw new FirebaseAuthError(
-            "Firebase Admin environment variables are not configured",
+            "FIREBASE_SERVICE_ACCOUNT_KEY is not set",
             "auth/config-missing",
             500
         );
     }
 
-    const firebaseAdminConfig: ServiceAccount = {
-        projectId,
-        clientEmail,
-        privateKey: privateKey.replace(/\\n/g, "\n"),
-    };
+    // Parse the JSON — works whether it's single-line or formatted
+    const serviceAccount = JSON.parse(serviceAccountKey);
 
     _app =
         getApps().length === 0
-            ? initializeApp({ credential: cert(firebaseAdminConfig) })
+            ? initializeApp({ credential: cert(serviceAccount) })
             : getApps()[0];
 
     _auth = getAuth(_app);
