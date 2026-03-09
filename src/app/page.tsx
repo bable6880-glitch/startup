@@ -1,6 +1,9 @@
 import Link from "next/link";
 import SearchBar from "@/components/ui/SearchBar";
 import { FeaturedKitchens } from "@/components/home/FeaturedKitchens";
+import { db } from "@/lib/db";
+import { kitchens, users, meals } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 const cities = [
   { name: "Lahore", emoji: "🏙️", count: "120+" },
@@ -41,7 +44,44 @@ const howItWorks = [
   { step: "4", title: "Enjoy", desc: "Fresh home-cooked meal delivered to your door." },
 ];
 
-export default function HomePage() {
+// ─── Live stats from DB (server component — no HTTP round-trip) ─────────────
+
+function formatStat(n: number): string {
+  if (n >= 1000) return `${Math.floor(n / 1000)}K+`;
+  if (n >= 100) return `${Math.floor(n / 100) * 100}+`;
+  if (n >= 10) return `${Math.floor(n / 10) * 10}+`;
+  return String(n);
+}
+
+async function getStats() {
+  try {
+    const [kitchenCount] = await db
+      .select({ count: db.$count(kitchens, eq(kitchens.status, "ACTIVE")) })
+      .from(kitchens);
+
+    const [mealCount] = await db
+      .select({ count: db.$count(meals, eq(meals.isAvailable, true)) })
+      .from(meals);
+
+    const [userCount] = await db
+      .select({ count: db.$count(users, eq(users.isActive, true)) })
+      .from(users);
+
+    return {
+      kitchens: Number(kitchenCount.count),
+      meals: Number(mealCount.count),
+      customers: Number(userCount.count),
+    };
+  } catch {
+    return { kitchens: 0, meals: 0, customers: 0 };
+  }
+}
+
+export const revalidate = 300; // ISR: refresh every 5 minutes
+
+export default async function HomePage() {
+  const stats = await getStats();
+
   return (
     <div className="flex flex-col">
       {/* ── Hero ─────────────────────────────────────────────────── */}
@@ -73,18 +113,18 @@ export default function HomePage() {
               <SearchBar />
             </div>
 
-            {/* Quick Stats */}
+            {/* Quick Stats — live from DB */}
             <div className="mt-10 flex flex-wrap justify-center gap-8 text-center animate-fade-in" style={{ animationDelay: "0.3s" }}>
               <div>
-                <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">500+</p>
+                <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">{formatStat(stats.kitchens)}</p>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">Home Kitchens</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">6</p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">Cities</p>
+                <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">{formatStat(stats.meals)}</p>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">Menu Items</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">10K+</p>
+                <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">{formatStat(stats.customers)}</p>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">Happy Customers</p>
               </div>
             </div>

@@ -61,10 +61,10 @@ function addCorsHeaders(response: NextResponse, origin: string | null) {
     return response;
 }
 
-// ─── Middleware ──────────────────────────────────────────────────────────────
-// NOTE: Next.js requires this export to be named `middleware` regardless of filename.
+// ─── Proxy ──────────────────────────────────────────────────────────────────
+// Next.js 16+ requires `proxy.ts` to export a function named `proxy`.
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Only apply to API routes

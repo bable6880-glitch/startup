@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { verifyFirebaseToken } from "@/lib/auth/firebase-admin";
+import { verifyFirebaseToken, setUserRoleClaim } from "@/lib/auth/firebase-admin";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -45,6 +45,11 @@ export async function getAuthUser(request: NextRequest): Promise<AuthUser | null
         });
 
         if (!user || !user.isActive) return null;
+
+        // Role reconciliation (DB as source of truth)
+        if (decoded.role !== user.role) {
+            await setUserRoleClaim(decoded.uid, user.role);
+        }
 
         return {
             id: user.id,

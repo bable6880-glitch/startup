@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { reviews, kitchens } from "@/lib/db/schema";
+import { reviews, kitchens, orders } from "@/lib/db/schema";
 import { eq, and, desc, asc, sql, isNull } from "drizzle-orm";
 import type { CreateReviewInput, ReviewQueryInput } from "@/lib/validations/review";
 import { NotFoundError, ConflictError, ValidationError } from "@/lib/utils/errors";
@@ -33,6 +33,16 @@ export async function createReview(userId: string, input: CreateReviewInput) {
         throw new ValidationError("You cannot review your own kitchen");
     }
 
+    // 3.5 Check for verified purchase
+    const completedOrder = await db.query.orders.findFirst({
+        where: and(
+            eq(orders.customerId, userId),
+            eq(orders.kitchenId, input.kitchenId),
+            eq(orders.status, "COMPLETED")
+        ),
+    });
+    const isVerifiedPurchase = completedOrder !== undefined;
+
     // 4. Create review
     const [review] = await db
         .insert(reviews)
@@ -41,6 +51,7 @@ export async function createReview(userId: string, input: CreateReviewInput) {
             userId,
             rating: input.rating,
             comment: input.comment,
+            isVerifiedPurchase,
         })
         .returning();
 

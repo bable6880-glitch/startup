@@ -15,8 +15,9 @@ import {
     GRACE_PERIOD_DAYS,
     type SubscriptionPlanType,
 } from "@/lib/validations/subscription";
-import { stripe, type Stripe } from "@/lib/stripe";
 
+import { stripe } from "@/lib/stripe";
+import Stripe from "stripe"
 // ─── Cache Keys ─────────────────────────────────────────────────────────────
 
 const SubscriptionCacheKeys = {

@@ -1,88 +1,107 @@
-import { useEffect, useState, useCallback } from "react";
-import { useAuth } from "@/lib/firebase/auth-context";
+'use client';
 
-export interface RealtimeEvent {
-    type: "NEW_ORDER" | "ORDER_STATUS" | "PING";
-    timestamp: string;
-    payload: any;
+import { useEffect, useLayoutEffect, useRef, useCallback, useState } from "react";
+import { useAuth } from "@/lib/firebase/auth-context";
+import type { SSEPayload } from "@/lib/redis/pubsub";
+
+interface UseKitchenSSEOptions {
+    kitchenId: string | null;
+    onNewOrder?: (payload: Record<string, unknown>) => void;
+    onSubscriptionChanged?: (payload: Record<string, unknown>) => void;
 }
 
-export function useKitchenSSE(kitchenId: string | null, onNewOrder?: (order: Record<string, unknown>) => void) {
+export function useKitchenSSE({ kitchenId, onNewOrder, onSubscriptionChanged }: UseKitchenSSEOptions) {
     const { getIdToken } = useAuth();
+    const [connected, setConnected] = useState(false);
     const [status, setStatus] = useState<"connecting" | "connected" | "disconnected">("disconnected");
+    const [lastEvent, setLastEvent] = useState<SSEPayload | null>(null);
+
+    const eventSourceRef = useRef<EventSource | null>(null);
+    const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const reconnectAttemptsRef = useRef(0);
+    const connectRef = useRef<() => void>(() => { });
+
+    const onNewOrderRef = useRef(onNewOrder);
+    const onSubChangedRef = useRef(onSubscriptionChanged);
+    useLayoutEffect(() => { onNewOrderRef.current = onNewOrder; }, [onNewOrder]);
+    useLayoutEffect(() => { onSubChangedRef.current = onSubscriptionChanged; }, [onSubscriptionChanged]);
 
     const connect = useCallback(async () => {
-        if (!kitchenId) return null;
+        if (!kitchenId) return;
+        if (eventSourceRef.current) eventSourceRef.current.close();
 
         try {
             const token = await getIdToken();
-            if (!token) return null;
+            if (!token) return;
 
             setStatus("connecting");
 
-            const es = new EventSource(`/api/sse/kitchen/${kitchenId}?token=${token}`);
+            const es = new EventSource(`/api/sse/kitchen/${kitchenId}?token=${token}`, { withCredentials: true });
+            eventSourceRef.current = es;
 
             es.onopen = () => {
+                setConnected(true);
                 setStatus("connected");
+                reconnectAttemptsRef.current = 0;
             };
 
             es.onmessage = (event) => {
-                // Ignore heartbeats
-                if (event.data.includes("heartbeat")) return;
-
                 try {
-                    const realtimeEvent = JSON.parse(event.data) as RealtimeEvent;
-                    if (realtimeEvent.type === "NEW_ORDER" && onNewOrder) {
-                        onNewOrder(realtimeEvent.payload);
+                    const data = JSON.parse(event.data) as SSEPayload;
+
+                    if (data.type === "HEARTBEAT" || data.type === "CONNECTED") return;
+
+                    setLastEvent(data);
+
+                    switch (data.type) {
+                        case "NEW_ORDER":
+                            onNewOrderRef.current?.(data.payload);
+                            if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+                                new Notification("🍽️ New Order!", {
+                                    body: `From ${data.payload.customerName ?? "Customer"} — PKR ${data.payload.totalAmount}`,
+                                    icon: "/favicon.ico",
+                                });
+                            }
+                            break;
+                        case "SUBSCRIPTION_CHANGED":
+                            onSubChangedRef.current?.(data.payload);
+                            break;
                     }
                 } catch (err) {
                     console.error("[useKitchenSSE] Parse error:", err);
                 }
             };
 
-            return es;
+            es.onerror = () => {
+                setConnected(false);
+                setStatus("disconnected");
+                es.close();
+
+                const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+                reconnectAttemptsRef.current++;
+                reconnectTimeoutRef.current = setTimeout(() => connectRef.current(), delay);
+            };
         } catch (err) {
             console.error("[useKitchenSSE] Connection error:", err);
             setStatus("disconnected");
-            return null;
+            reconnectTimeoutRef.current = setTimeout(() => connectRef.current(), 5000);
         }
-    }, [kitchenId, getIdToken, onNewOrder]);
+    }, [kitchenId, getIdToken]);
+
+    useLayoutEffect(() => {
+        connectRef.current = connect;
+    }, [connect]);
 
     useEffect(() => {
-        let es: EventSource | null = null;
-        let reconnectTimeout: NodeJS.Timeout | null = null;
-        let attempts = 0;
-        let isActive = true;
-
-        const startConnection = async () => {
-            if (!isActive) return;
-
-            es = await connect();
-
-            if (es) {
-                es.onerror = () => {
-                    if (!isActive) return;
-                    setStatus("disconnected");
-                    es?.close();
-
-                    const delay = Math.min(1000 * Math.pow(2, attempts), 30000);
-                    attempts++;
-                    reconnectTimeout = setTimeout(startConnection, delay);
-                };
-            } else if (isActive) {
-                // If connect failed (e.g. no token), retry later
-                reconnectTimeout = setTimeout(startConnection, 5000);
-            }
-        };
-
-        startConnection();
-
+        // ✅ Defer via setTimeout(0) — breaks the synchronous setState chain
+        // the linter traces through connect(), eliminating the cascading render warning
+        const timer = setTimeout(() => connectRef.current(), 0);
         return () => {
-            isActive = false;
-            es?.close();
-            if (reconnectTimeout) clearTimeout(reconnectTimeout);
+            clearTimeout(timer);
+            eventSourceRef.current?.close();
+            clearTimeout(reconnectTimeoutRef.current);
         };
     }, [connect]);
 
-    return { status };
+    return { connected, status, lastEvent };
 }

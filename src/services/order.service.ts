@@ -3,7 +3,7 @@ import { orders, orderItems, meals, kitchens } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import type { CreateOrderInput, UpdateOrderStatusInput } from "@/lib/validations/order";
 import { NotFoundError, AuthorizationError, ValidationError } from "@/lib/utils/errors";
-import { collectAndPublishEvent, RealtimeChannels } from "@/lib/redis/pubsub";
+import { publishEvent, CHANNELS } from "@/lib/redis/pubsub";
 
 // ─── Create Order ───────────────────────────────────────────────────────────
 
@@ -45,7 +45,7 @@ export async function createOrder(customerId: string, input: CreateOrderInput) {
             status: "PENDING",
             notes: input.notes,
             totalAmount,
-            currency: mealRecords[0]?.currency ?? "INR",
+            currency: mealRecords[0]?.currency ?? "PKR",
         })
         .returning();
 
@@ -60,11 +60,25 @@ export async function createOrder(customerId: string, input: CreateOrderInput) {
 
     await db.insert(orderItems).values(itemValues);
 
-    // ── 5. Real-time Notification ───────────────────────────────────────────
-    await collectAndPublishEvent(RealtimeChannels.kitchen(input.kitchenId), {
-        type: "NEW_ORDER",
-        payload: { orderId: order.id, ...order, items: itemValues },
-    });
+    // ── 5. Real-time: notify cook dashboard ────────────────────────────────
+    try {
+        await publishEvent(CHANNELS.kitchenOrders(input.kitchenId), {
+            type: "NEW_ORDER",
+            payload: {
+                orderId: order.id,
+                items: itemValues.map((item) => ({
+                    mealId: item.mealId,
+                    quantity: item.quantity,
+                    price: item.priceAtOrder,
+                })),
+                totalAmount: order.totalAmount,
+                currency: order.currency,
+                notes: order.notes ?? "",
+                status: "PENDING",
+                placedAt: new Date().toISOString(),
+            },
+        });
+    } catch { /* Non-critical — don't fail the order if Redis is down */ }
 
     // ── 6. Return order with kitchen contact info ───────────────────────────
     return {
@@ -142,7 +156,7 @@ export async function updateOrderStatus(
     const order = await db.query.orders.findFirst({
         where: eq(orders.id, orderId),
         with: {
-            kitchen: { columns: { id: true, ownerId: true } },
+            kitchen: { columns: { id: true, ownerId: true, name: true } },
         },
     });
 
@@ -167,18 +181,30 @@ export async function updateOrderStatus(
         .where(eq(orders.id, orderId))
         .returning();
 
-    // ── Real-time Status Update ─────────────────────────────────────────────
-    // Notify customer
-    await collectAndPublishEvent(RealtimeChannels.customer(order.customerId), {
-        type: "ORDER_STATUS",
-        payload: { orderId, status: input.status },
-    });
+    // ── Real-time: notify customer of status change ─────────────────────────
+    try {
+        await publishEvent(CHANNELS.customerOrders(order.customerId), {
+            type: "ORDER_STATUS_CHANGED",
+            payload: {
+                orderId: order.id,
+                newStatus: input.status,
+                kitchenName: order.kitchen.name ?? "",
+                updatedAt: now.toISOString(),
+            },
+        });
+    } catch { /* Non-critical */ }
 
-    // Also notify kitchen (to sync UI)
-    await collectAndPublishEvent(RealtimeChannels.kitchen(order.kitchenId), {
-        type: "ORDER_STATUS",
-        payload: { orderId, status: input.status },
-    });
+    // ── Real-time: also notify kitchen to sync UI ───────────────────────────
+    try {
+        await publishEvent(CHANNELS.kitchenOrders(order.kitchenId), {
+            type: "ORDER_STATUS_CHANGED",
+            payload: {
+                orderId: order.id,
+                newStatus: input.status,
+                updatedAt: now.toISOString(),
+            },
+        });
+    } catch { /* Non-critical */ }
 
     return updated;
 }

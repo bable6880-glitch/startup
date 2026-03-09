@@ -1,90 +1,90 @@
-import { useEffect, useState, useCallback } from "react";
-import { useAuth } from "@/lib/firebase/auth-context";
+'use client';
 
-export interface RealtimeEvent {
-    type: "NEW_ORDER" | "ORDER_STATUS" | "PING";
-    timestamp: string;
-    payload: Record<string, unknown>;
+import { useEffect, useLayoutEffect, useRef, useCallback, useState } from "react";
+import { useAuth } from "@/lib/firebase/auth-context";
+import type { SSEPayload } from "@/lib/redis/pubsub";
+
+interface UseCustomerSSEOptions {
+    customerId: string | null;
+    onStatusChange?: (payload: Record<string, unknown>) => void;
 }
 
-export function useCustomerSSE(customerId: string | null, onStatusChange?: (orderId: string, status: string) => void) {
+export function useCustomerSSE({ customerId, onStatusChange }: UseCustomerSSEOptions) {
     const { getIdToken } = useAuth();
+    const [connected, setConnected] = useState(false);
     const [status, setStatus] = useState<"connecting" | "connected" | "disconnected">("disconnected");
 
+    const eventSourceRef = useRef<EventSource | null>(null);
+    const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const reconnectAttemptsRef = useRef(0);
+    const connectRef = useRef<() => void>(() => { });
+
+    // Stable ref for callback — no re-connect when handler changes
+    const onStatusChangeRef = useRef(onStatusChange);
+    useLayoutEffect(() => { onStatusChangeRef.current = onStatusChange; }, [onStatusChange]);
+
     const connect = useCallback(async () => {
-        if (!customerId) return null;
+        if (!customerId) return;
+        if (eventSourceRef.current) eventSourceRef.current.close();
 
         try {
             const token = await getIdToken();
-            if (!token) return null;
+            if (!token) return;
 
             setStatus("connecting");
 
-            const es = new EventSource(`/api/sse/customer/${customerId}?token=${token}`);
+            const es = new EventSource(`/api/sse/customer/${customerId}?token=${token}`, { withCredentials: true });
+            eventSourceRef.current = es;
 
             es.onopen = () => {
+                setConnected(true);
                 setStatus("connected");
+                reconnectAttemptsRef.current = 0;
             };
 
             es.onmessage = (event) => {
-                // Ignore heartbeats
-                if (event.data.includes("heartbeat")) return;
-
                 try {
-                    const realtimeEvent = JSON.parse(event.data) as RealtimeEvent;
-                    if (realtimeEvent.type === "ORDER_STATUS" && onStatusChange) {
-                        const { orderId, status } = realtimeEvent.payload;
-                        if (typeof orderId === "string" && typeof status === "string") {
-                            onStatusChange(orderId, status);
-                        }
+                    const data = JSON.parse(event.data) as SSEPayload;
+
+                    if (data.type === "HEARTBEAT" || data.type === "CONNECTED") return;
+
+                    if (data.type === "ORDER_STATUS_CHANGED") {
+                        onStatusChangeRef.current?.(data.payload);
                     }
                 } catch (err) {
                     console.error("[useCustomerSSE] Parse error:", err);
                 }
             };
 
-            return es;
+            es.onerror = () => {
+                setConnected(false);
+                setStatus("disconnected");
+                es.close();
+
+                const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+                reconnectAttemptsRef.current++;
+                reconnectTimeoutRef.current = setTimeout(() => connectRef.current(), delay);
+            };
         } catch (err) {
             console.error("[useCustomerSSE] Connection error:", err);
             setStatus("disconnected");
-            return null;
+            reconnectTimeoutRef.current = setTimeout(() => connectRef.current(), 5000);
         }
-    }, [customerId, getIdToken, onStatusChange]);
+    }, [customerId, getIdToken]);
+
+    useLayoutEffect(() => {
+        connectRef.current = connect;
+    }, [connect]);
 
     useEffect(() => {
-        let es: EventSource | null = null;
-        let reconnectTimeout: NodeJS.Timeout | null = null;
-        let attempts = 0;
-        let isActive = true;
-
-        const startConnection = async () => {
-            if (!isActive) return;
-
-            es = await connect();
-
-            if (es) {
-                es.onerror = () => {
-                    if (!isActive) return;
-                    setStatus("disconnected");
-                    es?.close();
-
-                    const delay = Math.min(1000 * Math.pow(2, attempts), 30000);
-                    attempts++;
-                    reconnectTimeout = setTimeout(startConnection, delay);
-                };
-            } else if (isActive) {
-                reconnectTimeout = setTimeout(startConnection, 5000);
-            }
-        };
-
-        startConnection();
-
+        // ✅ Deferred via setTimeout(0) — avoids synchronous setState lint warning
+        const timer = setTimeout(() => connectRef.current(), 0);
         return () => {
-            isActive = false;
-            es?.close();
-            if (reconnectTimeout) clearTimeout(reconnectTimeout);
+            clearTimeout(timer);
+            eventSourceRef.current?.close();
+            clearTimeout(reconnectTimeoutRef.current);
         };
     }, [connect]);
 
-    return { status };
+    return { connected, status };
 }

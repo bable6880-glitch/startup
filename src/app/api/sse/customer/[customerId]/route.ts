@@ -1,8 +1,8 @@
+export const runtime = "nodejs"; // REQUIRED — streaming won't work on edge runtime
+
 import { NextRequest } from "next/server";
 import { getAuthUser } from "@/lib/auth/get-auth-user";
-import { getLatestEvents, RealtimeChannels } from "@/lib/redis/pubsub";
-
-export const runtime = "nodejs";
+import { CHANNELS, readEvents } from "@/lib/redis/pubsub";
 
 export async function GET(
     request: NextRequest,
@@ -10,47 +10,47 @@ export async function GET(
 ) {
     const { customerId } = await params;
 
-    // 1. Auth check
+    // 1. Auth check — customers can ONLY subscribe to their OWN channel
     const user = await getAuthUser(request);
     if (!user || user.id !== customerId) {
-        return Response.json({ error: "Unauthorized" }, { status: 401 });
+        return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const encoder = new TextEncoder();
-    const channel = RealtimeChannels.customer(customerId);
+    const channel = CHANNELS.customerOrders(customerId);
+    let lastSeen = Date.now() - 5000; // look back 5s on connect
 
+    // 2. Stream SSE
     const stream = new ReadableStream({
         async start(controller) {
-            // Send initial connection event
-            controller.enqueue(encoder.encode("event: connected\ndata: { \"connected\": true }\n\n"));
+            const encoder = new TextEncoder();
+            const send = (data: string) => {
+                try { controller.enqueue(encoder.encode(data)); } catch { }
+            };
 
-            let lastEventTimestamp = new Date().toISOString();
+            // Send connection confirmation immediately
+            send(`data: ${JSON.stringify({ type: "CONNECTED", payload: { customerId }, timestamp: Date.now() })}\n\n`);
 
+            // Poll Redis every 2 seconds
             const interval = setInterval(async () => {
                 try {
-                    // Send heartbeat
-                    controller.enqueue(encoder.encode(": heartbeat\n\n"));
+                    send(": heartbeat\n\n"); // Prevents browser timeout
 
-                    // Fetch latest events
-                    const events = await getLatestEvents(channel);
-                    const newEvents = events.filter(e => e.timestamp > lastEventTimestamp);
-
-                    if (newEvents.length > 0) {
-                        for (const event of newEvents) {
-                            controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-                        }
-                        lastEventTimestamp = newEvents[newEvents.length - 1].timestamp;
+                    const events = await readEvents(channel, lastSeen);
+                    for (const event of events) {
+                        send(`data: ${JSON.stringify(event)}\n\n`);
+                        lastSeen = Math.max(lastSeen, event.timestamp);
                     }
                 } catch (error) {
-                    console.error("[SSE Customer] Push error:", error);
+                    console.error("[SSE/customer] Poll error:", error);
                     clearInterval(interval);
-                    controller.close();
+                    try { controller.close(); } catch { }
                 }
-            }, 3000);
+            }, 2000);
 
+            // Cleanup on client disconnect
             request.signal.addEventListener("abort", () => {
                 clearInterval(interval);
-                controller.close();
+                try { controller.close(); } catch { }
             });
         },
     });

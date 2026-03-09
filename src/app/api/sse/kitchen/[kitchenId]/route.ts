@@ -1,8 +1,8 @@
+export const runtime = "nodejs"; // REQUIRED — streaming won't work on edge runtime
+
 import { NextRequest } from "next/server";
 import { requireSeller } from "@/lib/auth/seller-guard";
-import { getLatestEvents, RealtimeChannels } from "@/lib/redis/pubsub";
-
-export const runtime = "nodejs";
+import { CHANNELS, readEvents } from "@/lib/redis/pubsub";
 
 export async function GET(
     request: NextRequest,
@@ -14,50 +14,46 @@ export async function GET(
     const guard = await requireSeller(request);
     if (!guard.ok) return guard.response;
 
-    // Verify this is the correct kitchen
+    // 2. Verify this is the correct kitchen
     if (guard.kitchen.id !== kitchenId) {
-        return Response.json({ error: "Unauthorized" }, { status: 401 });
+        return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const encoder = new TextEncoder();
-    const channel = RealtimeChannels.kitchen(kitchenId);
+    const channel = CHANNELS.kitchenOrders(kitchenId);
+    let lastSeen = Date.now() - 5000; // look back 5s on connect
 
+    // 3. Stream SSE
     const stream = new ReadableStream({
         async start(controller) {
-            // Send initial connection event
-            controller.enqueue(encoder.encode("event: connected\ndata: { \"connected\": true }\n\n"));
+            const encoder = new TextEncoder();
+            const send = (data: string) => {
+                try { controller.enqueue(encoder.encode(data)); } catch { }
+            };
 
-            // Last seen event timestamp to avoid duplicates
-            let lastEventTimestamp = new Date().toISOString();
+            // Send connection confirmation immediately
+            send(`data: ${JSON.stringify({ type: "CONNECTED", payload: { kitchenId }, timestamp: Date.now() })}\n\n`);
 
+            // Poll Redis every 2 seconds
             const interval = setInterval(async () => {
                 try {
-                    // Send heartbeat to keep connection alive
-                    controller.enqueue(encoder.encode(": heartbeat\n\n"));
+                    send(": heartbeat\n\n"); // Prevents browser timeout
 
-                    // Fetch latest events from Redis list
-                    const events = await getLatestEvents(channel);
-
-                    // Filter for only truly new events since last poll
-                    const newEvents = events.filter(e => e.timestamp > lastEventTimestamp);
-
-                    if (newEvents.length > 0) {
-                        for (const event of newEvents) {
-                            controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-                        }
-                        lastEventTimestamp = newEvents[newEvents.length - 1].timestamp;
+                    const events = await readEvents(channel, lastSeen);
+                    for (const event of events) {
+                        send(`data: ${JSON.stringify(event)}\n\n`);
+                        lastSeen = Math.max(lastSeen, event.timestamp);
                     }
                 } catch (error) {
-                    console.error("[SSE Kitchen] Push error:", error);
+                    console.error("[SSE/kitchen] Poll error:", error);
                     clearInterval(interval);
-                    controller.close();
+                    try { controller.close(); } catch { }
                 }
-            }, 3000); // 3s polling frequency
+            }, 2000);
 
-            // Request cleanup on client disconnect
+            // Cleanup on client disconnect
             request.signal.addEventListener("abort", () => {
                 clearInterval(interval);
-                controller.close();
+                try { controller.close(); } catch { }
             });
         },
     });
@@ -67,7 +63,7 @@ export async function GET(
             "Content-Type": "text/event-stream",
             "Cache-Control": "no-cache, no-transform",
             "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
+            "X-Accel-Buffering": "no", // Critical for AWS — disables proxy buffering
         },
     });
 }

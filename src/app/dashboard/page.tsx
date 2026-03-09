@@ -4,6 +4,9 @@ import { useAuth } from "@/lib/firebase/auth-context";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useKitchenSSE } from "@/hooks/use-kitchen-sse"; // ← PHASE 4 ADDED
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Kitchen = {
     id: string;
@@ -38,6 +41,15 @@ type TopFood = {
     totalRevenue: number;
 };
 
+// ─── Order type extended to support real-time prepend ────────────────────────
+type Order = {
+    id: string;
+    totalAmount: number;
+    status: string;
+};
+
+// ─── Main Dashboard Component ─────────────────────────────────────────────────
+
 function DashboardContent() {
     const { user, loading: authLoading, getIdToken } = useAuth();
     const router = useRouter();
@@ -46,13 +58,66 @@ function DashboardContent() {
 
     const [kitchen, setKitchen] = useState<Kitchen | null>(null);
     const [stats, setStats] = useState<Stats>({ totalOrders: 0, totalMeals: 0 });
-    const [orders, setOrders] = useState<{ id: string; totalAmount: number; status: string }[]>([]);
+    const [orders, setOrders] = useState<Order[]>([]);
     const [topBuyers, setTopBuyers] = useState<TopBuyer[]>([]);
     const [topFood, setTopFood] = useState<TopFood[]>([]);
     const [analyticsMonth, setAnalyticsMonth] = useState("");
     const [loading, setLoading] = useState(true);
 
-    // CHANGED [P4]: Parallelized independent data fetches
+    // ── PHASE 4 ADDED: Real-time toast state ──────────────────────────────────
+    const [realtimeToast, setRealtimeToast] = useState<string | null>(null);
+
+    // ── PHASE 4 ADDED: Handle new order arriving via SSE ─────────────────────
+    const handleNewOrder = useCallback((payload: Record<string, unknown>) => {
+        // 1. Build a new order object shaped like existing orders
+        const newOrder: Order = {
+            id: payload.orderId as string,
+            status: "PENDING",
+            totalAmount: payload.totalAmount as number,
+        };
+
+        // 2. Prepend to orders list (appears at top instantly, no refresh needed)
+        setOrders((prev) => [newOrder, ...prev]);
+
+        // 3. Increment the Orders stat card counter
+        setStats((prev) => ({ ...prev, totalOrders: prev.totalOrders + 1 }));
+
+        // 4. Show green toast notification (auto-dismisses after 5s)
+        const msg = `🍽️ New order from ${payload.customerName} — Rs. ${Number(payload.totalAmount).toLocaleString()}`;
+        setRealtimeToast(msg);
+        setTimeout(() => setRealtimeToast(null), 5000);
+
+        // 5. Play a short audio beep using Web Audio API (no library needed)
+        try {
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 523; // C5 — pleasant notification tone
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + 0.4);
+        } catch {
+            // Audio unavailable in this context — silently ignore
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // ── PHASE 4 ADDED: Connect to SSE stream for this kitchen ────────────────
+    const { connected } = useKitchenSSE({
+        kitchenId: kitchen?.id ?? "",
+        onNewOrder: handleNewOrder,
+    });
+
+    // ── PHASE 4 ADDED: Request browser notification permission on mount ───────
+    useEffect(() => {
+        if ("Notification" in window && Notification.permission === "default") {
+            Notification.requestPermission();
+        }
+    }, []);
+
+    // ── Existing: Load all dashboard data ────────────────────────────────────
     const loadDashboard = useCallback(async () => {
         try {
             const token = await getIdToken();
@@ -152,6 +217,20 @@ function DashboardContent() {
 
     return (
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+
+            {/* ── PHASE 4 ADDED: Real-time toast notification (fixed, top-right) ── */}
+            {realtimeToast && (
+                <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 animate-in slide-in-from-top-2">
+                    <span className="text-sm font-medium">{realtimeToast}</span>
+                    <button
+                        onClick={() => setRealtimeToast(null)}
+                        className="text-white/80 hover:text-white text-xl leading-none ml-1"
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+
             {/* Success Banner */}
             {justRegistered && (
                 <div className="mb-6 rounded-xl bg-accent-50 border border-accent-200 px-4 py-3 text-sm text-accent-800 animate-slide-up dark:bg-accent-900/30 dark:border-accent-800 dark:text-accent-300">
@@ -159,12 +238,33 @@ function DashboardContent() {
                 </div>
             )}
 
-            {/* Header */}
+            {/* Header — PHASE 4: added Live/Reconnecting dot next to title */}
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-50">
-                        Cook Dashboard
-                    </h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-50">
+                            Cook Dashboard
+                        </h1>
+                        {/* ── PHASE 4 ADDED: SSE connection status indicator ── */}
+                        {kitchen && (
+                            <div className="flex items-center gap-1.5 text-xs">
+                                {connected ? (
+                                    <>
+                                        <span className="relative flex h-2 w-2">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                                        </span>
+                                        <span className="text-green-600 font-medium">Live</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="h-2 w-2 rounded-full bg-gray-400 animate-pulse" />
+                                        <span className="text-gray-400">Reconnecting...</span>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
                     <p className="mt-1 text-neutral-500 dark:text-neutral-400">
                         Welcome back, {user?.name?.split(" ")[0]}
                     </p>
@@ -234,7 +334,7 @@ function DashboardContent() {
 
                     {/* ── Analytics Section ── */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                        {/* Top 2 Buyers This Month */}
+                        {/* Top Buyers This Month */}
                         <div className="rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-sm dark:bg-neutral-800 dark:border-neutral-700">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="font-bold text-neutral-900 dark:text-neutral-50">🏆 Top Buyers</h2>
@@ -306,7 +406,7 @@ function DashboardContent() {
                         </div>
                     </div>
 
-                    {/* Recent Orders */}
+                    {/* Recent Orders — PHASE 4: Added Accept button on PENDING orders */}
                     <section>
                         <h2 className="text-lg font-bold text-neutral-900 mb-4 dark:text-neutral-50">Recent Orders</h2>
                         {orders.length > 0 ? (
@@ -324,14 +424,34 @@ function DashboardContent() {
                                                 Rs. {Number(order.totalAmount).toLocaleString()} · {order.status}
                                             </p>
                                         </div>
-                                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${order.status === "COMPLETED" ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300" :
+
+                                        {/* Right side: status badge + accept button */}
+                                        <div className="flex items-center gap-2">
+                                            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${order.status === "COMPLETED" ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300" :
                                                 order.status === "PENDING" ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" :
                                                     order.status === "ACCEPTED" ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" :
                                                         order.status === "CANCELLED" ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300" :
                                                             "bg-neutral-100 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300"
-                                            }`}>
-                                            {order.status}
-                                        </span>
+                                                }`}>
+                                                {order.status}
+                                            </span>
+
+                                            {/* ── PHASE 4 ADDED: One-click Accept button for PENDING orders ── */}
+                                            {order.status === "PENDING" && (
+                                                <AcceptOrderButton
+                                                    orderId={order.id}
+                                                    onAccepted={() => {
+                                                        setOrders((prev) =>
+                                                            prev.map((o) =>
+                                                                o.id === order.id
+                                                                    ? { ...o, status: "ACCEPTED" }
+                                                                    : o
+                                                            )
+                                                        );
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -344,6 +464,8 @@ function DashboardContent() {
         </div>
     );
 }
+
+// ─── Stat Card (unchanged) ────────────────────────────────────────────────────
 
 function StatCard({ icon, label, value }: { icon: string; label: string; value: string }) {
     return (
@@ -358,6 +480,58 @@ function StatCard({ icon, label, value }: { icon: string; label: string; value: 
         </div>
     );
 }
+
+// ─── PHASE 4 ADDED: Accept Order Button Component ─────────────────────────────
+
+function AcceptOrderButton({
+    orderId,
+    onAccepted,
+}: {
+    orderId: string;
+    onAccepted: () => void;
+}) {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleAccept = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await fetch(`/api/orders/${orderId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "ACCEPTED" }),
+            });
+            if (!res.ok) throw new Error("Failed");
+            onAccepted(); // Instantly update local state — no refetch needed
+        } catch {
+            setError("Failed");
+            setTimeout(() => setError(null), 3000);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="flex flex-col items-end">
+            <button
+                onClick={handleAccept}
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-900/20"
+            >
+                {loading && (
+                    <span className="animate-spin h-3 w-3 border border-blue-500 border-t-transparent rounded-full" />
+                )}
+                {loading ? "Updating..." : "Accept"}
+            </button>
+            {error && (
+                <p className="text-xs text-red-500 mt-1">{error}</p>
+            )}
+        </div>
+    );
+}
+
+// ─── Page Wrapper (unchanged) ─────────────────────────────────────────────────
 
 export default function DashboardPage() {
     return (

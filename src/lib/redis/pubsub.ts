@@ -1,40 +1,62 @@
 import { redis } from "./index";
 import { logger } from "@/lib/utils/logger";
 
-/**
- * Standard event structure for SSE
- */
-export interface RealtimeEvent {
-    type: "NEW_ORDER" | "ORDER_STATUS" | "PING";
-    timestamp: string;
+// ─── Channel Name Helpers ────────────────────────────────────────────────────
+
+export const CHANNELS = {
+    kitchenOrders: (kitchenId: string) => `st:orders:kitchen:${kitchenId}`,
+    customerOrders: (customerId: string) => `st:orders:customer:${customerId}`,
+} as const;
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export type SSEEventType =
+    | "NEW_ORDER"
+    | "ORDER_STATUS_CHANGED"
+    | "NEW_REVIEW"
+    | "SUBSCRIPTION_CHANGED"
+    | "CONNECTED"
+    | "HEARTBEAT";
+
+export interface SSEPayload {
+    type: SSEEventType;
     payload: Record<string, unknown>;
+    timestamp: number;
 }
+
+// Keep legacy type alias for any existing code using RealtimeEvent
+export type RealtimeEvent = SSEPayload;
+
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 const EVENT_LIST_LIMIT = 50;
 const CHANNEL_TTL = 3600; // 1 hour
 
+// ─── Publish ─────────────────────────────────────────────────────────────────
+
 /**
- * Publish an event to a Redis-backed channel (list)
+ * Publish an event to a Redis-backed channel (list).
+ * Matches Phase 3 API: publishEvent(channel, { type, payload })
  */
-export async function collectAndPublishEvent(channel: string, event: Omit<RealtimeEvent, "timestamp">) {
+export async function publishEvent(
+    channel: string,
+    event: Omit<SSEPayload, "timestamp">
+): Promise<void> {
     if (!redis) return;
 
     try {
-        const fullEvent: RealtimeEvent = {
+        const fullEvent: SSEPayload = {
             ...event,
-            timestamp: new Date().toISOString(),
+            timestamp: Date.now(),
         };
 
-        const eventStr = JSON.stringify(fullEvent);
+        const key = `${channel}:events`;
 
-        // RPUSH to the end of the list
-        // LTRIM to keep only the last N events
-        // EXPIRE to ensure the channel cleans up if unused
         await redis
             .pipeline()
-            .rpush(channel, eventStr)
-            .ltrim(channel, -EVENT_LIST_LIMIT, -1)
-            .expire(channel, CHANNEL_TTL)
+            .lpush(key, JSON.stringify(fullEvent))
+            .ltrim(key, 0, EVENT_LIST_LIMIT - 1) // Keep last 50 events
+            .expire(key, CHANNEL_TTL)             // Auto-expire after 1 hour
             .exec();
 
         logger.debug("Real-time event published", { channel, type: event.type });
@@ -46,15 +68,32 @@ export async function collectAndPublishEvent(channel: string, event: Omit<Realti
     }
 }
 
+// ─── Read ────────────────────────────────────────────────────────────────────
+
 /**
- * Read the latest events from a channel
+ * Read events newer than a given timestamp from a channel.
+ * Matches Phase 3 API: readEvents(channel, since)
  */
-export async function getLatestEvents(channel: string): Promise<RealtimeEvent[]> {
+export async function readEvents(
+    channel: string,
+    since: number
+): Promise<SSEPayload[]> {
     if (!redis) return [];
 
     try {
-        const rawEvents = await redis.lrange<string>(channel, 0, -1);
-        return rawEvents.map((e) => JSON.parse(e));
+        const key = `${channel}:events`;
+        const raw = await redis.lrange<string>(key, 0, EVENT_LIST_LIMIT - 1);
+
+        return raw
+            .map((item) => {
+                try {
+                    return JSON.parse(item) as SSEPayload;
+                } catch {
+                    return null;
+                }
+            })
+            .filter((e): e is SSEPayload => e !== null && e.timestamp > since)
+            .sort((a, b) => a.timestamp - b.timestamp);
     } catch (error) {
         logger.error("Failed to read real-time events", {
             channel,
@@ -64,8 +103,27 @@ export async function getLatestEvents(channel: string): Promise<RealtimeEvent[]>
     }
 }
 
+// ─── Legacy Helpers (kept for backward compatibility) ────────────────────────
+
 /**
- * Convenience helpers for specific channels
+ * @deprecated Use publishEvent() instead
+ */
+export async function collectAndPublishEvent(
+    channel: string,
+    event: Omit<RealtimeEvent, "timestamp">
+): Promise<void> {
+    return publishEvent(channel, event as Omit<SSEPayload, "timestamp">);
+}
+
+/**
+ * @deprecated Use readEvents() instead
+ */
+export async function getLatestEvents(channel: string): Promise<RealtimeEvent[]> {
+    return readEvents(channel, 0);
+}
+
+/**
+ * @deprecated Use CHANNELS instead
  */
 export const RealtimeChannels = {
     kitchen: (kitchenId: string) => `st:events:kitchen:${kitchenId}`,

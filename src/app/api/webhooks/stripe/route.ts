@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleStripeEvent } from "@/services/premium.service";
-import { stripe, type Stripe } from "@/lib/stripe";
+import { stripe } from "@/lib/stripe";
+import type Stripe from "stripe";
 
 /**
  * POST /api/webhooks/stripe

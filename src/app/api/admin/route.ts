@@ -51,29 +51,33 @@ export async function GET(request: NextRequest) {
             const { users: usersTable } = await import("@/lib/db/schema");
             const { db: database } = await import("@/lib/db");
             const { desc: descOrder, sql: sqlFn } = await import("drizzle-orm");
-            const offset = (page - 1) * limit;
+            const cursor = request.nextUrl.searchParams.get("cursor");
 
-            const [data, countResult] = await Promise.all([
-                database.query.users.findMany({
-                    orderBy: [descOrder(usersTable.createdAt)],
-                    limit,
-                    offset,
-                    columns: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        role: true,
-                        isActive: true,
-                        createdAt: true,
-                        avatarUrl: true,
-                    },
-                }),
-                database
-                    .select({ count: sqlFn<number>`count(*)` })
-                    .from(usersTable),
-            ]);
+            const conditions = [];
+            if (cursor) {
+                conditions.push(sqlFn`${usersTable.id} > ${cursor}`);
+            }
 
-            return apiPaginated(data, { page, limit, total: Number(countResult[0].count) });
+            const data = await database.query.users.findMany({
+                where: conditions.length ? (await import("drizzle-orm")).and(...conditions) : undefined,
+                orderBy: [descOrder(usersTable.createdAt)],
+                limit: limit + 1,
+                columns: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                    isActive: true,
+                    createdAt: true,
+                    avatarUrl: true,
+                },
+            });
+
+            const hasMore = data.length > limit;
+            const results = hasMore ? data.slice(0, -1) : data;
+            const nextCursor = hasMore ? results[results.length - 1].id : null;
+
+            return apiSuccess({ data: results, nextCursor });
         }
 
         // CHANGED [H5]: Added kitchens listing for admin
@@ -81,33 +85,38 @@ export async function GET(request: NextRequest) {
             const { kitchens: kitchensTable } = await import("@/lib/db/schema");
             const { db: database } = await import("@/lib/db");
             const { desc: descOrder, sql: sqlFn } = await import("drizzle-orm");
-            const offset = (page - 1) * limit;
 
-            const [data, countResult] = await Promise.all([
-                database.query.kitchens.findMany({
-                    orderBy: [descOrder(kitchensTable.createdAt)],
-                    limit,
-                    offset,
-                    columns: {
-                        id: true,
-                        name: true,
-                        city: true,
-                        status: true,
-                        isVerified: true,
-                        avgRating: true,
-                        reviewCount: true,
-                        createdAt: true,
-                    },
-                    with: {
-                        owner: { columns: { id: true, name: true, email: true } },
-                    },
-                }),
-                database
-                    .select({ count: sqlFn<number>`count(*)` })
-                    .from(kitchensTable),
-            ]);
+            const cursor = request.nextUrl.searchParams.get("cursor");
 
-            return apiPaginated(data, { page, limit, total: Number(countResult[0].count) });
+            const conditions = [];
+            if (cursor) {
+                conditions.push(sqlFn`${kitchensTable.id} > ${cursor}`);
+            }
+
+            const data = await database.query.kitchens.findMany({
+                where: conditions.length ? (await import("drizzle-orm")).and(...conditions) : undefined,
+                orderBy: [descOrder(kitchensTable.createdAt)],
+                limit: limit + 1,
+                columns: {
+                    id: true,
+                    name: true,
+                    city: true,
+                    status: true,
+                    isVerified: true,
+                    avgRating: true,
+                    reviewCount: true,
+                    createdAt: true,
+                },
+                with: {
+                    owner: { columns: { id: true, name: true, email: true } },
+                },
+            });
+
+            const hasMore = data.length > limit;
+            const results = hasMore ? data.slice(0, -1) : data;
+            const nextCursor = hasMore ? results[results.length - 1].id : null;
+
+            return apiSuccess({ data: results, nextCursor });
         }
 
         // CHANGED [H5]: Added audit log listing for admin

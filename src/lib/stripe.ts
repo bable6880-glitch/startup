@@ -1,11 +1,13 @@
-import Stripe from "stripe";
+import Stripe from 'stripe';
 
 if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error("STRIPE_SECRET_KEY is not set in environment variables");
+    throw new Error(
+        '[Stripe] STRIPE_SECRET_KEY environment variable is not set. ' +
+        'Add it to your .env.local file and AWS Amplify env vars.'
+    );
 }
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2026-02-25.clover",
+    apiVersion: '2026-02-25.clover',
+    typescript: true,
 });
-
-export type { Stripe } from "stripe";
