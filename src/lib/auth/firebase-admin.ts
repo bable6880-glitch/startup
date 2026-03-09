@@ -37,8 +37,18 @@ function getFirebaseAdmin(): Auth {
         );
     }
 
-    // Parse the JSON — works whether it's single-line or formatted
-    const serviceAccount = JSON.parse(serviceAccountKey);
+    // ✅ Fix literal \n → real newlines in case the key was pasted incorrectly in Amplify
+    let serviceAccount;
+    try {
+        const cleaned = serviceAccountKey.replace(/\\n/g, "\n");
+        serviceAccount = JSON.parse(cleaned);
+    } catch (err) {
+        throw new FirebaseAuthError(
+            `Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY: ${err}`,
+            "auth/config-invalid",
+            500
+        );
+    }
 
     _app =
         getApps().length === 0
