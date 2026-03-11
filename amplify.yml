@@ -9,10 +9,8 @@ frontend:
         - npm install --prefer-offline
     build:
       commands:
-        # Verify NEXT_PUBLIC_BASE_URL is set in Amplify Console > Environment Variables
-        # Note: middleware renamed from middleware.ts → proxy.ts to avoid Amplify naming conflicts
-        - echo "NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL"
-        - 'if [ -z "$NEXT_PUBLIC_BASE_URL" ]; then echo "WARNING: NEXT_PUBLIC_BASE_URL is not set!"; fi'
+        - echo "DATABASE_URL=$DATABASE_URL"
+        - echo "UPSTASH_REDIS_REST_URL=$UPSTASH_REDIS_REST_URL"
         - npm run build
   environmentVariables:
     NEXT_PUBLIC_BASE_URL: https://main.d3rcns8buqla6w.amplifyapp.com
