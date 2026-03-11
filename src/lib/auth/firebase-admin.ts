@@ -37,11 +37,14 @@ function getFirebaseAdmin(): Auth {
         );
     }
 
-    // ✅ Fix literal \n → real newlines in case the key was pasted incorrectly in Amplify
-    let serviceAccount;
+    // ✅ Fix literal \n → real newlines AFTER JSON parsing, in case the key was pasted incorrectly in Amplify
+    let serviceAccount: Record<string, string>;
     try {
-        const cleaned = serviceAccountKey.replace(/\\n/g, "\n");
-        serviceAccount = JSON.parse(cleaned);
+        serviceAccount = JSON.parse(serviceAccountKey);
+        if (serviceAccount.private_key) {
+            // Replace double-escaped newlines with actual newlines
+            serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
+        }
     } catch (err) {
         throw new FirebaseAuthError(
             `Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY: ${err}`,

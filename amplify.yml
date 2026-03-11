@@ -9,8 +9,7 @@ frontend:
         - npm install --prefer-offline
     build:
       commands:
-        - echo "DATABASE_URL=$DATABASE_URL"
-        - echo "UPSTASH_REDIS_REST_URL=$UPSTASH_REDIS_REST_URL"
+        - env | grep -E '^DATABASE_URL|^FIREBASE_|^UPSTASH_|^STRIPE_|^NEXT_PUBLIC_|^CRON_|^CLOUDINARY_' >> .env.production
         - npm run build
   environmentVariables:
     NEXT_PUBLIC_BASE_URL: https://main.d3rcns8buqla6w.amplifyapp.com

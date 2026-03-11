@@ -4,6 +4,7 @@ const AMPLIFY_URL = process.env.NEXT_PUBLIC_BASE_URL || "";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  output: "standalone",
   serverExternalPackages: ["firebase-admin"],
 
   // Replace deprecated `domains` with `remotePatterns`
