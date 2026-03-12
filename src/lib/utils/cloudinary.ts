@@ -16,8 +16,8 @@ export function getSignedUploadParams(folder: UploadFolder) {
     const params: UploadApiOptions = {
         timestamp,
         folder: `smart-tiffin/${folder}`,
-        allowed_formats: ["jpg", "jpeg", "png", "webp"],
-        max_file_size: 5_000_000, // 5MB
+        allowed_formats: ["jpg", "jpeg", "png", "webp", "gif"],
+        max_bytes: 5 * 1024 * 1024,
         transformation: [
             { width: 1200, height: 1200, crop: "limit", quality: "auto:good" },
         ],

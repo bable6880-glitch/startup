@@ -1,8 +1,11 @@
 export const runtime = "nodejs"; // REQUIRED — streaming won't work on edge runtime
 
 import { NextRequest } from "next/server";
-import { requireSeller } from "@/lib/auth/seller-guard";
 import { CHANNELS, readEvents } from "@/lib/redis/pubsub";
+import { resolveSseTicket } from "@/lib/auth/resolve-sse-ticket";
+import { db } from "@/lib/db";
+import { kitchens } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 export async function GET(
     request: NextRequest,
@@ -10,12 +13,19 @@ export async function GET(
 ) {
     const { kitchenId } = await params;
 
-    // 1. Auth check
-    const guard = await requireSeller(request);
-    if (!guard.ok) return guard.response;
+    // 1. Auth check using ticket
+    const ticket = request.nextUrl.searchParams.get("ticket");
+    if (!ticket) return Response.json({ error: "Missing ticket" }, { status: 401 });
+
+    const authUser = await resolveSseTicket(ticket);
+    if (!authUser) return Response.json({ error: "Invalid or expired ticket" }, { status: 401 });
 
     // 2. Verify this is the correct kitchen
-    if (guard.kitchen.id !== kitchenId) {
+    const kitchen = await db.query.kitchens.findFirst({
+        where: eq(kitchens.ownerId, authUser.userId),
+    });
+
+    if (!kitchen || kitchen.id !== kitchenId) {
         return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 

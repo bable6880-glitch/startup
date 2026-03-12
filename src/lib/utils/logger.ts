@@ -39,3 +39,12 @@ export const logger = {
         }
     },
 };
+
+export function createLogger(baseContext: LogContext) {
+    return {
+        info: (message: string, context?: LogContext) => logger.info(message, { ...baseContext, ...context }),
+        warn: (message: string, context?: LogContext) => logger.warn(message, { ...baseContext, ...context }),
+        error: (message: string, context?: LogContext) => logger.error(message, { ...baseContext, ...context }),
+        debug: (message: string, context?: LogContext) => logger.debug(message, { ...baseContext, ...context }),
+    };
+}

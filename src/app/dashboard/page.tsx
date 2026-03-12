@@ -243,7 +243,7 @@ function DashboardContent() {
                 <div>
                     <div className="flex items-center gap-3">
                         <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-50">
-                            Cook Dashboard
+                            Manage Your Tiffin Service & Home Cooked Food Business
                         </h1>
                         {/* ── PHASE 4 ADDED: SSE connection status indicator ── */}
                         {kitchen && (
@@ -461,6 +461,44 @@ function DashboardContent() {
                     </section>
                 </>
             )}
+
+            {/* ── SEO Content Section ─────────────────────────────────────────── */}
+            <section className="mt-12 rounded-2xl border border-neutral-200/60 bg-neutral-50/50 p-6 sm:p-8 dark:bg-neutral-800/50 dark:border-neutral-700">
+                <h2 className="text-lg font-bold text-neutral-800 mb-3 dark:text-neutral-100">
+                    Grow Your Tiffin Service Business
+                </h2>
+                <p className="text-sm text-neutral-500 leading-relaxed dark:text-neutral-400">
+                    The Seller Dashboard helps you manage your tiffin service efficiently.
+                    Track orders, update your menu,
+                    and monitor performance for your home cooked food business in one place.
+                </p>
+
+                <h3 className="text-base font-semibold text-neutral-700 mt-5 mb-2 dark:text-neutral-200">
+                    Manage Meal Delivery Orders Easily
+                </h3>
+                <p className="text-sm text-neutral-500 leading-relaxed dark:text-neutral-400">
+                    View incoming meal delivery requests, update order status, and
+                    communicate with customers directly.
+                    The dashboard allows you to stay organized while scaling your monthly
+                    tiffin service in Pakistan.
+                </p>
+
+                <h3 className="text-base font-semibold text-neutral-700 mt-5 mb-2 dark:text-neutral-200">
+                    Optimize Your Home Cooked Food Listings
+                </h3>
+                <p className="text-sm text-neutral-500 leading-relaxed dark:text-neutral-400">
+                    Add new meals, update prices, manage availability, and improve visibility
+                    in search results.
+                    Sellers can track performance and identify which dishes perform best in
+                    local searches such as
+                    home cooked food delivery near me.
+                </p>
+                <p className="text-sm text-neutral-500 leading-relaxed mt-4 dark:text-neutral-400">
+                    Use analytics and premium features to improve ranking, increase repeat
+                    customers, and grow your
+                    meal delivery business consistently.
+                </p>
+            </section>
         </div>
     );
 }

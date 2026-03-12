@@ -1,8 +1,8 @@
 export const runtime = "nodejs"; // REQUIRED — streaming won't work on edge runtime
 
 import { NextRequest } from "next/server";
-import { getAuthUser } from "@/lib/auth/get-auth-user";
 import { CHANNELS, readEvents } from "@/lib/redis/pubsub";
+import { resolveSseTicket } from "@/lib/auth/resolve-sse-ticket";
 
 export async function GET(
     request: NextRequest,
@@ -10,9 +10,12 @@ export async function GET(
 ) {
     const { customerId } = await params;
 
-    // 1. Auth check — customers can ONLY subscribe to their OWN channel
-    const user = await getAuthUser(request);
-    if (!user || user.id !== customerId) {
+    // 1. Auth check using ticket
+    const ticket = request.nextUrl.searchParams.get("ticket");
+    if (!ticket) return Response.json({ error: "Missing ticket" }, { status: 401 });
+
+    const authUser = await resolveSseTicket(ticket);
+    if (!authUser || authUser.userId !== customerId) {
         return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 

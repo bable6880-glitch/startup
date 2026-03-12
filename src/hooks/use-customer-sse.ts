@@ -33,7 +33,15 @@ export function useCustomerSSE({ customerId, onStatusChange }: UseCustomerSSEOpt
 
             setStatus("connecting");
 
-            const es = new EventSource(`/api/sse/customer/${customerId}?token=${token}`, { withCredentials: true });
+            // Step 1: Get one-time ticket
+            const ticketRes = await fetch("/api/sse/ticket", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const { data: { ticket } } = await ticketRes.json();
+
+            // Step 2: Open SSE with ticket
+            const es = new EventSource(`/api/sse/customer/${customerId}?ticket=${ticket}`, { withCredentials: true });
             eventSourceRef.current = es;
 
             es.onopen = () => {

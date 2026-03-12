@@ -4,6 +4,7 @@ import { eq, and, isNull, asc } from "drizzle-orm";
 import { cached, invalidateCache, CacheKeys, CacheTTL } from "@/lib/redis";
 import type { CreateMealInput, UpdateMealInput } from "@/lib/validations/menu";
 import { NotFoundError, AuthorizationError } from "@/lib/utils/errors";
+import { sanitizeRichText } from "@/lib/utils/sanitize";
 
 // ─── Verify Kitchen Ownership ───────────────────────────────────────────────
 
@@ -30,12 +31,14 @@ export async function createMeal(
 ) {
     await verifyKitchenOwner(kitchenId, userId);
 
+    const sanitizedDescription = input.description ? sanitizeRichText(input.description) : input.description;
+
     const [meal] = await db
         .insert(meals)
         .values({
             kitchenId,
             name: input.name,
-            description: input.description,
+            description: sanitizedDescription,
             price: input.price,
             currency: input.currency,
             imageUrl: input.imageUrl,
@@ -102,9 +105,14 @@ export async function updateMeal(
 
     if (!meal) throw new NotFoundError("Meal");
 
+    const updateData: Record<string, unknown> = { ...input, updatedAt: new Date() };
+    if (input.description) {
+        updateData.description = sanitizeRichText(input.description);
+    }
+
     const [updated] = await db
         .update(meals)
-        .set({ ...input, updatedAt: new Date() })
+        .set(updateData)
         .where(eq(meals.id, mealId))
         .returning();
 

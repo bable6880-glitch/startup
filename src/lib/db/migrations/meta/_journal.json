@@ -15,6 +15,13 @@
       "when": 1772098055211,
       "tag": "0001_dashing_skrulls",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773300514557,
+      "tag": "0002_romantic_felicia_hardy",
+      "breakpoints": true
     }
   ]
 }

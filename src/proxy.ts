@@ -1,21 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
-const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
-const publicLimits: Record<string, number> = {
-    "/api/auth": 10,
-    "/api/kitchens": 60,
-    "/api/search": 60,
-    "/api/reviews": 30,
-    "/api/orders": 20,
-    "/api/premium": 20,
-    "/api/admin": 30,
-};
-const DEFAULT_LIMIT = 60;
-
-// In-memory rate limiter (per Lambda instance on Amplify)
-const requestCounts = new Map<string, { count: number; resetAt: number }>();
+import { rateLimiters, getLimiterKey, getClientIp } from "@/lib/rate-limit";
+import { logger } from "@/lib/utils/logger";
+import { randomUUID } from "crypto";
 
 // ─── CORS Origins ─────────────────────────────────────────────────────────
 // Build the allowed origins list dynamically so it works across:
@@ -64,13 +54,22 @@ function addCorsHeaders(response: NextResponse, origin: string | null) {
 // ─── Proxy ──────────────────────────────────────────────────────────────────
 // Next.js 16+ requires `proxy.ts` to export a function named `proxy`.
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+    const requestId = randomUUID();
     const { pathname } = request.nextUrl;
+    const ip = getClientIp(request);
 
     // Only apply to API routes
-    if (!pathname.startsWith("/api")) {
+    if (!pathname.startsWith("/api/")) {
         return NextResponse.next();
     }
+
+    logger.info("Incoming API Request", {
+        requestId,
+        method: request.method,
+        path: pathname,
+        ip,
+    });
 
     const origin = request.headers.get("origin");
 
@@ -97,76 +96,58 @@ export function proxy(request: NextRequest) {
         );
     }
 
-    // ── 2. Rate Limiting (In-Memory per Lambda instance) ─────────────────────
-    const clientIp =
-        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-        request.headers.get("x-real-ip") ||
-        "unknown";
+    // ── 2. Rate Limiting (Distributed) ─────────────────────────────────────────
+    const limiterKey = getLimiterKey(pathname);
+    const limiter = rateLimiters[limiterKey];
 
-    const rateLimitKey = `${clientIp}:${pathname.split("/").slice(0, 3).join("/")}`;
-    const now = Date.now();
-    const existing = requestCounts.get(rateLimitKey);
-    const routePrefix = "/" + pathname.split("/").slice(1, 3).join("/");
-    const limit = publicLimits[routePrefix] || DEFAULT_LIMIT;
+    let rateLimitInfo = null;
 
-    if (existing) {
-        if (now > existing.resetAt) {
-            requestCounts.set(rateLimitKey, {
-                count: 1,
-                resetAt: now + RATE_LIMIT_WINDOW_MS,
-            });
-        } else if (existing.count >= limit) {
+    if (limiter) {
+        const ip = getClientIp(request);
+        const identifier = `${ip}:${limiterKey}`;
+        const { success, limit, remaining, reset } = await limiter.limit(identifier);
+
+        rateLimitInfo = { limit, remaining, reset };
+
+        if (!success) {
             return NextResponse.json(
                 {
                     success: false,
                     error: {
                         code: "RATE_LIMITED",
-                        message: "Too many requests. Please try again later.",
+                        message: "Too many requests. Please slow down.",
                     },
                 },
                 {
                     status: 429,
                     headers: {
-                        "Retry-After": Math.ceil(
-                            (existing.resetAt - now) / 1000
-                        ).toString(),
                         "X-RateLimit-Limit": limit.toString(),
                         "X-RateLimit-Remaining": "0",
-                        "X-RateLimit-Reset": existing.resetAt.toString(),
+                        "X-RateLimit-Reset": reset.toString(),
+                        "Retry-After": Math.ceil((reset - Date.now()) / 1000).toString(),
                     },
                 }
             );
-        } else {
-            existing.count++;
         }
-    } else {
-        requestCounts.set(rateLimitKey, {
-            count: 1,
-            resetAt: now + RATE_LIMIT_WINDOW_MS,
-        });
     }
 
-    // ── 3. Build response with CORS + Security headers ───────────────────────
+    // ── 3. Build response with CORS headers ───────────────────────
     const response = NextResponse.next();
     addCorsHeaders(response, origin);
 
-    // Security headers
-    response.headers.set("X-Content-Type-Options", "nosniff");
-    response.headers.set("X-Frame-Options", "SAMEORIGIN");
-    response.headers.set("X-XSS-Protection", "1; mode=block");
-    response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    // Request Correlation ID
+    response.headers.set("X-Request-Id", requestId);
 
     // Rate limit info headers
-    const currentCount = requestCounts.get(rateLimitKey);
-    if (currentCount) {
-        response.headers.set("X-RateLimit-Limit", limit.toString());
+    if (rateLimitInfo) {
+        response.headers.set("X-RateLimit-Limit", rateLimitInfo.limit.toString());
         response.headers.set(
             "X-RateLimit-Remaining",
-            Math.max(0, limit - currentCount.count).toString()
+            rateLimitInfo.remaining.toString()
         );
         response.headers.set(
             "X-RateLimit-Reset",
-            currentCount.resetAt.toString()
+            rateLimitInfo.reset.toString()
         );
     }
 

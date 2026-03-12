@@ -4,6 +4,7 @@ import { eq, and, desc } from "drizzle-orm";
 import type { CreateOrderInput, UpdateOrderStatusInput } from "@/lib/validations/order";
 import { NotFoundError, AuthorizationError, ValidationError } from "@/lib/utils/errors";
 import { publishEvent, CHANNELS } from "@/lib/redis/pubsub";
+import { sanitizeText } from "@/lib/utils/sanitize";
 
 // ─── Create Order ───────────────────────────────────────────────────────────
 
@@ -24,17 +25,16 @@ export async function createOrder(customerId: string, input: CreateOrderInput) {
         where: and(eq(meals.kitchenId, input.kitchenId)),
     });
 
-    const mealMap = new Map(mealRecords.map((m) => [m.id, m]));
+    // 2. Calculate total amount and check availability
     let totalAmount = 0;
-
     for (const item of input.items) {
-        const meal = mealMap.get(item.mealId);
-        if (!meal) throw new NotFoundError(`Meal ${item.mealId}`);
-        if (!meal.isAvailable) {
-            throw new ValidationError(`${meal.name} is not available`);
-        }
+        const meal = mealRecords.find((m) => m.id === item.mealId);
+        if (!meal) throw new ValidationError(`Meal not found: ${item.mealId}`);
+        if (!meal.isAvailable) throw new ValidationError(`Meal is currently unavailable: ${meal.name}`);
         totalAmount += meal.price * item.quantity;
     }
+
+    const sanitizedNotes = input.notes ? sanitizeText(input.notes) : input.notes;
 
     // 3. Create order
     const [order] = await db
@@ -43,22 +43,31 @@ export async function createOrder(customerId: string, input: CreateOrderInput) {
             kitchenId: input.kitchenId,
             customerId,
             status: "PENDING",
-            notes: input.notes,
+            notes: sanitizedNotes,
             totalAmount,
             currency: mealRecords[0]?.currency ?? "PKR",
         })
         .returning();
 
-    // 4. Create order items
-    const itemValues = input.items.map((item) => ({
-        orderId: order.id,
-        mealId: item.mealId,
-        quantity: item.quantity,
-        priceAtOrder: mealMap.get(item.mealId)!.price,
-        notes: item.notes,
-    }));
-
-    await db.insert(orderItems).values(itemValues);
+    // 4. Create order items (Atomic approximation via compensation)
+    try {
+        await db.insert(orderItems).values(
+            input.items.map((item) => {
+                const meal = mealRecords.find((m) => m.id === item.mealId)!;
+                return {
+                    orderId: order.id,
+                    mealId: item.mealId,
+                    quantity: item.quantity,
+                    priceAtOrder: meal.price,
+                    notes: item.notes,
+                };
+            })
+        );
+    } catch (error) {
+        // Compensation: delete the orphaned order if item insertion fails
+        await db.delete(orders).where(eq(orders.id, order.id));
+        throw new Error("Failed to create order items. Order creation rolled back.");
+    }
 
     // ── 5. Real-time: notify cook dashboard ────────────────────────────────
     try {
@@ -66,11 +75,14 @@ export async function createOrder(customerId: string, input: CreateOrderInput) {
             type: "NEW_ORDER",
             payload: {
                 orderId: order.id,
-                items: itemValues.map((item) => ({
-                    mealId: item.mealId,
-                    quantity: item.quantity,
-                    price: item.priceAtOrder,
-                })),
+                items: input.items.map((item) => {
+                    const meal = mealRecords.find((m) => m.id === item.mealId)!;
+                    return {
+                        mealId: item.mealId,
+                        quantity: item.quantity,
+                        price: meal.price,
+                    };
+                }),
                 totalAmount: order.totalAmount,
                 currency: order.currency,
                 notes: order.notes ?? "",
@@ -83,7 +95,15 @@ export async function createOrder(customerId: string, input: CreateOrderInput) {
     // ── 6. Return order with kitchen contact info ───────────────────────────
     return {
         ...order,
-        items: itemValues,
+        items: input.items.map((item) => {
+            const meal = mealRecords.find((m) => m.id === item.mealId)!;
+            return {
+                mealId: item.mealId,
+                quantity: item.quantity,
+                price: meal.price,
+                notes: item.notes,
+            };
+        }),
         kitchenContact: {
             phone: kitchen.contactPhone,
             whatsapp: kitchen.contactWhatsapp,

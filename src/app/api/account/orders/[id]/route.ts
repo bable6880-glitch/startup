@@ -30,9 +30,11 @@ export async function GET(
                 cancelledAt: orders.cancelledAt,
                 kitchenId: orders.kitchenId,
                 kitchenName: kitchens.name,
+                kitchenSlug: kitchens.slug,
                 kitchenCity: kitchens.city,
                 kitchenAddress: kitchens.addressLine,
-                kitchenPhone: users.phoneNumber,
+                kitchenPhone: users.phone,
+                customerName: users.name,
             })
             .from(orders)
             .leftJoin(kitchens, eq(orders.kitchenId, kitchens.id))
@@ -74,7 +76,7 @@ export async function GET(
                 name: order.kitchenName ?? "Kitchen",
                 city: order.kitchenCity ?? "",
                 address: order.kitchenAddress ?? "",
-                phoneNumber: order.kitchenPhone ?? "",
+                phone: order.kitchenPhone ?? "",
             },
             items: itemRows.map((i) => ({
                 quantity: i.quantity,

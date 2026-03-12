@@ -20,7 +20,7 @@ type OrderDetail = {
         name: string;
         city: string;
         address: string;
-        phoneNumber: string;
+        phone: string;
     };
     items: Array<{
         quantity: number;
@@ -116,9 +116,9 @@ export default function OrderDetailPage() {
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
                     {[order.kitchen.address, order.kitchen.city].filter(Boolean).join(", ")}
                 </p>
-                {order.kitchen.phoneNumber && (
+                {order.kitchen.phone && (
                     <p className="text-sm text-neutral-500 mt-1 dark:text-neutral-400">
-                        📞 {order.kitchen.phoneNumber}
+                        📞 {order.kitchen.phone}
                     </p>
                 )}
             </div>

@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
                 id: users.id,
                 name: users.name,
                 email: users.email,
-                phoneNumber: users.phoneNumber,
+                phone: users.phone,
                 defaultCity: users.defaultCity,
                 defaultAddress: users.defaultAddress,
                 role: users.role,
@@ -70,7 +70,7 @@ export async function PUT(req: NextRequest) {
         if (!user) return apiUnauthorized();
 
         const body = await req.json();
-        const { name, phoneNumber, defaultCity, defaultAddress } = body;
+        const { name, phone, defaultCity, defaultAddress } = body;
 
         // Basic validation
         if (name !== undefined && (typeof name !== "string" || name.trim().length < 2)) {
@@ -79,7 +79,7 @@ export async function PUT(req: NextRequest) {
 
         const updateData: Record<string, string> = {};
         if (name !== undefined) updateData.name = name.trim();
-        if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+        if (phone !== undefined) updateData.phone = phone;
         if (defaultCity !== undefined) updateData.defaultCity = defaultCity;
         if (defaultAddress !== undefined) updateData.defaultAddress = defaultAddress;
 

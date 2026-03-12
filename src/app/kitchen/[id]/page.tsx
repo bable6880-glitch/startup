@@ -41,9 +41,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { id } = await params;
     try {
         const kitchen = await getKitchenById(id);
+        const title = `${kitchen.name} – Tiffin Service & Home Cooked Food | Smart Tiffin`;
+        const description = `Order fresh home cooked food from ${kitchen.name}. Affordable meal delivery and monthly tiffin service in Pakistan. View menu, reviews, and place your order today.`;
         return {
-            title: kitchen.name,
-            description: kitchen.description || `Order from ${kitchen.name} in ${kitchen.city}. Authentic home-cooked meals.`,
+            title,
+            description,
+            keywords: [
+                "tiffin service",
+                "home cooked food",
+                "meal delivery",
+                "monthly tiffin service in Pakistan",
+                "home cooked food delivery near me",
+                kitchen.city || "Pakistan",
+                kitchen.name,
+            ].filter(Boolean),
+            openGraph: {
+                title,
+                description,
+                type: "website",
+                siteName: "Smart Tiffin",
+                ...(kitchen.coverImageUrl ? { images: [{ url: kitchen.coverImageUrl }] } : {}),
+            },
         };
     } catch {
         return { title: "Kitchen Not Found" };
@@ -225,6 +243,32 @@ async function KitchenContent({ id }: { id: string }) {
 
     return (
         <div className="animate-fade-in pb-20 md:pb-0">
+            {/* JSON-LD Structured Data for SEO */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify({
+                        "@context": "https://schema.org",
+                        "@type": "LocalBusiness",
+                        name: kitchen.name,
+                        description: "Tiffin service and home cooked food meal delivery provider.",
+                        servesCuisine: kitchen.cuisineTypes?.join(", ") || "Home Style",
+                        areaServed: kitchen.city || "Pakistan",
+                        ...(kitchen.addressLine ? { address: { "@type": "PostalAddress", streetAddress: kitchen.addressLine, addressLocality: kitchen.city || "" } } : {}),
+                        ...(kitchen.coverImageUrl ? { image: kitchen.coverImageUrl } : {}),
+                        ...(Number(kitchen.reviewCount) > 0
+                            ? {
+                                aggregateRating: {
+                                    "@type": "AggregateRating",
+                                    ratingValue: Number(kitchen.avgRating).toFixed(1),
+                                    reviewCount: String(kitchen.reviewCount),
+                                },
+                            }
+                            : {}),
+                    }),
+                }}
+            />
+
             <div className="flex flex-col md:flex-row gap-8 items-start">
 
                 {/* Left Column: Details & Menu */}
@@ -245,7 +289,7 @@ async function KitchenContent({ id }: { id: string }) {
                     <div className="mt-6">
                         <div className="flex items-center gap-3 flex-wrap">
                             <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-50">
-                                {kitchen.name}
+                                Tiffin Service & Home Cooked Food by {kitchen.name}
                             </h1>
                             {kitchen.isVerified && (
                                 <span className="rounded-full bg-accent-100 px-3 py-1 text-xs font-semibold text-accent-700 dark:bg-accent-900/30 dark:text-accent-300">
@@ -387,6 +431,71 @@ async function KitchenContent({ id }: { id: string }) {
                                 className="text-sm font-medium text-primary-600 hover:underline dark:text-primary-400"
                             >
                                 Write a review →
+                            </Link>
+                        </div>
+                    </section>
+
+                    {/* ── SEO Content Section ─────────────────────────────── */}
+                    <section className="mt-12 mb-12 rounded-2xl border border-neutral-200/60 bg-neutral-50/50 p-6 sm:p-8 dark:bg-neutral-800/50 dark:border-neutral-700">
+                        <h2 className="text-xl font-bold text-neutral-900 mb-4 dark:text-neutral-50">
+                            Fresh Home Cooked Food You Can Trust
+                        </h2>
+                        <p className="text-neutral-600 leading-relaxed dark:text-neutral-300">
+                            {kitchen.name} offers reliable tiffin service and fresh home cooked food
+                            prepared daily with quality ingredients.
+                            If you&apos;re searching for home cooked food delivery near me, this kitchen
+                            provides affordable and hygienic meals
+                            for students, families, and working professionals.
+                        </p>
+
+                        <h3 className="text-lg font-semibold text-neutral-800 mt-6 mb-3 dark:text-neutral-100">
+                            Affordable Meal Delivery Options
+                        </h3>
+                        <p className="text-neutral-600 leading-relaxed dark:text-neutral-300">
+                            Whether you need daily lunch, dinner, or a monthly tiffin service in
+                            Pakistan, this kitchen provides flexible
+                            meal delivery options designed for convenience. Customers can choose
+                            individual meals or subscribe to regular
+                            meal plans based on their schedule.
+                        </p>
+
+                        <h3 className="text-lg font-semibold text-neutral-800 mt-6 mb-3 dark:text-neutral-100">
+                            Why Choose This Tiffin Service?
+                        </h3>
+                        <ul className="list-disc list-inside space-y-2 text-neutral-600 dark:text-neutral-300">
+                            <li>Freshly prepared home cooked food every day</li>
+                            <li>Affordable pricing for regular customers</li>
+                            <li>Clean and hygienic preparation standards</li>
+                            <li>Reliable meal delivery within the city</li>
+                        </ul>
+
+                        <p className="text-neutral-600 leading-relaxed mt-6 dark:text-neutral-300">
+                            Browse the full menu above, read verified customer reviews, and place
+                            your order directly.
+                            Enjoy delicious home cooked food without the hassle of cooking daily.
+                        </p>
+
+                        {/* Internal Links */}
+                        <div className="mt-6 flex flex-wrap gap-3">
+                            <Link
+                                href="/explore"
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-medium text-primary-600 border border-primary-200 hover:bg-primary-50 transition-colors dark:bg-neutral-800 dark:border-primary-800 dark:text-primary-400 dark:hover:bg-primary-900/20"
+                            >
+                                🔍 Explore All Kitchens
+                            </Link>
+                            {kitchen.citySlug && (
+                                <Link
+                                    href={`/city/${kitchen.citySlug}`}
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-medium text-primary-600 border border-primary-200 hover:bg-primary-50 transition-colors dark:bg-neutral-800 dark:border-primary-800 dark:text-primary-400 dark:hover:bg-primary-900/20"
+                                >
+                                    📍 Browse Kitchens in {kitchen.city}
+                                </Link>
+                            )}
+                            <Link
+                                href="/become-a-cook"
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-4 py-2 text-sm font-medium text-accent-600 border border-accent-200 hover:bg-accent-50 transition-colors dark:bg-neutral-800 dark:border-accent-800 dark:text-accent-400 dark:hover:bg-accent-900/20"
+                            >
+                                👨‍🍳 Start Your Own Tiffin Service
                             </Link>
                         </div>
                     </section>

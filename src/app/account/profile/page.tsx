@@ -17,7 +17,7 @@ export default function ProfilePage() {
 
     const [form, setForm] = useState({
         name: "",
-        phoneNumber: "",
+        phone: "",
         defaultCity: "",
         defaultAddress: "",
     });
@@ -35,7 +35,7 @@ export default function ProfilePage() {
                     const p = d.data ?? d;
                     setForm({
                         name: p.name ?? "",
-                        phoneNumber: p.phoneNumber ?? "",
+                        phone: p.phone ?? "",
                         defaultCity: p.defaultCity ?? "",
                         defaultAddress: p.defaultAddress ?? "",
                     });
@@ -124,8 +124,8 @@ export default function ProfilePage() {
                     <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1.5">Phone Number</label>
                     <input
                         type="tel"
-                        value={form.phoneNumber}
-                        onChange={e => setForm(f => ({ ...f, phoneNumber: e.target.value }))}
+                        value={form.phone}
+                        onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
                         placeholder="03XX-XXXXXXX"
                         className="w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-sm text-neutral-900 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 dark:bg-neutral-700 dark:border-neutral-600 dark:text-neutral-100"
                     />

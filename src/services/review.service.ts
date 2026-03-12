@@ -4,6 +4,7 @@ import { eq, and, desc, asc, sql, isNull } from "drizzle-orm";
 import type { CreateReviewInput, ReviewQueryInput } from "@/lib/validations/review";
 import { NotFoundError, ConflictError, ValidationError } from "@/lib/utils/errors";
 import { invalidateCache, CacheKeys } from "@/lib/redis";
+import { sanitizeText } from "@/lib/utils/sanitize";
 
 // ─── Create Review ──────────────────────────────────────────────────────────
 
@@ -44,13 +45,14 @@ export async function createReview(userId: string, input: CreateReviewInput) {
     const isVerifiedPurchase = completedOrder !== undefined;
 
     // 4. Create review
+    const sanitizedComment = input.comment ? sanitizeText(input.comment) : input.comment;
     const [review] = await db
         .insert(reviews)
         .values({
             kitchenId: input.kitchenId,
             userId,
             rating: input.rating,
-            comment: input.comment,
+            comment: sanitizedComment,
             isVerifiedPurchase,
         })
         .returning();
@@ -198,10 +200,12 @@ export async function addSellerReply(
         throw new NotFoundError("You do not own this kitchen");
     }
 
+    const sanitizedReply = sanitizeText(reply);
+
     const [updated] = await db
         .update(reviews)
         .set({
-            sellerReply: reply,
+            sellerReply: sanitizedReply,
             sellerRepliedAt: new Date(),
             updatedAt: new Date(),
         })

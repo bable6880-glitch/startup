@@ -3,6 +3,7 @@ import { kitchens } from "@/lib/db/schema";
 import { eq, and, desc, sql, isNull } from "drizzle-orm";
 import { slugify } from "@/config/constants";
 import { cached, invalidateCache, CacheKeys, CacheTTL } from "@/lib/redis";
+import { sanitizeRichText } from "@/lib/utils/sanitize";
 import type { CreateKitchenInput, UpdateKitchenInput, KitchenQueryInput } from "@/lib/validations/kitchen";
 import { NotFoundError, AuthorizationError } from "@/lib/utils/errors";
 
@@ -19,13 +20,15 @@ export async function createKitchen(ownerId: string, input: CreateKitchenInput) 
         slug = `${slug}-${Date.now().toString(36)}`;
     }
 
+    const sanitizedDescription = input.description ? sanitizeRichText(input.description) : input.description;
+
     const [kitchen] = await db
         .insert(kitchens)
         .values({
             ownerId,
             name: input.name,
             slug,
-            description: input.description,
+            description: sanitizedDescription,
             profileImageUrl: input.profileImageUrl,
             coverImageUrl: input.coverImageUrl,
             images: input.images,
@@ -126,30 +129,29 @@ export async function listKitchens(query: KitchenQueryInput) {
 
     const offset = (page - 1) * limit;
 
-    const [data, countResult] = await Promise.all([
-        db.query.kitchens.findMany({
-            where: and(...conditions),
-            orderBy,
-            limit,
-            offset,
-            columns: {
-                // Exclude sensitive fields from public listing
-                contactPhone: false,
-                contactWhatsapp: false,
-                contactEmail: false,
-                deletedAt: false,
+    const data = await db.query.kitchens.findMany({
+        where: and(...conditions),
+        orderBy,
+        limit,
+        offset,
+        columns: {
+            // Exclude sensitive fields from public listing
+            contactPhone: false,
+            contactWhatsapp: false,
+            contactEmail: false,
+            deletedAt: false,
+        },
+        with: {
+            owner: {
+                columns: { id: true, name: true, avatarUrl: true },
             },
-            with: {
-                owner: {
-                    columns: { id: true, name: true, avatarUrl: true },
-                },
-            },
-        }),
-        db
-            .select({ count: sql<number>`count(*)` })
-            .from(kitchens)
-            .where(and(...conditions)),
-    ]);
+        },
+    });
+
+    const countResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(kitchens)
+        .where(and(...conditions));
 
     return {
         kitchens: data,
@@ -174,6 +176,10 @@ export async function updateKitchen(
     if (kitchen.ownerId !== ownerId) throw new AuthorizationError("You don't own this kitchen");
 
     const updateData: Record<string, unknown> = { ...input, updatedAt: new Date() };
+
+    if (input.description) {
+        updateData.description = sanitizeRichText(input.description);
+    }
 
     // Recalculate slugs if city or area changed
     if (input.city) updateData.citySlug = slugify(input.city);

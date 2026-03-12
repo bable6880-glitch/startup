@@ -36,7 +36,15 @@ export function useKitchenSSE({ kitchenId, onNewOrder, onSubscriptionChanged }: 
 
             setStatus("connecting");
 
-            const es = new EventSource(`/api/sse/kitchen/${kitchenId}?token=${token}`, { withCredentials: true });
+            // Step 1: Get one-time ticket
+            const ticketRes = await fetch("/api/sse/ticket", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const { data: { ticket } } = await ticketRes.json();
+
+            // Step 2: Open SSE with ticket
+            const es = new EventSource(`/api/sse/kitchen/${kitchenId}?ticket=${ticket}`, { withCredentials: true });
             eventSourceRef.current = es;
 
             es.onopen = () => {

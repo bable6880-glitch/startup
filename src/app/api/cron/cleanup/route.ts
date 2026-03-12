@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { subscriptions, boosts, kitchens } from "@/lib/db/schema";
 import { eq, and, lt, sql } from "drizzle-orm";
 import { apiSuccess, apiUnauthorized, apiInternalError } from "@/lib/utils/api-response";
+import { timingSafeEqual } from "crypto";
 
 // CHANGED [H3]: Cron endpoint for subscription + boost expiry cleanup.
 // Call via Vercel Cron or external scheduler: GET /api/cron/cleanup
@@ -12,9 +13,22 @@ const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: NextRequest) {
     try {
-        // Auth: check x-cron-secret header
-        const cronSecret = request.headers.get("x-cron-secret");
-        if (!CRON_SECRET || cronSecret !== CRON_SECRET) {
+        // Auth: check Bearer token or x-cron-secret
+        let cronSecret = request.headers.get("x-cron-secret");
+        const authHeader = request.headers.get("authorization");
+        if (!cronSecret && authHeader?.startsWith("Bearer ")) {
+            cronSecret = authHeader.substring(7);
+        }
+
+        if (!CRON_SECRET || !cronSecret) {
+            return apiUnauthorized("Missing cron secret");
+        }
+
+        // Timing-safe comparison to prevent timing attacks
+        const providedBuffer = Buffer.from(cronSecret);
+        const expectedBuffer = Buffer.from(CRON_SECRET);
+
+        if (providedBuffer.length !== expectedBuffer.length || !timingSafeEqual(providedBuffer, expectedBuffer)) {
             return apiUnauthorized("Invalid cron secret");
         }
 

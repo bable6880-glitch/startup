@@ -17,6 +17,7 @@ export type ApiErrorResponse = {
         code: string;
         message: string;
         details?: Record<string, string[]>;
+        requestId?: string;
     };
 };
 
@@ -58,10 +59,11 @@ export function apiError(
     message: string,
     code: string,
     status: number,
-    details?: Record<string, string[]>
+    details?: Record<string, string[]>,
+    requestId?: string
 ) {
     return NextResponse.json<ApiErrorResponse>(
-        { success: false, error: { code, message, details } },
+        { success: false, error: { code, message, details, requestId } },
         { status }
     );
 }

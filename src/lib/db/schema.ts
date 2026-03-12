@@ -113,7 +113,6 @@ export const users = pgTable(
             .notNull(),
         fcmToken: text("fcm_token"), // Device token for push notifications
         deletedAt: timestamp("deleted_at", { withTimezone: true }),
-        phoneNumber: varchar("phone_number", { length: 20 }),
         defaultAddress: text("default_address"),
         defaultCity: varchar("default_city", { length: 100 }),
     },
