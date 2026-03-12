@@ -266,11 +266,10 @@ import {
 } from "react";
 import {
     onAuthStateChanged,
-    signInWithPopup,
     signOut as firebaseSignOut,
     type User as FirebaseUser,
 } from "firebase/auth";
-import { auth, googleProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from "./config";
+import { auth, googleProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail, signInWithRedirect, getRedirectResult } from "./config";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -453,14 +452,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         [cleanSignOut]
     );
 
+    // ── Handle post-redirect Google sign-in result on mount ──
+    // This fires when the user lands back on the page after being redirected
+    // to Google. It replaces the popup approach so browsers can never block it.
+    useEffect(() => {
+        getRedirectResult(auth)
+            .then((result) => {
+                // result is null when there's no pending redirect (normal page load)
+                if (result?.user) {
+                    // onAuthStateChanged will also fire — syncUser is idempotent
+                    // so it's safe if both run, but typically onAuthStateChanged wins.
+                }
+            })
+            .catch((err) => {
+                // Only surface errors that are NOT user-cancelled
+                const code = (err as { code?: string })?.code ?? "";
+                if (code !== "auth/user-cancelled" && code !== "auth/popup-closed-by-user") {
+                    const message = err instanceof Error ? err.message : "Google sign-in failed";
+                    setState((prev) => ({ ...prev, loading: false, error: message }));
+                }
+            });
+    }, []);
+
     // ── Listen to Firebase auth state ──
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 await syncUser(firebaseUser);
             } else {
-                // ── FIX: Reset ALL guards when Firebase reports no user ──
-                // This ensures a subsequent sign-in attempt starts completely clean.
+                // Reset ALL guards when Firebase reports no user so a subsequent
+                // sign-in attempt starts completely clean.
                 currentSyncUid.current = null;
                 hasTriedCleanup.current = false;
                 syncAttemptCount.current = 0;
@@ -470,19 +491,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return () => unsubscribe();
     }, [syncUser]);
 
-    // ── Sign in with Google ──
+    // ── Sign in with Google (redirect — never blocked by browsers) ──
+    // signInWithRedirect navigates the whole page to Google's OAuth screen.
+    // On return, getRedirectResult (called on mount above) picks up the result.
+    // This completely eliminates the auth/popup-blocked error.
     const signInWithGoogle = useCallback(async () => {
-        setState((prev) => ({ ...prev, loading: true, error: null }));
-
-        // ── FIX: Always fully reset guards before a new sign-in attempt ──
+        // Reset guards before starting a new sign-in.
         hasTriedCleanup.current = false;
         syncAttemptCount.current = 0;
         currentSyncUid.current = null;
 
+        // Show loading while we navigate away. No error can surface here
+        // because the page redirects immediately.
+        setState((prev) => ({ ...prev, loading: true, error: null }));
+
         try {
-            await signInWithPopup(auth, googleProvider);
-            // onAuthStateChanged will fire → syncUser will run
+            await signInWithRedirect(auth, googleProvider);
+            // ↑ The browser navigates away. Code below this line never runs
+            //   until the user comes back from Google (handled by getRedirectResult).
         } catch (err) {
+            // Only reached if the redirect itself fails (very rare).
             const message = err instanceof Error ? err.message : "Google sign-in failed";
             setState((prev) => ({ ...prev, loading: false, error: message }));
         }
