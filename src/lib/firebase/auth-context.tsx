@@ -358,6 +358,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Prevents a stale cleanup from a previous UID affecting a new sign-in.
     const currentSyncUid = useRef<string | null>(null);
 
+    // ── Guards against showing the login form while a redirect result is being processed ──
+    // getRedirectResult() must resolve BEFORE onAuthStateChanged(null) can set loading:false.
+    // Without this, the login form flashes briefly after returning from Google.
+    const redirectResultChecked = useRef(false);
+    // Tracks if onAuthStateChanged fired null while redirect was still pending.
+    const pendingNullAuthEvent = useRef(false);
+
     /**
      * Sign out and clear stale Firebase data.
      * Pass null for errorMessage to do a silent cleanup (no error shown).
@@ -453,23 +460,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // ── Handle post-redirect Google sign-in result on mount ──
-    // This fires when the user lands back on the page after being redirected
-    // to Google. It replaces the popup approach so browsers can never block it.
+    // MUST run before onAuthStateChanged processes the null event so we can
+    // hold loading:true while Firebase completes the redirect handshake.
     useEffect(() => {
         getRedirectResult(auth)
             .then((result) => {
-                // result is null when there's no pending redirect (normal page load)
-                if (result?.user) {
-                    // onAuthStateChanged will also fire — syncUser is idempotent
-                    // so it's safe if both run, but typically onAuthStateChanged wins.
+                redirectResultChecked.current = true;
+                // No pending redirect — if onAuthStateChanged already fired null,
+                // it was waiting for us; unlock loading now.
+                if (!result && pendingNullAuthEvent.current) {
+                    currentSyncUid.current = null;
+                    hasTriedCleanup.current = false;
+                    syncAttemptCount.current = 0;
+                    pendingNullAuthEvent.current = false;
+                    setState({ user: null, firebaseUser: null, loading: false, error: null });
                 }
+                // result?.user case: onAuthStateChanged will fire with the user
+                // and syncUser will handle everything — nothing to do here.
             })
             .catch((err) => {
+                redirectResultChecked.current = true;
                 // Only surface errors that are NOT user-cancelled
                 const code = (err as { code?: string })?.code ?? "";
-                if (code !== "auth/user-cancelled" && code !== "auth/popup-closed-by-user") {
-                    const message = err instanceof Error ? err.message : "Google sign-in failed";
-                    setState((prev) => ({ ...prev, loading: false, error: message }));
+                const msg = code !== "auth/user-cancelled" && code !== "auth/popup-closed-by-user"
+                    ? (err instanceof Error ? err.message : "Google sign-in failed")
+                    : null;
+                if (pendingNullAuthEvent.current) {
+                    pendingNullAuthEvent.current = false;
+                    setState({ user: null, firebaseUser: null, loading: false, error: msg });
+                } else if (msg) {
+                    setState((prev) => ({ ...prev, loading: false, error: msg }));
                 }
             });
     }, []);
@@ -478,10 +498,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
+                // Reset pending-null flag — we have a real user now.
+                pendingNullAuthEvent.current = false;
                 await syncUser(firebaseUser);
             } else {
-                // Reset ALL guards when Firebase reports no user so a subsequent
-                // sign-in attempt starts completely clean.
+                // If getRedirectResult hasn't resolved yet, the null event might be
+                // premature (Firebase fires null before it processes the redirect).
+                // Hold loading:true until we know for sure there's no redirect.
+                if (!redirectResultChecked.current) {
+                    pendingNullAuthEvent.current = true;
+                    return; // wait for getRedirectResult to decide
+                }
+                // Redirect result already checked — safe to unlock.
                 currentSyncUid.current = null;
                 hasTriedCleanup.current = false;
                 syncAttemptCount.current = 0;

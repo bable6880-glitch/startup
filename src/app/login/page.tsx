@@ -21,6 +21,20 @@ function LoginContent() {
         }
     }, [user, loading, redirect, router]);
 
+    // While Firebase is processing auth state (initial load OR returning from
+    // Google redirect), show a full-screen spinner. This prevents the login
+    // form from flashing and gives the user visual feedback.
+    if (loading || user) {
+        return (
+            <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-neutral-50 to-white dark:from-neutral-900 dark:to-neutral-800">
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />
+                <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400 animate-pulse">
+                    {user ? "Redirecting you…" : "Signing you in…"}
+                </p>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-[calc(100vh-80px)] flex">
             {/* ── Left: Hero Panel ── */}
