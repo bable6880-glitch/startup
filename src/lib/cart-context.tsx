@@ -81,17 +81,19 @@ const CartContext = createContext<CartContextType | null>(null);
 // ─── Provider ────────────────────────────────────────────────────────────────
 
 export function CartProvider({ children }: { children: ReactNode }) {
-    // Start with empty cart on the server — hydrate from localStorage in effect
+    // To avoid hydration mismatch while still being SSR-safe, we initialize to EMPTY_CART
+    // on the server, and then sync from localStorage on the client in the first pass
     const [cart, setCart] = useState<CartState>(EMPTY_CART);
     const [hydrated, setHydrated] = useState(false);
 
     // SSR-safe hydration: only touch localStorage after mount
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCart(readFromStorage());
         setHydrated(true);
     }, []);
 
-    // Persist every cart change (after hydration to avoid overwriting with empty)
+    // Persist every cart change
     useEffect(() => {
         if (hydrated) {
             writeToStorage(cart);

@@ -14,7 +14,7 @@ const createLimiter = (requests: number, window: string) => {
     if (!redis) return null;
     return new Ratelimit({
         redis,
-        limiter: Ratelimit.slidingWindow(requests, window as any),
+        limiter: Ratelimit.slidingWindow(requests, window as `${number} m`),
         analytics: false,
         prefix: "st:rl", // Smart Tiffin rate limit namespace
     });

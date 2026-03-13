@@ -33,7 +33,7 @@ export function KitchenHeader({ kitchen }: KitchenHeaderProps) {
                 if (res.ok) {
                     const d = await res.json();
                     const favs = d.data?.favorites ?? d.favorites ?? [];
-                    setIsFavorite(favs.some((f: any) => f.kitchen.id === kitchen.id));
+                    setIsFavorite(favs.some((f: { kitchen: { id: string } }) => f.kitchen.id === kitchen.id));
                 }
             } catch (err) {
                 console.error("Failed to check favorites status", err);

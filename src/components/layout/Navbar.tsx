@@ -52,6 +52,7 @@ export default function Navbar() {
     }, [user, getIdToken]);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchUnread();
         const interval = setInterval(fetchUnread, 60_000);
         return () => clearInterval(interval);

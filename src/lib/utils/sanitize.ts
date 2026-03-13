@@ -23,7 +23,7 @@ export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
     const result = { ...obj };
     for (const key in result) {
         if (typeof result[key] === "string") {
-            result[key] = sanitizeText(result[key] as string) as any;
+            result[key] = sanitizeText(result[key] as string) as T[Extract<keyof T, string>];
         }
     }
     return result;

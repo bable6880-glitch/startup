@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useForm } from "react-hook-form";
@@ -17,7 +17,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-export default function CompleteProfilePage() {
+function ProfileForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, userProfile, getIdToken, setUserProfile } = useAuth();
@@ -263,5 +263,17 @@ export default function CompleteProfilePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CompleteProfilePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-orange-50 flex flex-col items-center justify-center dark:bg-neutral-900">
+        <div className="w-8 h-8 border-4 border-orange-400 border-t-transparent rounded-full animate-spin dark:border-neutral-700 dark:border-t-orange-500" />
+      </div>
+    }>
+      <ProfileForm />
+    </Suspense>
   );
 }
