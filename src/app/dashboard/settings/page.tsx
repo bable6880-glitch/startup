@@ -32,6 +32,7 @@ export default function KitchenSettingsPage() {
     const [profileImage, setProfileImage] = useState("");
     const [coverImage, setCoverImage] = useState("");
     const [deliveryOptions, setDeliveryOptions] = useState<string[]>([]);
+    const [uploadingImage, setUploadingImage] = useState<"profile" | "cover" | null>(null);
 
     const loadKitchen = useCallback(async () => {
         try {
@@ -76,6 +77,46 @@ export default function KitchenSettingsPage() {
                 ? prev.filter((o) => o !== option)
                 : [...prev, option]
         );
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "profile" | "cover") => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploadingImage(type);
+        setMessage(null);
+
+        try {
+            const token = await getIdToken();
+            if (!token) throw new Error("Unauthorized");
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("folder", "kitchens");
+
+            const res = await fetch("/api/upload", {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                body: formData,
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message || "Upload failed");
+
+            if (type === "profile") {
+                setProfileImage(data.data.url);
+            } else {
+                setCoverImage(data.data.url);
+            }
+        } catch (err: unknown) {
+            setMessage({ type: "error", text: err instanceof Error ? err.message : "Failed to upload image" });
+        } finally {
+            setUploadingImage(null);
+            // reset file input
+            e.target.value = "";
+        }
     };
 
     const handleSave = async () => {
@@ -182,24 +223,36 @@ export default function KitchenSettingsPage() {
                                         <button
                                             onClick={() => handleDeleteImage("profile")}
                                             className="absolute top-0 right-1/2 translate-x-16 -translate-y-2 h-6 w-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-600"
+                                            disabled={uploadingImage === "profile"}
                                         >
                                             ✕
                                         </button>
+                                        {uploadingImage === "profile" && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl backdrop-blur-sm">
+                                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
-                                    <div className="py-4">
+                                    <div className="py-4 relative">
                                         <span className="text-3xl">📷</span>
-                                        <p className="mt-2 text-xs text-neutral-400">Paste image URL below</p>
+                                        <p className="mt-2 text-xs text-neutral-500 font-medium">Click to upload image</p>
+                                        {uploadingImage === "profile" && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-neutral-800/80 rounded-xl backdrop-blur-sm">
+                                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-200 border-t-primary-600" />
+                                            </div>
+                                        )}
                                     </div>
                                 )}
+                                {/* Invisible file input covering the whole box when empty, or below it when filled */}
+                                <input
+                                    type="file"
+                                    accept="image/jpeg, image/png, image/webp, image/gif"
+                                    onChange={(e) => handleImageUpload(e, "profile")}
+                                    disabled={uploadingImage !== null}
+                                    className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer ${profileImage ? 'pointer-events-none' : ''}`}
+                                />
                             </div>
-                            <input
-                                type="url"
-                                value={profileImage}
-                                onChange={(e) => setProfileImage(e.target.value)}
-                                placeholder="https://example.com/image.jpg"
-                                className="mt-2 w-full rounded-lg border border-neutral-200 px-3 py-2 text-xs focus:border-primary-500 outline-none dark:bg-neutral-700 dark:border-neutral-600 dark:text-neutral-200"
-                            />
                         </div>
 
                         {/* Cover Image */}
@@ -214,24 +267,36 @@ export default function KitchenSettingsPage() {
                                         <button
                                             onClick={() => handleDeleteImage("cover")}
                                             className="absolute top-0 right-0 -translate-y-2 translate-x-2 h-6 w-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-600"
+                                            disabled={uploadingImage === "cover"}
                                         >
                                             ✕
                                         </button>
+                                        {uploadingImage === "cover" && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl backdrop-blur-sm">
+                                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
-                                    <div className="py-4">
+                                    <div className="py-4 relative">
                                         <span className="text-3xl">🖼️</span>
-                                        <p className="mt-2 text-xs text-neutral-400">Paste image URL below</p>
+                                        <p className="mt-2 text-xs text-neutral-500 font-medium">Click to upload image</p>
+                                        {uploadingImage === "cover" && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-neutral-800/80 rounded-xl backdrop-blur-sm">
+                                                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary-200 border-t-primary-600" />
+                                            </div>
+                                        )}
                                     </div>
                                 )}
+                                {/* Invisible file input covering the whole box */}
+                                <input
+                                    type="file"
+                                    accept="image/jpeg, image/png, image/webp, image/gif"
+                                    onChange={(e) => handleImageUpload(e, "cover")}
+                                    disabled={uploadingImage !== null}
+                                    className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer ${coverImage ? 'pointer-events-none' : ''}`}
+                                />
                             </div>
-                            <input
-                                type="url"
-                                value={coverImage}
-                                onChange={(e) => setCoverImage(e.target.value)}
-                                placeholder="https://example.com/cover.jpg"
-                                className="mt-2 w-full rounded-lg border border-neutral-200 px-3 py-2 text-xs focus:border-primary-500 outline-none dark:bg-neutral-700 dark:border-neutral-600 dark:text-neutral-200"
-                            />
                         </div>
                     </div>
                 </section>

@@ -6,7 +6,7 @@ import { useEffect, Suspense } from "react";
 import Link from "next/link";
 
 function LoginContent() {
-    const { user, loading, error, signInWithGoogle } = useAuth();
+    const { user, userProfile, loading, error, signInWithGoogle } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
     const redirect = searchParams.get("redirect") || "/explore";
@@ -16,11 +16,22 @@ function LoginContent() {
             if (user.role === "COOK" || user.role === "ADMIN") {
                 router.push("/dashboard");
             } else {
-                const profileRedirect = `/complete-profile?redirect=${encodeURIComponent(redirect)}`;
-                router.push(profileRedirect);
+                // If the user already has a complete profile, skip the form
+                const hasCompleteProfile =
+                    userProfile?.name &&
+                    userProfile?.phone &&
+                    userProfile?.defaultAddress &&
+                    userProfile?.defaultCity;
+
+                if (hasCompleteProfile) {
+                    router.push(redirect);
+                } else {
+                    const profileRedirect = `/complete-profile?redirect=${encodeURIComponent(redirect)}`;
+                    router.push(profileRedirect);
+                }
             }
         }
-    }, [user, loading, redirect, router]);
+    }, [user, userProfile, loading, redirect, router]);
 
     // While Firebase is processing auth state (initial load OR returning from
     // Google redirect), show a full-screen spinner. This prevents the login

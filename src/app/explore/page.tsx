@@ -78,8 +78,8 @@ async function KitchenGrid({ searchParams }: { searchParams: Record<string, stri
                         area={k.area as string | null}
                         rating={Number(k.avgRating) || 0}
                         totalReviews={Number(k.totalReviews) || 0}
-                        imageUrl={k.coverImage as string | null}
-                        cuisineType={k.cuisineType as string[] | null}
+                        imageUrl={k.coverImageUrl as string | null}
+                        cuisineType={k.cuisineTypes as string[] | null}
                         priceRange={k.priceRange as string | null}
                         isVerified={k.isVerified as boolean}
                         isBoosted={(Number(k.boostPriority) || 0) > 0}

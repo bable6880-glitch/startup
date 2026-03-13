@@ -27,6 +27,9 @@ export const metadata: Metadata = {
     description:
       "Discover authentic home-cooked meals from local kitchens in your city.",
   },
+  verification: {
+    google: "G1PoNPbn6mDSSvNRhvx3ICAWjQUQx7oIEl1dpl6W_j8",
+  },
 };
 
 export default function RootLayout({
