@@ -5,7 +5,7 @@ import { type ReactNode } from "react";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     return (
-        <RoleGuard allowedRoles={["COOK", "ADMIN"]}>
+        <RoleGuard allowedRoles={["COOK", "ADMIN"]} redirectTo="/account">
             {/* SEO: Prevent search engines from indexing private seller pages */}
             <head>
                 <meta name="robots" content="noindex,nofollow" />

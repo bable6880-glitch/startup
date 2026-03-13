@@ -20,11 +20,16 @@ function statusBadge(status: string) {
         COMPLETED: "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300",
         CANCELLED: "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300",
     };
-    return map[status] ?? "bg-neutral-100 text-neutral-600";
+    return map[status] ?? "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400";
 }
 
-const FILTERS = ["All", "Active", "Completed", "Cancelled"] as const;
-type Filter = typeof FILTERS[number];
+const FILTERS = [
+    { id: "All", label: "All Orders", icon: "📋" },
+    { id: "Active", label: "Active", icon: "🔄" },
+    { id: "Completed", label: "Completed", icon: "✅" },
+    { id: "Cancelled", label: "Cancelled", icon: "❌" },
+] as const;
+type Filter = typeof FILTERS[number]["id"];
 
 export default function OrdersPage() {
     const { user, getIdToken } = useAuth();
@@ -70,17 +75,18 @@ export default function OrdersPage() {
             <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">My Orders</h1>
 
             {/* Filter tabs */}
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                 {FILTERS.map((f) => (
                     <button
-                        key={f}
-                        onClick={() => { setFilter(f); setPage(1); }}
-                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${filter === f
-                                ? "bg-primary-500 text-white"
-                                : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300"
+                        key={f.id}
+                        onClick={() => { setFilter(f.id); setPage(1); }}
+                        className={`flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-xl text-sm font-medium transition-all ${filter === f.id
+                                ? "bg-primary-50 text-primary-700 ring-1 ring-primary-500/50 dark:bg-primary-900/30 dark:text-primary-300 dark:ring-primary-500/50"
+                                : "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-700"
                             }`}
                     >
-                        {f}
+                        <span>{f.icon}</span>
+                        {f.label}
                     </button>
                 ))}
             </div>
@@ -120,20 +126,19 @@ export default function OrdersPage() {
                                 </div>
                                 <div className="flex items-center gap-3 shrink-0 ml-3">
                                     <div className="text-right">
-                                        <p className="text-sm font-bold text-neutral-900 dark:text-neutral-100">Rs. {Number(order.totalAmount).toLocaleString()}</p>
                                         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusBadge(order.status)}`}>{order.status}</span>
                                     </div>
-                                    <span className="text-neutral-300 dark:text-neutral-600">→</span>
+                                    <span className="text-neutral-300 dark:text-neutral-600 p-1">→</span>
                                 </div>
                             </Link>
                         );
                     })}
                 </div>
             ) : (
-                <div className="text-center py-12 rounded-2xl border-2 border-dashed border-neutral-200 dark:border-neutral-700">
-                    <span className="text-4xl block mb-3">📦</span>
-                    <p className="text-neutral-500 dark:text-neutral-400">No {filter !== "All" ? filter.toLowerCase() : ""} orders yet</p>
-                    <Link href="/explore" className="mt-2 inline-block text-sm text-primary-600 hover:underline dark:text-primary-400">Browse kitchens →</Link>
+                <div className="text-center py-12 rounded-2xl border-2 border-dashed border-neutral-200 bg-neutral-50/50 dark:border-neutral-700 dark:bg-neutral-800/20">
+                    <span className="text-4xl block mb-3">{FILTERS.find(f => f.id === filter)?.icon || "📦"}</span>
+                    <p className="text-neutral-500 dark:text-neutral-400 font-medium">No {filter !== "All" ? filter.toLowerCase() : ""} orders found</p>
+                    <Link href="/explore" className="mt-3 inline-block rounded-xl bg-white px-4 py-2 text-sm font-medium text-primary-600 shadow-sm border border-neutral-200 hover:bg-neutral-50 dark:bg-neutral-800 dark:text-primary-400 dark:border-neutral-700 dark:hover:bg-neutral-700">Browse kitchens</Link>
                 </div>
             )}
 

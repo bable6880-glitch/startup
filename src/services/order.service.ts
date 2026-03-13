@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { orders, orderItems, meals, kitchens } from "@/lib/db/schema";
+import { orders, orderItems, meals, kitchens, users } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import type { CreateOrderInput, UpdateOrderStatusInput } from "@/lib/validations/order";
 import { NotFoundError, AuthorizationError, ValidationError } from "@/lib/utils/errors";
@@ -9,6 +9,13 @@ import { sanitizeText } from "@/lib/utils/sanitize";
 // ─── Create Order ───────────────────────────────────────────────────────────
 
 export async function createOrder(customerId: string, input: CreateOrderInput) {
+    // 0. Fetch customer contact & location details for snapshot
+    const customer = await db.query.users.findFirst({
+        where: eq(users.id, customerId),
+        columns: { name: true, phone: true, defaultAddress: true },
+    });
+    if (!customer) throw new NotFoundError("Customer");
+
     // 1. Verify kitchen is active
     const kitchen = await db.query.kitchens.findFirst({
         where: eq(kitchens.id, input.kitchenId),
@@ -46,6 +53,10 @@ export async function createOrder(customerId: string, input: CreateOrderInput) {
             notes: sanitizedNotes,
             totalAmount,
             currency: mealRecords[0]?.currency ?? "PKR",
+            // Snapshot of customer details at time of order
+            customerName: customer.name,
+            customerPhone: customer.phone,
+            deliveryAddress: customer.defaultAddress,
         })
         .returning();
 
@@ -63,7 +74,7 @@ export async function createOrder(customerId: string, input: CreateOrderInput) {
                 };
             })
         );
-    } catch (error) {
+    } catch {
         // Compensation: delete the orphaned order if item insertion fails
         await db.delete(orders).where(eq(orders.id, order.id));
         throw new Error("Failed to create order items. Order creation rolled back.");
@@ -88,6 +99,10 @@ export async function createOrder(customerId: string, input: CreateOrderInput) {
                 notes: order.notes ?? "",
                 status: "PENDING",
                 placedAt: new Date().toISOString(),
+                // Send the snapshotted contact details to the UI live
+                customerName: customer.name,
+                customerPhone: customer.phone,
+                deliveryAddress: customer.defaultAddress,
             },
         });
     } catch { /* Non-critical — don't fail the order if Redis is down */ }

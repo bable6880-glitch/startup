@@ -2,13 +2,15 @@
 
 import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/firebase/auth-context";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
+import Link from "next/link";
 
 export function CartPanel() {
     const { items, total, itemCount, kitchenName, kitchenId, updateQuantity, removeItem, clearCart } = useCart();
-    const { user, loading: authLoading, getIdToken } = useAuth();
+    const { user, userProfile, loading: authLoading, getIdToken } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isOpen, setIsOpen] = useState(false);
@@ -20,10 +22,7 @@ export function CartPanel() {
         if (itemCount === 0) return;
 
         if (!user && !authLoading) {
-            const confirmLogin = window.confirm("You need to login to place an order. Proceed to login?");
-            if (confirmLogin) {
-                router.push(`/login?redirect=/kitchen/${kitchenId}`);
-            }
+            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
             return;
         }
 
@@ -174,6 +173,17 @@ export function CartPanel() {
 
                     {/* Footer / Checkout — no delivery mode toggle */}
                     <div className="border-t border-neutral-100 p-5 bg-neutral-50 dark:bg-neutral-900/50 dark:border-neutral-800/50">
+                        {userProfile && (
+                            <div className="mb-4 rounded-xl bg-white p-4 shadow-sm border border-neutral-100 dark:bg-neutral-800 dark:border-neutral-700">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-xs font-bold text-neutral-900 uppercase tracking-widest dark:text-neutral-100">Delivery Details</h4>
+                                    <Link href="/account" className="text-[11px] font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400">Edit</Link>
+                                </div>
+                                <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200">{userProfile.name} • {userProfile.phone}</p>
+                                <p className="text-xs text-neutral-500 mt-0.5 truncate dark:text-neutral-400">{userProfile.defaultAddress}, {userProfile.defaultCity}</p>
+                            </div>
+                        )}
+
                         <div className="flex items-center justify-between mb-4">
                             <span className="text-neutral-600 dark:text-neutral-400">Total</span>
                             <span className="text-xl font-bold text-neutral-900 dark:text-white">Rs. {total}</span>

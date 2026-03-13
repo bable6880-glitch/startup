@@ -2,8 +2,11 @@
 
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+import { useCustomerSSE } from "@/hooks/use-customer-sse";
+import { OrderTimeline } from "@/components/dashboard/buyer/OrderTimeline";
 
 type OrderDetail = {
     id: string;
@@ -42,9 +45,11 @@ function statusBadge(status: string) {
 export default function OrderDetailPage() {
     const { id } = useParams<{ id: string }>();
     const { user, getIdToken } = useAuth();
+    const router = useRouter();
     const [order, setOrder] = useState<OrderDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [reordering, setReordering] = useState(false);
 
     useEffect(() => {
         if (!user || !id) return;
@@ -68,6 +73,41 @@ export default function OrderDetailPage() {
         };
         load();
     }, [user, id, getIdToken]);
+
+    // Live SSE
+    const { connected } = useCustomerSSE({
+        customerId: user?.id ?? "",
+        onStatusChange: (payload) => {
+            if (payload.orderId === id) {
+                setOrder(prev => prev ? { ...prev, status: payload.newStatus as string } : prev);
+            }
+        },
+    });
+
+    const handleReorder = async () => {
+        if (!order || reordering) return;
+        setReordering(true);
+        try {
+            const token = await getIdToken();
+            const res = await fetch("/api/orders/reorder", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ orderId: order.id })
+            });
+            const data = await res.json();
+            if (res.ok && data.data?.id) {
+                router.push(`/account/orders/${data.data.id}`);
+            } else {
+                alert(data.error || "Failed to reorder");
+            }
+            alert("Something went wrong");
+        } finally {
+            setReordering(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -94,18 +134,55 @@ export default function OrderDetailPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <Link href="/account" className="text-sm text-neutral-500 hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400">
-                        ← Back to Account
+                    <Link href="/account/orders" className="text-sm font-medium text-neutral-500 hover:text-primary-600 dark:text-neutral-400 dark:hover:text-primary-400">
+                        ← Back to Orders
                     </Link>
-                    <h1 className="mt-2 text-xl font-bold text-neutral-900 dark:text-neutral-50">
-                        Order Details
-                    </h1>
+                    <div className="mt-2 flex items-center gap-3">
+                        <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
+                            Order #{order.id.split('-')[0].toUpperCase()}
+                        </h1>
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusBadge(order.status)}`}>
+                            {order.status}
+                        </span>
+                    </div>
                 </div>
-                <span className={`rounded-full px-3 py-1.5 text-sm font-semibold ${statusBadge(order.status)}`}>
-                    {order.status}
-                </span>
+                <div className="flex items-center gap-3">
+                    {order.status !== "COMPLETED" && order.status !== "CANCELLED" && (
+                        <div className="flex items-center gap-1.5 text-xs">
+                            {connected ? (
+                                <>
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                                    </span>
+                                    <span className="text-green-600 font-medium whitespace-nowrap">Live Updates</span>
+                                </>
+                            ) : null}
+                        </div>
+                    )}
+                    {order.status === "COMPLETED" && (
+                        <button 
+                            onClick={handleReorder}
+                            disabled={reordering}
+                            className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-500 disabled:opacity-50 dark:bg-primary-500 dark:hover:bg-primary-400"
+                        >
+                            {reordering ? "Reordering..." : "Reorder Details"}
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Timeline */}
+            <div className="rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-sm dark:bg-neutral-800 dark:border-neutral-700">
+                <OrderTimeline
+                    status={order.status as any}
+                    placedAt={order.createdAt}
+                    acceptedAt={order.acceptedAt}
+                    completedAt={order.completedAt}
+                    cancelledAt={order.cancelledAt}
+                />
             </div>
 
             {/* Kitchen Info */}
@@ -131,8 +208,8 @@ export default function OrderDetailPage() {
                         <div key={idx} className="flex items-center justify-between py-2 border-b border-neutral-100 last:border-0 dark:border-neutral-700">
                             <div className="flex items-center gap-3">
                                 {item.meal.imageUrl && (
-                                    <div className="h-10 w-10 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-700 flex-shrink-0">
-                                        <img src={item.meal.imageUrl} alt={item.meal.name} className="h-full w-full object-cover" loading="lazy" />
+                                    <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-700 flex-shrink-0">
+                                        <Image src={item.meal.imageUrl} alt={item.meal.name} fill className="object-cover" sizes="40px" />
                                     </div>
                                 )}
                                 <div>

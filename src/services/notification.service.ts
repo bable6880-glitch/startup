@@ -1,11 +1,15 @@
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { users, notifications } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 // CHANGED [N2]: Notification service — in-app notifications + FCM push stub
 // Firebase Cloud Messaging requires firebase-admin and service account setup.
 // This service provides a unified notification API that works with or without FCM.
 
+// Match the database enum exactly
+type DBNotificationType = "ORDER_PLACED" | "ORDER_ACCEPTED" | "ORDER_PREPARING" | "ORDER_READY" | "ORDER_COMPLETED" | "ORDER_CANCELLED" | "REVIEW_REPLY" | "PROMO" | "SYSTEM";
+
+// Local payload type used by templates (maps dynamically to DB type if needed)
 type NotificationType = "ORDER_PLACED" | "ORDER_ACCEPTED" | "ORDER_COMPLETED" | "ORDER_CANCELLED" | "NEW_REVIEW" | "SELLER_REPLY" | "PAYMENT_RECEIVED";
 
 interface NotificationPayload {
@@ -22,7 +26,25 @@ const notificationLog: NotificationPayload[] = [];
 
 export async function sendNotification(payload: NotificationPayload): Promise<void> {
     try {
-        // 1. Log notification (in-memory for now, can be stored in DB)
+        // Map payload type to DB enum (some don't perfectly match so we coerce to SYSTEM or known enums)
+        let dbType: DBNotificationType = "SYSTEM";
+        if (["ORDER_PLACED", "ORDER_ACCEPTED", "ORDER_COMPLETED", "ORDER_CANCELLED"].includes(payload.type)) {
+            dbType = payload.type as DBNotificationType;
+        } else if (payload.type === "SELLER_REPLY") {
+            dbType = "REVIEW_REPLY";
+        }
+
+        // 1. Save to Database for in-app notification center
+        await db.insert(notifications).values({
+            userId: payload.recipientId,
+            type: dbType,
+            title: payload.title,
+            body: payload.body,
+            link: payload.data?.url || null,
+            metadata: payload.data || {},
+        });
+
+        // Log for terminal debugging
         notificationLog.push(payload);
         console.log(`[Notification] ${payload.type} → ${payload.recipientId}: ${payload.title}`);
 

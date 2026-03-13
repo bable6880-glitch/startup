@@ -2,13 +2,14 @@
 
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
-    const { user, loading } = useAuth();
+    const { user, loading, getIdToken } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -23,6 +24,37 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
         }
     }, [user, loading, router]);
 
+    // Fetch unread notifications count
+    useEffect(() => {
+        if (!user || user.role !== "CUSTOMER") return;
+
+        let mounted = true;
+        const fetchUnread = async () => {
+            try {
+                const token = await getIdToken();
+                const res = await fetch("/api/account/notifications?limit=50", {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                
+                // Count unread
+                const count = (data.data || []).filter((n: any) => !n.isRead).length;
+                if (mounted) setUnreadCount(count);
+            } catch (_err) {
+                // Ignore silent fetch errors
+            }
+        };
+
+        fetchUnread();
+        // Optional: set up an interval to poll every 60s
+        const interval = setInterval(fetchUnread, 60000);
+        return () => {
+            mounted = false;
+            clearInterval(interval);
+        };
+    }, [user, getIdToken]);
+
     if (loading || !user) {
         return (
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -35,9 +67,14 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     }
 
     const navItems = [
-        { href: "/account", label: "My Account", icon: "👤" },
+        { href: "/account", label: "Overview", icon: "📊" },
         { href: "/account/orders", label: "My Orders", icon: "📦" },
-        { href: "/account/profile", label: "Profile Settings", icon: "⚙️" },
+        { href: "/account/favorites", label: "Favorites", icon: "❤️" },
+        { href: "/account/addresses", label: "Addresses", icon: "📍" },
+        { href: "/account/reviews", label: "My Reviews", icon: "⭐" },
+        { href: "/account/notifications", label: "Notifications", icon: "🔔", badge: unreadCount },
+        { href: "/account/analytics", label: "Analytics", icon: "📈" },
+        { href: "/account/profile", label: "Profile", icon: "👤" },
     ];
 
     return (
@@ -55,6 +92,11 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                     >
                         <span>{item.icon}</span>
                         {item.label}
+                        {item.badge ? (
+                            <span className="ml-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                                {item.badge > 99 ? "99+" : item.badge}
+                            </span>
+                        ) : null}
                     </Link>
                 ))}
             </div>
@@ -74,7 +116,12 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                                     }`}
                             >
                                 <span className="text-base">{item.icon}</span>
-                                {item.label}
+                                <span className="flex-1">{item.label}</span>
+                                {item.badge ? (
+                                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                                        {item.badge > 99 ? "99+" : item.badge}
+                                    </span>
+                                ) : null}
                             </Link>
                         ))}
                     </nav>

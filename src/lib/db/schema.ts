@@ -10,6 +10,7 @@ import {
     pgEnum,
     index,
     uniqueIndex,
+    jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -330,6 +331,9 @@ export const orders = pgTable(
         customerLat: decimal("customer_lat", { precision: 10, scale: 7 }),
         customerLng: decimal("customer_lng", { precision: 10, scale: 7 }),
         customerAddress: text("customer_address"),
+        customerName: varchar("customer_name", { length: 255 }),
+        customerPhone: varchar("customer_phone", { length: 20 }),
+        deliveryAddress: text("delivery_address"),
 
         // N1: Payment fields
         paymentMethod: paymentMethodEnum("payment_method").default("STRIPE"),
@@ -548,6 +552,9 @@ export const usersRelations = relations(users, ({ many }) => ({
     subscriptions: many(subscriptions),
     boosts: many(boosts),
     reports: many(reports),
+    favorites: many(userFavorites),
+    addresses: many(userAddresses),
+    notifications: many(notifications),
 }));
 
 export const kitchensRelations = relations(kitchens, ({ one, many }) => ({
@@ -639,4 +646,81 @@ export const reportsRelations = relations(reports, ({ one }) => ({
         fields: [reports.reviewedBy],
         references: [users.id],
     }),
+}));
+
+// ─── USER FAVORITES ───────────────────────────────────────────────
+export const userFavorites = pgTable(
+    "user_favorites",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+        kitchenId: uuid("kitchen_id").notNull().references(() => kitchens.id, { onDelete: "cascade" }),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+    },
+    (t) => [
+        uniqueIndex("user_kitchen_unique_idx").on(t.userId, t.kitchenId),
+        index("user_favorites_user_id_idx").on(t.userId),
+    ]
+);
+
+export const userFavoritesRelations = relations(userFavorites, ({ one }) => ({
+    user: one(users, { fields: [userFavorites.userId], references: [users.id] }),
+    kitchen: one(kitchens, { fields: [userFavorites.kitchenId], references: [kitchens.id] }),
+}));
+
+// ─── USER ADDRESSES ───────────────────────────────────────────────
+export const userAddresses = pgTable(
+    "user_addresses",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+        label: varchar("label", { length: 50 }).default("Home"),  // "Home", "Work", "Other"
+        addressLine: text("address_line").notNull(),
+        city: varchar("city", { length: 100 }),
+        area: varchar("area", { length: 100 }),
+        isDefault: boolean("is_default").default(false).notNull(),
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+        updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    }
+);
+
+export const userAddressesRelations = relations(userAddresses, ({ one }) => ({
+    user: one(users, { fields: [userAddresses.userId], references: [users.id] }),
+}));
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────
+export const notificationTypeEnum = pgEnum("notification_type", [
+    "ORDER_PLACED",
+    "ORDER_ACCEPTED",
+    "ORDER_PREPARING",
+    "ORDER_READY",
+    "ORDER_COMPLETED",
+    "ORDER_CANCELLED",
+    "REVIEW_REPLY",
+    "PROMO",
+    "SYSTEM",
+]);
+
+export const notifications = pgTable(
+    "notifications",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+        type: notificationTypeEnum("type").notNull(),
+        title: varchar("title", { length: 255 }).notNull(),
+        body: text("body"),
+        isRead: boolean("is_read").default(false).notNull(),
+        link: varchar("link", { length: 500 }),  // e.g. /account/orders/[id]
+        metadata: jsonb("metadata"),                 // { orderId, kitchenId, etc. }
+        createdAt: timestamp("created_at").defaultNow().notNull(),
+    },
+    (t) => [
+        index("notifications_user_id_idx").on(t.userId),
+        index("notifications_is_read_idx").on(t.isRead),
+        index("notifications_created_at_idx").on(t.createdAt),
+    ]
+);
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+    user: one(users, { fields: [notifications.userId], references: [users.id] }),
 }));

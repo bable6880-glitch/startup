@@ -33,7 +33,9 @@ type Order = {
     createdAt: string;
     items: OrderItem[];
     customer: OrderCustomer;
-    customerAddress: string | null;
+    customerName: string | null;
+    customerPhone: string | null;
+    deliveryAddress: string | null;
 };
 
 export function OrderCard({ order, getToken }: { order: Order; getToken: () => Promise<string | null> }) {
@@ -92,11 +94,30 @@ export function OrderCard({ order, getToken }: { order: Order; getToken: () => P
                         {format(new Date(order.createdAt), "MMM d, h:mm a")} • {order.deliveryMode.replace("_", " ")}
                     </p>
                     <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mt-1">
-                        Customer: {order.customer?.name || "Guest"}
+                        Customer: {order.customerName || order.customer?.name || "Guest"}
                     </p>
-                    {order.customerAddress && (
-                        <p className="text-xs text-neutral-500 mt-0.5 max-w-xs truncate dark:text-neutral-400">
-                            📍 {order.customerAddress}
+                    {order.customerPhone && (
+                        <div className="flex items-center gap-2 mt-1">
+                            <a 
+                                href={`tel:${order.customerPhone}`}
+                                className="text-xs font-semibold text-primary-600 hover:underline dark:text-primary-400 flex items-center gap-1"
+                            >
+                                📞 {order.customerPhone}
+                            </a>
+                            <a 
+                                href={`https://wa.me/${order.customerPhone.replace(/[^0-9]/g, "").replace(/^0/, "92")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] font-bold text-white bg-[#25D366] px-1.5 py-0.5 rounded shadow-sm hover:bg-[#1fb855] transition-colors"
+                            >
+                                WA
+                            </a>
+                        </div>
+                    )}
+                    {order.deliveryAddress && (
+                        <p className="text-xs text-neutral-500 mt-1.5 max-w-sm leading-relaxed dark:text-neutral-400 bg-neutral-50 p-2 rounded-lg border border-neutral-100 dark:bg-neutral-900/50 dark:border-neutral-700/50">
+                            <span className="font-semibold block text-[10px] uppercase tracking-wider text-neutral-400 mb-0.5 dark:text-neutral-500">Delivery Address</span>
+                            {order.deliveryAddress}
                         </p>
                     )}
                 </div>

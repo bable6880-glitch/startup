@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MapLazy } from "@/components/map/MapLazy";
 import { ReportButton } from "@/components/kitchen/ReportButton";
+import { KitchenHeader } from "@/components/kitchen/KitchenHeader";
+import { ClientOrderBanner } from "@/components/kitchen/ClientOrderBanner";
 import { getKitchenById, getKitchenBySlug } from "@/services/kitchen.service";
 import { getMealsByKitchen } from "@/services/menu.service";
 import { getKitchenReviews } from "@/services/review.service";
@@ -285,62 +287,18 @@ async function KitchenContent({ id }: { id: string }) {
                         )}
                     </div>
 
-                    {/* Info */}
-                    <div className="mt-6">
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-50">
-                                Tiffin Service & Home Cooked Food by {kitchen.name}
-                            </h1>
-                            {kitchen.isVerified && (
-                                <span className="rounded-full bg-accent-100 px-3 py-1 text-xs font-semibold text-accent-700 dark:bg-accent-900/30 dark:text-accent-300">
-                                    ✓ Verified
-                                </span>
-                            )}
-                        </div>
-
-                        <p className="mt-2 flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            {[kitchen.area, kitchen.city].filter(Boolean).join(", ")}
-                        </p>
-
-                        {kitchen.description && (
-                            <p className="mt-4 text-neutral-600 leading-relaxed dark:text-neutral-300">
-                                {kitchen.description}
-                            </p>
-                        )}
-
-                        <div className="mt-4 flex items-center gap-3">
-                            <div className="flex items-center gap-1.5 rounded-lg bg-accent-50 px-3 py-1.5 dark:bg-accent-900/20">
-                                <svg className="h-4 w-4 text-accent-500" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                                <span className="font-bold text-accent-700 dark:text-accent-400">
-                                    {Number(kitchen.avgRating) > 0 ? Number(kitchen.avgRating).toFixed(1) : "New"}
-                                </span>
-                            </div>
-                            <span className="text-sm text-neutral-500 dark:text-neutral-400">
-                                {kitchen.reviewCount || 0} reviews
-                            </span>
-                        </div>
-
-                        {/* Delivery Badges */}
-                        {kitchen.deliveryOptions && kitchen.deliveryOptions.length > 0 && (
-                            <div className="mt-4 flex flex-wrap gap-2">
-                                {kitchen.deliveryOptions.includes("SELF_PICKUP") && (
-                                    <span className="rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-300">
-                                        🏃 Self Pickup
-                                    </span>
-                                )}
-                                {kitchen.deliveryOptions.includes("FREE_DELIVERY") && (
-                                    <span className="rounded-full bg-accent-50 px-3 py-1.5 text-xs font-semibold text-accent-700 dark:bg-accent-900/20 dark:text-accent-300">
-                                        🛵 Free Delivery
-                                    </span>
-                                )}
-                            </div>
-                        )}
+                    {/* Interactive Header (Title, Rating, Favorite Toggle) */}
+                    <KitchenHeader kitchen={{
+                        id: kitchen.id,
+                        name: kitchen.name,
+                        area: kitchen.area,
+                        city: kitchen.city,
+                        description: kitchen.description,
+                        avgRating: String(kitchen.avgRating ?? "0"),
+                        reviewCount: Number(kitchen.reviewCount ?? 0),
+                        isVerified: kitchen.isVerified,
+                        deliveryOptions: kitchen.deliveryOptions
+                    }} />
 
                         {/* U1: Report Button */}
                         <div className="mt-4">
@@ -363,7 +321,6 @@ async function KitchenContent({ id }: { id: string }) {
                                 </a>
                             </div>
                         )}
-                    </div>
 
                     {/* U4c: Kitchen Gallery */}
                     {kitchen.images && kitchen.images.length > 0 && (
@@ -394,12 +351,13 @@ async function KitchenContent({ id }: { id: string }) {
 
                     {/* Menu */}
                     <section className="mt-12">
+                        <ClientOrderBanner kitchenName={kitchen.name} />
                         <h2 className="text-xl font-bold text-neutral-900 mb-6 dark:text-neutral-50">
                             Menu ({menu.length} items)
                         </h2>
                         {menu.length > 0 ? (
                             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                                {menu.map((m: any) => (
+                                {menu.map((m: MealData) => (
                                     <MealItem key={m.id} meal={m} kitchenId={kitchen.id} kitchenName={kitchen.name} />
                                 ))}
                             </div>
@@ -417,7 +375,7 @@ async function KitchenContent({ id }: { id: string }) {
                         </h2>
                         {reviewData.reviews.length > 0 ? (
                             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                                {reviewData.reviews.map((r: any) => (
+                                {reviewData.reviews.map((r: ReviewData) => (
                                     <ReviewCard key={r.id} review={r} />
                                 ))}
                             </div>
@@ -531,9 +489,9 @@ export default async function KitchenProfilePage({ params }: Props) {
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             {/* Breadcrumb */}
             <nav className="mb-6 text-sm text-neutral-500 dark:text-neutral-400">
-                <a href="/" className="hover:text-primary-600 transition-colors">Home</a>
+                <Link href="/" className="hover:text-primary-600 transition-colors">Home</Link>
                 <span className="mx-2">/</span>
-                <a href="/explore" className="hover:text-primary-600 transition-colors">Explore</a>
+                <Link href="/explore" className="hover:text-primary-600 transition-colors">Explore</Link>
                 <span className="mx-2">/</span>
                 <span className="text-neutral-900 font-medium dark:text-neutral-100">Kitchen</span>
             </nav>

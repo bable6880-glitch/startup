@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/firebase/auth-context";
+import { useRouter, usePathname } from "next/navigation";
 
 type MealData = {
     id: string;
@@ -21,6 +22,8 @@ type MealData = {
 export function MealItem({ meal, kitchenId, kitchenName }: { meal: MealData; kitchenId: string; kitchenName: string }) {
     const { addItem, items, updateQuantity, clearCart, kitchenName: currentKitchenName } = useCart();
     const { user } = useAuth();
+    const router = useRouter();
+    const pathname = usePathname();
     const isCook = user?.role === "COOK" || user?.role === "ADMIN";
 
     // Mixed-kitchen dialog state
@@ -31,6 +34,11 @@ export function MealItem({ meal, kitchenId, kitchenName }: { meal: MealData; kit
     const quantity = cartItem?.quantity || 0;
 
     const handleAdd = () => {
+        if (!user) {
+            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+            return;
+        }
+
         try {
             addItem(kitchenId, kitchenName, {
                 mealId: meal.id,

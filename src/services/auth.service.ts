@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { users, kitchens } from "@/lib/db/schema";
 import { verifyFirebaseToken } from "@/lib/auth/firebase-admin";
 import { eq } from "drizzle-orm";
 import type { DecodedIdToken } from "firebase-admin/auth";
@@ -12,6 +12,7 @@ export type AuthUser = {
     avatar: string | null;
     role: "CUSTOMER" | "COOK" | "ADMIN";
     isActive: boolean;
+    cookKitchenId?: string | null;
 };
 
 /**
@@ -38,6 +39,16 @@ export async function authenticateUser(idToken: string): Promise<AuthUser> {
             .set({ lastLoginAt: new Date(), updatedAt: new Date() })
             .where(eq(users.id, existing.id));
 
+        // Fetch kitchen ID if user is a COOK
+        let cookKitchenId = null;
+        if (existing.role === "COOK" || existing.role === "ADMIN") {
+            const kitchen = await db.query.kitchens.findFirst({
+                where: eq(kitchens.ownerId, existing.id),
+                columns: { id: true }
+            });
+            if (kitchen) cookKitchenId = kitchen.id;
+        }
+
         return {
             id: existing.id,
             firebaseUid: existing.firebaseUid,
@@ -46,6 +57,7 @@ export async function authenticateUser(idToken: string): Promise<AuthUser> {
             avatar: existing.avatarUrl,
             role: existing.role,
             isActive: existing.isActive,
+            cookKitchenId,
         };
     }
 
@@ -73,6 +85,7 @@ export async function authenticateUser(idToken: string): Promise<AuthUser> {
         avatar: newUser.avatarUrl,
         role: newUser.role,
         isActive: newUser.isActive,
+        cookKitchenId: null, // New users are never cooks initially
     };
 }
 

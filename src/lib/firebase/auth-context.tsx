@@ -273,17 +273,26 @@ import { auth, googleProvider, createUserWithEmailAndPassword, signInWithEmailAn
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-export type AppUser = {
+export interface AppUser {
     id: string;
-    firebaseUid: string;
+    uid: string;
     email: string | null;
     name: string | null;
     avatar: string | null;
     role: "CUSTOMER" | "COOK" | "ADMIN";
+    isActive: boolean;
+    cookKitchenId?: string | null;
+}
+export type UserProfile = {
+    name: string | null;
+    phone: string | null;
+    defaultAddress: string | null;
+    defaultCity: string | null;
 };
 
 type AuthState = {
     user: AppUser | null;
+    userProfile: UserProfile | null;
     firebaseUser: FirebaseUser | null;
     loading: boolean;
     error: string | null;
@@ -297,6 +306,7 @@ interface AuthContextType extends AuthState {
     getIdToken: () => Promise<string | null>;
     sendPasswordReset: (email: string) => Promise<boolean>;
     refreshUser: () => Promise<void>;
+    setUserProfile: (profile: UserProfile | null) => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -342,6 +352,7 @@ const MAX_SYNC_ATTEMPTS = 2;
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [state, setState] = useState<AuthState>({
         user: null,
+        userProfile: null,
         firebaseUser: null,
         loading: true,
         error: null,
@@ -371,7 +382,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
      */
     const cleanSignOut = useCallback(async (errorMessage: string | null) => {
         if (hasTriedCleanup.current) {
-            setState({ user: null, firebaseUser: null, loading: false, error: errorMessage });
+            setState({ user: null, userProfile: null, firebaseUser: null, loading: false, error: errorMessage });
             return;
         }
 
@@ -380,7 +391,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         try { await firebaseSignOut(auth); } catch { /* ignore */ }
 
-        setState({ user: null, firebaseUser: null, loading: false, error: errorMessage });
+        setState({ user: null, userProfile: null, firebaseUser: null, loading: false, error: errorMessage });
     }, []);
 
     // ── Sync Firebase user → Postgres ──
@@ -438,6 +449,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     throw new Error(body?.error?.message || "Sync failed");
                 }
 
+                // Step 5: Fetch Profile
+                let profileInfo = null;
+                try {
+                    const profileRes = await fetch("/api/account/profile-update", {
+                        headers: { Authorization: `Bearer ${idToken}` },
+                    });
+                    if (profileRes.ok) {
+                        const profileBody = await profileRes.json();
+                        profileInfo = profileBody.data?.profile ?? null;
+                    }
+                } catch {
+                    // Ignore error
+                }
+
                 // ✅ Success — reset guards
                 hasTriedCleanup.current = false;
                 syncAttemptCount.current = 0;
@@ -445,6 +470,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
                 setState({
                     user: body.data,
+                    userProfile: profileInfo,
                     firebaseUser,
                     loading: false,
                     error: null,
@@ -473,7 +499,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     hasTriedCleanup.current = false;
                     syncAttemptCount.current = 0;
                     pendingNullAuthEvent.current = false;
-                    setState({ user: null, firebaseUser: null, loading: false, error: null });
+                    setState({ user: null, userProfile: null, firebaseUser: null, loading: false, error: null });
                 }
                 // result?.user case: onAuthStateChanged will fire with the user
                 // and syncUser will handle everything — nothing to do here.
@@ -487,7 +513,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     : null;
                 if (pendingNullAuthEvent.current) {
                     pendingNullAuthEvent.current = false;
-                    setState({ user: null, firebaseUser: null, loading: false, error: msg });
+                    setState({ user: null, userProfile: null, firebaseUser: null, loading: false, error: msg });
                 } else if (msg) {
                     setState((prev) => ({ ...prev, loading: false, error: msg }));
                 }
@@ -513,7 +539,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 currentSyncUid.current = null;
                 hasTriedCleanup.current = false;
                 syncAttemptCount.current = 0;
-                setState({ user: null, firebaseUser: null, loading: false, error: null });
+                setState({ user: null, userProfile: null, firebaseUser: null, loading: false, error: null });
             }
         });
         return () => unsubscribe();
@@ -587,7 +613,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hasTriedCleanup.current = false;
         syncAttemptCount.current = 0;
         currentSyncUid.current = null;
-        setState({ user: null, firebaseUser: null, loading: false, error: null });
+        setState({ user: null, userProfile: null, firebaseUser: null, loading: false, error: null });
     }, []);
 
     // ── Get fresh ID token for API calls ──
@@ -628,9 +654,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await syncUser(state.firebaseUser);
     }, [state.firebaseUser, syncUser]);
 
+    const setUserProfile = useCallback((profile: UserProfile | null) => {
+        setState((prev) => ({ ...prev, userProfile: profile }));
+    }, []);
+
     return (
         <AuthContext.Provider
-            value={{ ...state, signInWithGoogle, signUpWithEmail, signInWithEmail, signOutUser, getIdToken, sendPasswordReset, refreshUser }}
+            value={{ ...state, signInWithGoogle, signUpWithEmail, signInWithEmail, signOutUser, getIdToken, sendPasswordReset, refreshUser, setUserProfile }}
         >
             {children}
         </AuthContext.Provider>

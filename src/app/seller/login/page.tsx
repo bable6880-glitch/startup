@@ -29,7 +29,12 @@ export default function SellerLoginPage() {
     useEffect(() => {
         if (user && !authLoading) {
             if (user.role === "COOK" || user.role === "ADMIN") {
-                router.push("/dashboard");
+                // If they have a kitchen ID, send them directly to dashboard
+                if (user.cookKitchenId) {
+                    router.push("/dashboard");
+                } else {
+                    router.push("/become-a-cook");
+                }
             } else {
                 router.push("/become-a-cook");
             }
@@ -73,12 +78,15 @@ export default function SellerLoginPage() {
 
             const body = await res.json();
             const role = body.data?.role;
+            const cookKitchenId = body.data?.cookKitchenId;
 
             // Route based on the DB role
-            if (role === "COOK") {
-                router.push("/dashboard");
-            } else if (role === "ADMIN") {
-                router.push("/admin");
+            if (role === "COOK" || role === "ADMIN") {
+                if (cookKitchenId) {
+                    router.push("/dashboard");
+                } else {
+                    router.push("/become-a-cook");
+                }
             } else {
                 // CUSTOMER — needs to register a kitchen
                 router.push("/become-a-cook");
