@@ -14,7 +14,7 @@ import {
     signOut as firebaseSignOut,
     type User as FirebaseUser,
 } from "firebase/auth";
-import { auth, googleProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail, signInWithRedirect, getRedirectResult } from "./config";
+import { auth, googleProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail, signInWithPopup, getRedirectResult } from "./config";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -286,30 +286,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
     }, [syncUser]);
 
-    // ── Sign in with Google (redirect — never blocked by browsers) ──
-    // signInWithRedirect navigates the whole page to Google's OAuth screen.
-    // On return, getRedirectResult (called on mount above) picks up the result.
-    // This completely eliminates the auth/popup-blocked error.
+    // ── Sign in with Google (popup to avoid third-party cookie/redirect loop issues) ──
     const signInWithGoogle = useCallback(async () => {
         // Reset guards before starting a new sign-in.
         hasTriedCleanup.current = false;
         syncAttemptCount.current = 0;
         currentSyncUid.current = null;
 
-        // Show loading while we navigate away. No error can surface here
-        // because the page redirects immediately.
         setState((prev) => ({ ...prev, loading: true, error: null }));
 
         try {
-            await signInWithRedirect(auth, googleProvider);
-            // ↑ The browser navigates away. Code below this line never runs
-            //   until the user comes back from Google (handled by getRedirectResult).
+            const result = await signInWithPopup(auth, googleProvider);
+            if (result?.user) {
+                await syncUser(result.user);
+            }
         } catch (err) {
-            // Only reached if the redirect itself fails (very rare).
+            const code = (err as { code?: string })?.code ?? "";
+            if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+                // User simply closed the popup, clear loading but don't show an error.
+                setState((prev) => ({ ...prev, loading: false }));
+                return;
+            }
             const message = err instanceof Error ? err.message : "Google sign-in failed";
             setState((prev) => ({ ...prev, loading: false, error: message }));
         }
-    }, []);
+    }, [syncUser]);
 
     // ── Sign up with Email/Password (for Cooks) ──
     const signUpWithEmail = useCallback(async (email: string, password: string, displayName: string) => {
