@@ -5,10 +5,11 @@ import { FirebaseAuthError } from "@/lib/auth/firebase-admin";
 import {
     apiSuccess,
     apiBadRequest,
-    apiInternalError,
     apiUnauthorized,
     apiForbidden,
+    apiError,
 } from "@/lib/utils/api-response";
+import { logger } from "@/lib/utils/logger";
 
 /**
  * OPTIONS /api/auth/sync
@@ -32,6 +33,7 @@ export async function OPTIONS() {
  * Body: { idToken: string }
  */
 export async function POST(request: NextRequest) {
+    const requestId = crypto.randomUUID();
     try {
         const body = await request.json();
 
@@ -47,9 +49,10 @@ export async function POST(request: NextRequest) {
     } catch (error: unknown) {
         // ── Firebase/Auth errors — return proper 401/403 ──
         if (error instanceof FirebaseAuthError) {
-            console.error("[Auth Sync] Firebase auth error:", {
+            logger.error("[Auth Sync] Firebase auth error", {
+                requestId,
                 code: error.code,
-                message: error.message,
+                error: error.message,
                 httpStatus: error.httpStatus,
             });
 
@@ -69,10 +72,12 @@ export async function POST(request: NextRequest) {
         }
 
         // ── Unexpected errors ──
-        console.error("[Auth Sync] Unexpected error:", {
-            message: error instanceof Error ? error.message : String(error),
+        logger.error("[Auth Sync] Unexpected error", {
+            requestId,
+            error: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined,
         });
-        return apiInternalError("Failed to sync user");
+        
+        return apiError("Failed to sync user", "SYNC_FAILED", 500, undefined, requestId);
     }
 }

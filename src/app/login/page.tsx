@@ -12,7 +12,8 @@ function LoginContent() {
     const redirect = searchParams.get("redirect") || "/explore";
 
     useEffect(() => {
-        if (user && !loading) {
+        if (loading) return; // wait, do not redirect
+        if (user) {
             if (user.role === "COOK" || user.role === "ADMIN") {
                 router.push("/dashboard");
             } else {

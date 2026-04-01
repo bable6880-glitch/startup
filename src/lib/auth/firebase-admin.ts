@@ -27,9 +27,10 @@ let _auth: Auth | null = null;
 function ensureInitialized(): App {
     if (_app) return _app;
 
-    const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+    const raw = (process.env.FIREBASE_SERVICE_ACCOUNT_KEY ?? '')
+        .replace(/(^"|"$)/g, '');
 
-    if (!serviceAccountKey) {
+    if (!raw) {
         throw new FirebaseAuthError(
             "FIREBASE_SERVICE_ACCOUNT_KEY is not set",
             "auth/config-missing",
@@ -40,16 +41,15 @@ function ensureInitialized(): App {
     // ✅ Fix literal \n → real newlines AFTER JSON parsing, in case the key was pasted incorrectly in Amplify
     let serviceAccount: Record<string, string>;
     try {
-        serviceAccount = JSON.parse(serviceAccountKey);
+        serviceAccount = JSON.parse(raw);
         if (serviceAccount.private_key) {
             // Replace double-escaped newlines with actual newlines
             serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
         }
-    } catch (err) {
-        throw new FirebaseAuthError(
-            `Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY: ${err}`,
-            "auth/config-invalid",
-            500
+    } catch {
+        throw new Error(
+            'FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON. ' +
+            'Check Amplify env vars for surrounding quotes or escaped characters.'
         );
     }
 
