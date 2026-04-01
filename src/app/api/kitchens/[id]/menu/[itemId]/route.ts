@@ -9,7 +9,7 @@ import {
     apiNotFound,
     apiInternalError,
 } from "@/lib/utils/api-response";
-import { getAuthUser } from "@/lib/auth/get-auth-user";
+import { requireSeller } from "@/lib/auth/seller-guard";
 import { AppError } from "@/lib/utils/errors";
 
 type Params = { params: Promise<{ id: string; itemId: string }> };
@@ -38,10 +38,10 @@ export async function GET(request: NextRequest, { params }: Params) {
  */
 export async function PUT(request: NextRequest, { params }: Params) {
     try {
-        const user = await getAuthUser(request);
-        if (!user) return apiUnauthorized();
-
         const { id, itemId } = await params;
+        const guard = await requireSeller(request, id);
+        if (!guard.ok) return guard.response;
+        const { user } = guard;
         const body = await request.json();
         const parsed = updateMealSchema.safeParse(body);
 
@@ -68,10 +68,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
  */
 export async function DELETE(request: NextRequest, { params }: Params) {
     try {
-        const user = await getAuthUser(request);
-        if (!user) return apiUnauthorized();
-
         const { id, itemId } = await params;
+        const guard = await requireSeller(request, id);
+        if (!guard.ok) return guard.response;
+        const { user } = guard;
         await deleteMeal(id, itemId, user.id);
         return apiSuccess({ deleted: true });
     } catch (error) {

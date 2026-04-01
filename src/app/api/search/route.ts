@@ -7,6 +7,11 @@ import {
     apiInternalError,
 } from "@/lib/utils/api-response";
 
+// MVP: haversine filter runs in-memory after DB fetch.
+// Acceptable at current kitchen count per city (<500).
+// TODO P6: Replace with PostGIS ST_DWithin query for scale.
+import { calculateDistance } from "@/lib/utils/distance";
+
 /**
  * GET /api/search
  * Public: Full search with all filters.
@@ -23,6 +28,22 @@ export async function GET(request: NextRequest) {
         }
 
         const result = await listKitchens(parsed.data);
+
+        if (parsed.data.lat !== undefined && parsed.data.lng !== undefined) {
+            const { lat, lng, radiusKm } = parsed.data;
+            const filteredKitchens = [];
+            for (const k of result.kitchens) {
+                if (k.latitude && k.longitude) {
+                    const dist = calculateDistance(lat, lng, Number(k.latitude), Number(k.longitude));
+                    if (dist <= radiusKm) {
+                        filteredKitchens.push({ ...k, distanceKm: dist });
+                    }
+                }
+            }
+            filteredKitchens.sort((a, b) => a.distanceKm - b.distanceKm);
+            result.kitchens = filteredKitchens;
+            result.total = filteredKitchens.length;
+        }
 
         return apiPaginated(result.kitchens, {
             page: result.page,

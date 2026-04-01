@@ -92,8 +92,12 @@ export async function authenticateUser(idToken: string): Promise<AuthUser> {
 /**
  * Sync user data from Firebase token — used on login.
  */
-export async function syncUser(idToken: string) {
-    return authenticateUser(idToken);
+export async function syncUser(idToken: string, fcmToken?: string) {
+    const user = await authenticateUser(idToken);
+    if (fcmToken) {
+        await db.update(users).set({ fcmToken, updatedAt: new Date() }).where(eq(users.id, user.id));
+    }
+    return user;
 }
 
 /**

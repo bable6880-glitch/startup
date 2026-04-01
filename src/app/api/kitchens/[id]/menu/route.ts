@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { createHash } from "crypto";
 import { createMealSchema } from "@/lib/validations/menu";
 import { createMeal, getMealsByKitchen } from "@/services/menu.service";
 import {
@@ -9,7 +10,7 @@ import {
     apiForbidden,
     apiInternalError,
 } from "@/lib/utils/api-response";
-import { getAuthUser } from "@/lib/auth/get-auth-user";
+import { requireSeller } from "@/lib/auth/seller-guard";
 import { AppError } from "@/lib/utils/errors";
 
 type Params = { params: Promise<{ id: string }> };
@@ -22,7 +23,18 @@ export async function GET(request: NextRequest, { params }: Params) {
     try {
         const { id } = await params;
         const meals = await getMealsByKitchen(id);
-        return apiSuccess(meals);
+
+        const hash = createHash("sha256").update(JSON.stringify(meals)).digest("hex").substring(0, 16);
+        const etag = `"${hash}"`;
+        const ifNoneMatch = request.headers.get("if-none-match");
+
+        if (ifNoneMatch === etag) {
+            return new Response(null, { status: 304 });
+        }
+
+        const response = apiSuccess(meals);
+        response.headers.set("ETag", etag);
+        return response;
     } catch (error) {
         console.error("[List Meals Error]", error);
         return apiInternalError("Failed to fetch meals");
@@ -35,10 +47,11 @@ export async function GET(request: NextRequest, { params }: Params) {
  */
 export async function POST(request: NextRequest, { params }: Params) {
     try {
-        const user = await getAuthUser(request);
-        if (!user) return apiUnauthorized();
-
         const { id } = await params;
+        const guard = await requireSeller(request, id);
+        if (!guard.ok) return guard.response;
+        
+        const { user } = guard;
         const body = await request.json();
         const parsed = createMealSchema.safeParse(body);
 

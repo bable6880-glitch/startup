@@ -3,6 +3,7 @@
 // Role is returned in response so client can update local state.
 
 import { NextRequest } from "next/server";
+import { createHash } from "crypto";
 import { createKitchenSchema, kitchenQuerySchema } from "@/lib/validations/kitchen";
 import { createKitchen, listKitchens, getKitchensByOwner } from "@/services/kitchen.service";
 import { updateUserRole } from "@/services/auth.service";
@@ -61,13 +62,29 @@ export async function GET(request: NextRequest) {
             return apiBadRequest("Invalid query parameters", errors);
         }
 
-        const result = await listKitchens(parsed.data);
+        const result = await listKitchens({
+            ...parsed.data,
+            page: Math.max(1, parseInt(params.page ?? "1")),
+            limit: Math.min(50, Math.max(1, parseInt(params.limit ?? "20"))),
+        });
 
-        return apiPaginated(result.kitchens, {
+        // Compute ETag
+        const hash = createHash("sha256").update(JSON.stringify(result)).digest("hex").substring(0, 16);
+        const etag = `"${hash}"`;
+        const ifNoneMatch = request.headers.get("if-none-match");
+
+        if (ifNoneMatch === etag) {
+            return new Response(null, { status: 304 });
+        }
+
+        const response = apiPaginated(result.kitchens, {
             page: result.page,
             limit: result.limit,
             total: result.total,
         });
+
+        response.headers.set("ETag", etag);
+        return response;
     } catch (error) {
         console.error("[List Kitchens Error]", {
             message: error instanceof Error ? error.message : String(error),

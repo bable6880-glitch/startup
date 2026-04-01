@@ -4,6 +4,7 @@ import { z } from "zod";
 
 export const syncAuthSchema = z.object({
     idToken: z.string().min(1, "Firebase ID token is required"),
+    fcmToken: z.string().optional(),
 });
 
 // ─── Email regex: standard RFC-compliant pattern ────────────────────────────

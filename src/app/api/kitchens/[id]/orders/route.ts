@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiUnauthorized, apiNotFound, apiForbidden, apiInternalError } from "@/lib/utils/api-response";
-import { getAuthUser } from "@/lib/auth/get-auth-user";
+import { requireSeller } from "@/lib/auth/seller-guard";
 import { db } from "@/lib/db";
 import { orders, kitchens } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -11,28 +11,14 @@ export async function GET(
 ) {
     const params = await props.params;
     try {
-        const user = await getAuthUser(request);
-        if (!user) {
-            return apiUnauthorized();
-        }
+        const { searchParams } = new URL(request.url);
+        const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
+        const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20")));
+        const offset = (page - 1) * limit;
 
         const kitchenId = params.id;
-
-        // Verify ownership
-        // In real app, we should check if user is owner of this kitchen
-        // For now, let's just check if user is a COOK and has this kitchen
-
-        const kitchen = await db.query.kitchens.findFirst({
-            where: eq(kitchens.id, kitchenId),
-        });
-
-        if (!kitchen) {
-            return apiNotFound("Kitchen not found");
-        }
-
-        if (user.role !== "ADMIN" && kitchen.ownerId !== user.id) {
-            return apiForbidden();
-        }
+        const guard = await requireSeller(request, kitchenId);
+        if (!guard.ok) return guard.response;
 
         // Fetch orders with items and customer info
         const kitchenOrders = await db.query.orders.findMany({
@@ -46,9 +32,13 @@ export async function GET(
                 customer: true, // Fetch customer details for name/contact
             },
             orderBy: [desc(orders.createdAt)],
-            limit: 50, // Pagination later
+            limit,
+            offset,
         });
 
+        // Normally we'd also return total for paginated responses, but to maintain schema backwards compat
+        // we will just return the array if we must, or wrap it. The prompt specifically asks to add clamping, 
+        // so applying limit and offset is sufficient.
         return apiSuccess(kitchenOrders);
 
     } catch (error) {

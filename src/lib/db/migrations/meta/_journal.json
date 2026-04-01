@@ -36,6 +36,13 @@
       "when": 1773385240088,
       "tag": "0004_cute_slapstick",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775025230335,
+      "tag": "0005_first_proteus",
+      "breakpoints": true
     }
   ]
 }

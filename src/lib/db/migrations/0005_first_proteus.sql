@@ -1,0 +1,1 @@
+DO $$ BEGIN ALTER TYPE "public"."payment_method" ADD VALUE 'COD'; EXCEPTION WHEN duplicate_object THEN null; END $$;

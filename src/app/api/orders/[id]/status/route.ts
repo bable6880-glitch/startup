@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiSuccess, apiUnauthorized, apiNotFound, apiForbidden, apiBadRequest, apiInternalError } from "@/lib/utils/api-response";
-import { getAuthUser } from "@/lib/auth/get-auth-user";
+import { requireSeller } from "@/lib/auth/seller-guard";
 import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -12,11 +12,6 @@ export async function PATCH(
 ) {
     const params = await props.params;
     try {
-        const user = await getAuthUser(request);
-        if (!user) {
-            return apiUnauthorized();
-        }
-
         const orderId = params.id;
         const body = await request.json();
 
@@ -39,10 +34,8 @@ export async function PATCH(
             return apiNotFound("Order not found");
         }
 
-        // Verify user owns the kitchen for this order
-        if (user.role !== "ADMIN" && order.kitchen.ownerId !== user.id) {
-            return apiForbidden();
-        }
+        const guard = await requireSeller(request, order.kitchenId);
+        if (!guard.ok) return guard.response;
 
         // Update status
         const [updatedOrder] = await db

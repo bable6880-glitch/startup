@@ -74,17 +74,12 @@ async function sendFCMPush(payload: NotificationPayload): Promise<void> {
 
         if (!user?.fcmToken) return;
 
-        // Dynamic import firebase-admin to avoid startup errors when not configured
-        const admin = await import("firebase-admin");
+        // Reuse the shared Firebase Admin singleton (Rule #3)
+        const { getFirebaseApp } = await import("@/lib/auth/firebase-admin");
+        const { getMessaging } = await import("firebase-admin/messaging");
+        const app = getFirebaseApp();
 
-        if (!admin.apps.length) {
-            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-            admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
-            });
-        }
-
-        await admin.messaging().send({
+        await getMessaging(app).send({
             token: user.fcmToken,
             notification: {
                 title: payload.title,
@@ -103,8 +98,15 @@ async function sendFCMPush(payload: NotificationPayload): Promise<void> {
         });
 
         console.log(`[FCM] Push sent to ${payload.recipientId}`);
-    } catch (error) {
+    } catch (error: unknown) {
         console.warn("[FCM] Push failed (non-critical):", error);
+        
+        const fcmError = error as { errorInfo?: { code?: string }, code?: string };
+        const errorCode = fcmError?.errorInfo?.code || fcmError?.code;
+        if (errorCode === "messaging/registration-token-not-registered" || errorCode === "messaging/invalid-registration-token") {
+            await db.update(users).set({ fcmToken: null }).where(eq(users.id, payload.recipientId));
+            console.log(`[FCM] Stale token removed for user ${payload.recipientId}`);
+        }
     }
 }
 

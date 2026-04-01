@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { orders, orderItems, meals, kitchens } from "@/lib/db/schema";
 import { createOrderSchema } from "@/lib/validations/order";
 import { eq, inArray, desc } from "drizzle-orm";
+import { sanitizeText } from "@/lib/utils/sanitize";
 
 /**
  * GET /api/orders
@@ -14,6 +15,11 @@ export async function GET(request: NextRequest) {
     try {
         const user = await getAuthUser(request);
         if (!user) return apiUnauthorized();
+
+        const { searchParams } = new URL(request.url);
+        const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
+        const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20")));
+        const offset = (page - 1) * limit;
 
         const isCook = user.role === "COOK" || user.role === "ADMIN";
 
@@ -36,6 +42,8 @@ export async function GET(request: NextRequest) {
                         with: { meal: { columns: { id: true, name: true } } },
                     },
                 },
+                limit,
+                offset,
             });
 
             return apiSuccess(kitchenOrders);
@@ -50,6 +58,8 @@ export async function GET(request: NextRequest) {
                         with: { meal: { columns: { id: true, name: true } } },
                     },
                 },
+                limit,
+                offset,
             });
 
             return apiSuccess(customerOrders);
@@ -140,7 +150,7 @@ export async function POST(request: NextRequest) {
                 mealId: item.mealId,
                 quantity: item.quantity,
                 price: Number(meal.price),
-                notes: item.notes,
+                notes: item.notes ? sanitizeText(item.notes) : null,
             };
         });
 
@@ -156,7 +166,7 @@ export async function POST(request: NextRequest) {
                 status: "PENDING",
                 totalAmount,
                 currency: "PKR",
-                notes,
+                notes: notes ? sanitizeText(notes) : null,
                 deliveryMode,
                 customerAddress,
                 customerLat: customerLat ? customerLat.toString() : null,
@@ -178,10 +188,14 @@ export async function POST(request: NextRequest) {
         const { notifyOrderPlaced } = await import("@/services/notification.service");
         await notifyOrderPlaced(kitchen.ownerId, newOrder.id, user.name || "A customer");
 
+        // N3: Invalidate buyer analytics cache
+        const { invalidateCache } = await import("@/lib/redis");
+        await invalidateCache(`account:analytics:${user.id}`);
+
         return apiSuccess(newOrder);
 
-    } catch (error: any) {
-        if (error.message?.includes("is currently unavailable")) {
+    } catch (error: unknown) {
+        if (error instanceof Error && error.message?.includes("is currently unavailable")) {
             return apiBadRequest(error.message);
         }
         console.error("[Create Order Error]", error);

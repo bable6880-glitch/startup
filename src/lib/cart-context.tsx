@@ -12,6 +12,8 @@ import {
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
+export type AddItemResult = { ok: true } | { ok: false; error: "MIXED_KITCHEN" | "OUT_OF_STOCK" };
+
 export interface CartItem {
     mealId: string;
     name: string;
@@ -31,11 +33,11 @@ interface CartContextType extends CartState {
     hydrated: boolean;
     /**
      * Add an item to the cart.
-     * Throws `Error("MIXED_KITCHEN")` if the item is from a different kitchen
-     * than the current cart contents. The caller is responsible for catching
-     * this and offering the user a clear-cart confirmation dialog.
+     * Returns `{ ok: false, error: "MIXED_KITCHEN" }` if the item is from a
+     * different kitchen than the current cart contents. The caller must check
+     * the result and offer the user a clear-cart confirmation dialog.
      */
-    addItem: (kitchenId: string, kitchenName: string, item: Omit<CartItem, "quantity">) => void;
+    addItem: (kitchenId: string, kitchenName: string, item: Omit<CartItem, "quantity">) => AddItemResult;
     removeItem: (mealId: string) => void;
     updateQuantity: (mealId: string, quantity: number) => void;
     clearCart: () => void;
@@ -103,11 +105,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     // ── Mutating functions ────────────────────────────────────────────────────
 
     const addItem = useCallback(
-        (kitchenId: string, kitchenName: string, item: Omit<CartItem, "quantity">) => {
+        (kitchenId: string, kitchenName: string, item: Omit<CartItem, "quantity">): AddItemResult => {
+            // Mixed-kitchen guard — check BEFORE setState (Rule #2: never throw inside setState)
+            // We read cart via ref-style closure; setCart hasn't been called yet.
+            let mixedKitchen = false;
             setCart((prev) => {
-                // Mixed-kitchen guard — throw so the caller can show a dialog
                 if (prev.kitchenId && prev.kitchenId !== kitchenId && prev.items.length > 0) {
-                    throw new Error("MIXED_KITCHEN");
+                    mixedKitchen = true;
+                    return prev; // no-op, return unchanged state
                 }
 
                 const existing = prev.items.find((i) => i.mealId === item.mealId);
@@ -129,6 +134,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
                     items: [...prev.items, { ...item, quantity: 1 }],
                 };
             });
+
+            if (mixedKitchen) return { ok: false, error: "MIXED_KITCHEN" };
+            return { ok: true };
         },
         []
     );

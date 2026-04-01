@@ -106,6 +106,23 @@ export async function readEvents(
 // ─── Legacy Helpers (kept for backward compatibility) ────────────────────────
 
 /**
+ * Opt-in fast path for pub/sub delivery.
+ * Upstash Redis REST API does not support persistent connections or SUBSCRIBE commands.
+ * Pub/Sub requires stateful TCP connections which Serverless/Edge REST environments lack.
+ * Therefore, pub/sub via REST is natively unavailable and we will fallback to polling.
+ */
+export async function subscribeToChannel(
+    channel: string,
+    callback: (event: SSEPayload) => void
+): Promise<void> {
+    throw new Error("Upstash REST pub/sub not supported");
+}
+
+export async function unsubscribeFromChannel(channel: string): Promise<void> {
+    // Not supported
+}
+
+/**
  * @deprecated Use publishEvent() instead
  */
 export async function collectAndPublishEvent(

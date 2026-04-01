@@ -24,7 +24,7 @@ const SubscriptionCacheKeys = {
     status: (kitchenId: string) => `subscription:status:${kitchenId}`,
 };
 
-const SUBSCRIPTION_CACHE_TTL = 300; // 5 minutes
+const SUBSCRIPTION_CACHE_TTL = 60; // 60 seconds
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -218,19 +218,17 @@ export async function createSubscriptionCheckout(
     const planConfig = SUBSCRIPTION_PLANS[planType];
     if (!planConfig) throw new NotFoundError("Subscription plan");
 
-    // Non-Stripe gateways: return a stub
+    // Non-Stripe gateways: throw proper 501 Not Implemented error
     if (paymentMethod !== "STRIPE") {
         logger.info("Non-Stripe payment method requested", {
             paymentMethod,
             kitchenId,
             planType,
         });
-        return {
-            url: null,
-            paymentMethod,
-            status: "COMING_SOON" as const,
-            message: `${paymentMethod} payments are coming soon. Please use Stripe for now.`,
-        };
+        const error = new Error(`${paymentMethod} payments are not yet available. Please use Stripe or contact support.`);
+        (error as any).statusCode = 501;
+        (error as any).code = 'NOT_IMPLEMENTED';
+        throw error;
     }
 
     // Find the plan in DB
@@ -389,8 +387,26 @@ export async function handleStripeEvent(event: Stripe.Event) {
     switch (event.type) {
         case "checkout.session.completed": {
             const session = event.data.object as Stripe.Checkout.Session;
-            const { userId, kitchenId, planId, planType } =
-                session.metadata || {};
+            const metadata = session.metadata || {};
+
+            // Handle BOOST explicitly
+            if (metadata.type === "BOOST") {
+                const { kitchenId, userId, durationDays } = metadata;
+                if (!kitchenId || !userId || !durationDays) {
+                    logger.error("Missing metadata for BOOST checkout", { sessionId: session.id });
+                    return;
+                }
+                logger.info("Processing BOOST checkout", { kitchenId, durationDays });
+                await activateBoost(kitchenId, userId, parseInt(durationDays, 10), 10);
+                
+                // Invalidate city search cache (we don't have city slug readily available but we invalidate profile)
+                await invalidateCache(SubscriptionCacheKeys.status(kitchenId));
+                const k = await db.query.kitchens.findFirst({ where: eq(kitchens.id, kitchenId) });
+                if (k?.citySlug) await invalidateCache(`kitchens:city:${k.citySlug}`);
+                return;
+            }
+
+            const { userId, kitchenId, planId, planType } = metadata;
 
             if (!userId || !kitchenId || !planId) {
                 logger.error(

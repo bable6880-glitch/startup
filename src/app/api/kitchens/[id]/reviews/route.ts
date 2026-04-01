@@ -24,7 +24,11 @@ export async function GET(request: NextRequest, { params }: Params) {
             return apiBadRequest("Invalid query parameters", errors);
         }
 
-        const result = await getKitchenReviews(id, parsed.data);
+        const result = await getKitchenReviews(id, {
+            ...parsed.data,
+            page: Math.max(1, parseInt(queryParams.page ?? "1")),
+            limit: Math.min(50, Math.max(1, parseInt(queryParams.limit ?? "20"))),
+        });
 
         return apiPaginated(result.reviews, {
             page: result.page,

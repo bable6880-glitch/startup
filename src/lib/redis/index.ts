@@ -8,8 +8,8 @@ if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN
 
 export const redis = process.env.UPSTASH_REDIS_REST_URL
     ? new Redis({
-        url: process.env.UPSTASH_REDIS_REST_URL,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+        url: process.env.UPSTASH_REDIS_REST_URL.replace(/(^"|"$)/g, ""),
+        token: process.env.UPSTASH_REDIS_REST_TOKEN!.replace(/(^"|"$)/g, ""),
     })
     : null;
 

@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
             return apiBadRequest("Invalid input", errors);
         }
 
-        const user = await syncUser(parsed.data.idToken);
+        const user = await syncUser(parsed.data.idToken, parsed.data.fcmToken);
         return apiSuccess(user);
     } catch (error: unknown) {
         // ── Firebase/Auth errors — return proper 401/403 ──

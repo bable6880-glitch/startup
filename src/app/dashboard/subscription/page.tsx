@@ -32,37 +32,15 @@ type SubscriptionStatus = {
 
 type PlanKey = keyof typeof SUBSCRIPTION_PLANS;
 
+// TODO P6: JazzCash/Easypaisa integration
+// Backend stub at /api/seller/subscription/checkout (501)
 const PAYMENT_METHODS = [
     {
         id: "STRIPE" as const,
         label: "Credit/Debit Card",
         icon: "💳",
         available: true,
-    },
-    {
-        id: "JAZZCASH" as const,
-        label: "JazzCash",
-        icon: "📱",
-        available: false,
-    },
-    {
-        id: "EASYPAISA" as const,
-        label: "EasyPaisa",
-        icon: "📲",
-        available: false,
-    },
-    {
-        id: "SADAPAY" as const,
-        label: "SadaPay",
-        icon: "🏦",
-        available: false,
-    },
-    {
-        id: "BANK_TRANSFER" as const,
-        label: "Bank Transfer",
-        icon: "🏛️",
-        available: false,
-    },
+    }
 ];
 
 // ─── Main Page Content ──────────────────────────────────────────────────────

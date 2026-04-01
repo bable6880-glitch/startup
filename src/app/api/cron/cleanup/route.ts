@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { subscriptions, boosts, kitchens } from "@/lib/db/schema";
-import { eq, and, lt, sql } from "drizzle-orm";
+import { subscriptions, boosts, kitchens, orders, orderItems, users, adminAuditLog } from "@/lib/db/schema";
+import { eq, and, lt, sql, isNull } from "drizzle-orm";
 import { apiSuccess, apiUnauthorized, apiInternalError } from "@/lib/utils/api-response";
 import { timingSafeEqual } from "crypto";
 
@@ -25,10 +25,10 @@ export async function GET(request: NextRequest) {
         }
 
         // Timing-safe comparison to prevent timing attacks
-        const providedBuffer = Buffer.from(cronSecret);
-        const expectedBuffer = Buffer.from(CRON_SECRET);
+        const a = Buffer.from(cronSecret);
+        const b = Buffer.from(process.env.CRON_SECRET ?? "");
 
-        if (providedBuffer.length !== expectedBuffer.length || !timingSafeEqual(providedBuffer, expectedBuffer)) {
+        if (a.length !== b.length || !timingSafeEqual(a, b)) {
             return apiUnauthorized("Invalid cron secret");
         }
 
@@ -100,6 +100,48 @@ export async function GET(request: NextRequest) {
                 .where(eq(kitchens.id, boost.kitchenId));
 
             expiredBoosts++;
+        }
+
+        // ── 4. Cancel Orphan Orders ───────────────────────────────────────────
+        const fiveMinsAgo = new Date(now.getTime() - 5 * 60 * 1000);
+        const orphanOrders = await db
+            .select({ id: orders.id })
+            .from(orders)
+            .leftJoin(orderItems, eq(orders.id, orderItems.orderId))
+            .where(
+                and(
+                    isNull(orderItems.id),
+                    lt(orders.createdAt, fiveMinsAgo),
+                    sql`${orders.status} != 'CANCELLED'`
+                )
+            );
+
+        if (orphanOrders.length > 0) {
+            const adminUser = await db.query.users.findFirst({
+                where: eq(users.role, "ADMIN"),
+                columns: { id: true }
+            });
+
+            for (const { id: orderId } of orphanOrders) {
+                await db
+                    .update(orders)
+                    .set({
+                        status: "CANCELLED",
+                        updatedAt: now,
+                        notes: sql`CONCAT(COALESCE(${orders.notes}, ''), '\n[auto-cancelled: no items found]')`,
+                    })
+                    .where(eq(orders.id, orderId));
+
+                if (adminUser) {
+                    await db.insert(adminAuditLog).values({
+                        adminId: adminUser.id,
+                        action: "AUTO_CANCEL_ORPHAN_ORDER",
+                        targetType: "ORDER",
+                        targetId: orderId,
+                        details: "auto-cancelled: no items found",
+                    });
+                }
+            }
         }
 
         return apiSuccess({

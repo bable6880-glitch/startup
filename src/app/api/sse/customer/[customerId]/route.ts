@@ -1,7 +1,7 @@
 export const runtime = "nodejs"; // REQUIRED — streaming won't work on edge runtime
 
 import { NextRequest } from "next/server";
-import { CHANNELS, readEvents } from "@/lib/redis/pubsub";
+import { CHANNELS, readEvents, subscribeToChannel, unsubscribeFromChannel } from "@/lib/redis/pubsub";
 import { resolveSseTicket } from "@/lib/auth/resolve-sse-ticket";
 
 export async function GET(
@@ -15,7 +15,7 @@ export async function GET(
     if (!ticket) return Response.json({ error: "Missing ticket" }, { status: 401 });
 
     const authUser = await resolveSseTicket(ticket);
-    if (!authUser || authUser.userId !== customerId) {
+    if (!authUser || authUser.userId !== customerId || authUser.channel !== "customer" || authUser.channelId !== customerId) {
         return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -33,26 +33,48 @@ export async function GET(
             // Send connection confirmation immediately
             send(`data: ${JSON.stringify({ type: "CONNECTED", payload: { customerId }, timestamp: Date.now() })}\n\n`);
 
-            // Poll Redis every 2 seconds
-            const interval = setInterval(async () => {
-                try {
-                    send(": heartbeat\n\n"); // Prevents browser timeout
+            // Independent Heartbeat (30s)
+            const heartbeatInterval = setInterval(() => {
+                send(": heartbeat\n\n");
+            }, 30000);
 
-                    const events = await readEvents(channel, lastSeen);
-                    for (const event of events) {
-                        send(`data: ${JSON.stringify(event)}\n\n`);
-                        lastSeen = Math.max(lastSeen, event.timestamp);
-                    }
-                } catch (error) {
-                    console.error("[SSE/customer] Poll error:", error);
-                    clearInterval(interval);
-                    try { controller.close(); } catch { }
+            let pollIntervalId: ReturnType<typeof setInterval> | null = null;
+
+            // Attempt Pub/Sub Fast Path
+            subscribeToChannel(channel, (event) => {
+                if (event.type === "ORDER_STATUS_CHANGED") {
+                    send(`data: ${JSON.stringify(event)}\n\n`);
+                    lastSeen = Math.max(lastSeen, event.timestamp);
                 }
-            }, 2000);
+            }).catch(() => {
+                // Fallback: Polling with Jitter
+                const jitter = Math.floor(Math.random() * 2000) - 1000;
+                const pollInterval = 5000 + jitter;
+
+                pollIntervalId = setInterval(async () => {
+                    try {
+                        const events = await readEvents(channel, lastSeen);
+                        for (const event of events) {
+                            if (event.type === "ORDER_STATUS_CHANGED") {
+                                send(`data: ${JSON.stringify(event)}\n\n`);
+                            } else {
+                                send(`data: ${JSON.stringify(event)}\n\n`); // send anyway
+                            }
+                            lastSeen = Math.max(lastSeen, event.timestamp);
+                        }
+                    } catch (error) {
+                        console.error("[SSE/customer] Poll error:", error);
+                        if (pollIntervalId) clearInterval(pollIntervalId);
+                        try { controller.close(); } catch { }
+                    }
+                }, pollInterval);
+            });
 
             // Cleanup on client disconnect
             request.signal.addEventListener("abort", () => {
-                clearInterval(interval);
+                unsubscribeFromChannel(channel).catch(() => {});
+                clearInterval(heartbeatInterval);
+                if (pollIntervalId) clearInterval(pollIntervalId);
                 try { controller.close(); } catch { }
             });
         },

@@ -6,11 +6,14 @@ frontend:
         - nvm install 20
         - nvm use 20
         - node -v
-        - npm install --prefer-offline
+        - npm ci
     build:
       commands:
+        # Migrations are executed manually via a separate pipeline.
+        # db:migrate is explicitly omitted to prevent concurrent lock races.
         - env | grep -E '^DATABASE_URL|^FIREBASE_|^UPSTASH_|^STRIPE_|^NEXT_PUBLIC_|^CRON_|^CLOUDINARY_' >> .env.production
         - npm run build
+        - test -d .next && echo "Build succeeded" || exit 1
   environmentVariables:
     NEXT_PUBLIC_BASE_URL: https://main.d3rcns8buqla6w.amplifyapp.com
   artifacts:

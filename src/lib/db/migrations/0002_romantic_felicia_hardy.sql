@@ -1,2 +1,2 @@
-ALTER TABLE "users" ADD COLUMN "default_address" text;--> statement-breakpoint
-ALTER TABLE "users" ADD COLUMN "default_city" varchar(100);
+DO $$ BEGIN ALTER TABLE "users" ADD COLUMN "default_address" text; EXCEPTION WHEN duplicate_column THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "users" ADD COLUMN "default_city" varchar(100); EXCEPTION WHEN duplicate_column THEN null; END $$;

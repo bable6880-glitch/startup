@@ -39,23 +39,21 @@ export function MealItem({ meal, kitchenId, kitchenName }: { meal: MealData; kit
             return;
         }
 
-        try {
-            addItem(kitchenId, kitchenName, {
-                mealId: meal.id,
-                name: meal.name,
-                price: meal.price,
-                imageUrl: meal.imageUrl,
+        const result = addItem(kitchenId, kitchenName, {
+            mealId: meal.id,
+            name: meal.name,
+            price: meal.price,
+            imageUrl: meal.imageUrl,
+        });
+
+        if (!result.ok && result.error === "MIXED_KITCHEN") {
+            // Save what the user wanted to add, then prompt for clear
+            setPendingAdd({
+                kitchenId,
+                kitchenName,
+                item: { mealId: meal.id, name: meal.name, price: meal.price, imageUrl: meal.imageUrl },
             });
-        } catch (err) {
-            if (err instanceof Error && err.message === "MIXED_KITCHEN") {
-                // Save what the user wanted to add, then prompt for clear
-                setPendingAdd({
-                    kitchenId,
-                    kitchenName,
-                    item: { mealId: meal.id, name: meal.name, price: meal.price, imageUrl: meal.imageUrl },
-                });
-                setShowClearDialog(true);
-            }
+            setShowClearDialog(true);
         }
     };
 

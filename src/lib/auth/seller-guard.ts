@@ -34,7 +34,8 @@ export type SellerGuardResult = SellerGuardSuccess | SellerGuardFailure;
  *   const { user, kitchen } = guard;
  */
 export async function requireSeller(
-    request: NextRequest
+    request: NextRequest,
+    targetKitchenId?: string
 ): Promise<SellerGuardResult> {
     const user = await getAuthUser(request);
     if (!user) {
@@ -55,9 +56,14 @@ export async function requireSeller(
     if (!kitchen) {
         return {
             ok: false,
-            response: apiNotFound(
-                "No kitchen found. Please register your kitchen first."
-            ),
+            response: apiNotFound("No kitchen found. Please register your kitchen first."),
+        };
+    }
+
+    if (targetKitchenId && kitchen.id !== targetKitchenId) {
+        return {
+            ok: false,
+            response: apiForbidden("You do not have permission to modify this kitchen"),
         };
     }
 

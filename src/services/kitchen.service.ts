@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { kitchens } from "@/lib/db/schema";
 import { eq, and, desc, sql, isNull } from "drizzle-orm";
 import { slugify } from "@/config/constants";
-import { cached, invalidateCache, CacheKeys, CacheTTL } from "@/lib/redis";
+import { cached, invalidateCache, CacheKeys, CacheTTL, redis } from "@/lib/redis";
 import { sanitizeRichText } from "@/lib/utils/sanitize";
 import type { CreateKitchenInput, UpdateKitchenInput, KitchenQueryInput } from "@/lib/validations/kitchen";
 import { NotFoundError, AuthorizationError } from "@/lib/utils/errors";
@@ -52,6 +52,20 @@ export async function createKitchen(ownerId: string, input: CreateKitchenInput) 
 
     // Invalidate city cache
     await invalidateCache(CacheKeys.kitchensByCity(slugify(input.city)));
+
+    // Best-effort cache warming
+    try {
+        if (redis) {
+            const freshListing = await listKitchens({ city: input.city, page: 1, limit: 50, sort: "boost", radiusKm: 10 });
+            await redis.setex(
+                CacheKeys.kitchensByCity(slugify(input.city)),
+                CacheTTL.CITY_LISTINGS || 300,
+                JSON.stringify(freshListing)
+            );
+        }
+    } catch (error) {
+        console.error("[Kitchen Service] Failed to warm city cache after kitchen creation:", error);
+    }
 
     return kitchen;
 }

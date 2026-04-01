@@ -1,3 +1,3 @@
-ALTER TABLE "orders" ADD COLUMN "customer_name" varchar(255);--> statement-breakpoint
-ALTER TABLE "orders" ADD COLUMN "customer_phone" varchar(20);--> statement-breakpoint
-ALTER TABLE "orders" ADD COLUMN "delivery_address" text;
+DO $$ BEGIN ALTER TABLE "orders" ADD COLUMN "customer_name" varchar(255); EXCEPTION WHEN duplicate_column THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "orders" ADD COLUMN "customer_phone" varchar(20); EXCEPTION WHEN duplicate_column THEN null; END $$;--> statement-breakpoint
+DO $$ BEGIN ALTER TABLE "orders" ADD COLUMN "delivery_address" text; EXCEPTION WHEN duplicate_column THEN null; END $$;

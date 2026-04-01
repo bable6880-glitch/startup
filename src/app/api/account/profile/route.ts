@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getAuthUser } from "@/lib/auth/get-auth-user";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { apiSuccess, apiUnauthorized, apiNotFound, apiBadRequest, apiInternalError } from "@/lib/utils/api-response";
+import { sanitizeText } from "@/lib/utils/sanitize";
 
 // GET /api/account/profile
 export async function GET(req: NextRequest) {
@@ -28,34 +29,26 @@ export async function GET(req: NextRequest) {
 
         if (!profile) return apiNotFound("User not found");
 
-        // Count stats via raw queries (no heavy joins needed)
-        const { orders, reviews } = await db.transaction(async (tx) => {
-            // total orders placed by this customer
-            const orderRows = await tx.execute(
-                `SELECT COUNT(*) as count FROM orders WHERE customer_id = '${user.id}'`
-            );
-            // total reviews written
-            const reviewRows = await tx.execute(
-                `SELECT COUNT(*) as count FROM reviews WHERE user_id = '${user.id}'`
-            );
-            // distinct kitchens ordered from
-            const kitchenRows = await tx.execute(
-                `SELECT COUNT(DISTINCT kitchen_id) as count FROM orders WHERE customer_id = '${user.id}'`
-            );
-            return {
-                orders: {
-                    total: Number((orderRows.rows[0] as { count: string }).count),
-                    kitchens: Number((kitchenRows.rows[0] as { count: string }).count),
-                },
-                reviews: Number((reviewRows.rows[0] as { count: string }).count),
-            };
-        });
+        // Count stats via sequential parameterized queries (neon-http: no transactions)
+        const orderRows = await db.execute(
+            sql`SELECT COUNT(*) as count FROM orders WHERE customer_id = ${user.id}`
+        );
+        const reviewRows = await db.execute(
+            sql`SELECT COUNT(*) as count FROM reviews WHERE user_id = ${user.id}`
+        );
+        const kitchenRows = await db.execute(
+            sql`SELECT COUNT(DISTINCT kitchen_id) as count FROM orders WHERE customer_id = ${user.id}`
+        );
+
+        const totalOrders = Number((orderRows.rows[0] as { count: string }).count);
+        const totalReviews = Number((reviewRows.rows[0] as { count: string }).count);
+        const kitchensTried = Number((kitchenRows.rows[0] as { count: string }).count);
 
         return apiSuccess({
             ...profile,
-            totalOrders: orders.total,
-            totalReviews: reviews,
-            kitchensTried: orders.kitchens,
+            totalOrders,
+            totalReviews,
+            kitchensTried,
         });
     } catch (err) {
         console.error("[GET /api/account/profile]", err);
@@ -77,11 +70,12 @@ export async function PUT(req: NextRequest) {
             return apiBadRequest("Name must be at least 2 characters");
         }
 
+        // Sanitize all user-supplied text before DB insert (Rule #8)
         const updateData: Record<string, string> = {};
-        if (name !== undefined) updateData.name = name.trim();
-        if (phone !== undefined) updateData.phone = phone;
-        if (defaultCity !== undefined) updateData.defaultCity = defaultCity;
-        if (defaultAddress !== undefined) updateData.defaultAddress = defaultAddress;
+        if (name !== undefined) updateData.name = sanitizeText(name.trim());
+        if (phone !== undefined) updateData.phone = sanitizeText(phone);
+        if (defaultCity !== undefined) updateData.defaultCity = sanitizeText(defaultCity);
+        if (defaultAddress !== undefined) updateData.defaultAddress = sanitizeText(defaultAddress);
 
         if (Object.keys(updateData).length === 0) {
             return apiBadRequest("No fields to update");

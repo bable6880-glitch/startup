@@ -39,7 +39,11 @@ export function useKitchenSSE({ kitchenId, onNewOrder, onSubscriptionChanged }: 
             // Step 1: Get one-time ticket
             const ticketRes = await fetch("/api/sse/ticket", {
                 method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
+                headers: { 
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ channel: "kitchen", channelId: kitchenId })
             });
             const { data: { ticket } } = await ticketRes.json();
 

@@ -12,8 +12,8 @@ export async function GET(req: NextRequest) {
         if (!user) return apiUnauthorized();
 
         const { searchParams } = new URL(req.url);
-        const page = Math.max(1, Number(searchParams.get("page") ?? 1));
-        const limit = Math.min(50, Math.max(1, Number(searchParams.get("limit") ?? 10)));
+        const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
+        const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20")));
         const offset = (page - 1) * limit;
 
         // Fetch orders with kitchen name

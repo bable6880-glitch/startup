@@ -24,8 +24,8 @@ let _auth: Auth | null = null;
  * Lazily initialize Firebase Admin SDK (singleton).
  * Prevents build-time failures when env vars are not available.
  */
-function getFirebaseAdmin(): Auth {
-    if (_auth) return _auth;
+function ensureInitialized(): App {
+    if (_app) return _app;
 
     const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
@@ -58,8 +58,22 @@ function getFirebaseAdmin(): Auth {
             ? initializeApp({ credential: cert(serviceAccount) })
             : getApps()[0];
 
-    _auth = getAuth(_app);
+    return _app;
+}
+
+function getFirebaseAdmin(): Auth {
+    if (_auth) return _auth;
+    const app = ensureInitialized();
+    _auth = getAuth(app);
     return _auth;
+}
+
+/**
+ * Returns the shared Firebase Admin App singleton.
+ * Use this when you need the App directly (e.g. for FCM getMessaging).
+ */
+export function getFirebaseApp(): App {
+    return ensureInitialized();
 }
 
 /**

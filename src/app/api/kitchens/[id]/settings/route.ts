@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { kitchens } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { getAuthUser } from "@/lib/auth/get-auth-user";
 import { apiUnauthorized, apiForbidden, apiNotFound, apiInternalError } from "@/lib/utils/api-response";
+import { requireSeller } from "@/lib/auth/seller-guard";
 
 // PATCH — update kitchen images (profileImageUrl, coverImageUrl, deliveryOptions)
 export async function PATCH(
@@ -11,20 +11,9 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const authUser = await getAuthUser(req);
-        if (!authUser) return apiUnauthorized();
-
         const { id: kitchenId } = await params;
-
-        // Verify ownership
-        const kitchen = await db
-            .select({ id: kitchens.id, ownerId: kitchens.ownerId })
-            .from(kitchens)
-            .where(eq(kitchens.id, kitchenId))
-            .limit(1);
-
-        if (kitchen.length === 0) return apiNotFound("Kitchen not found");
-        if (kitchen[0].ownerId !== authUser.id) return apiForbidden("You don't own this kitchen");
+        const guard = await requireSeller(req, kitchenId);
+        if (!guard.ok) return guard.response;
 
         const body = await req.json();
         const updateData: Record<string, unknown> = {};

@@ -4,6 +4,8 @@ export interface SSETicketPayload {
     userId: string;
     role: string;
     firebaseUid: string;
+    channel?: string;
+    channelId?: string;
 }
 
 export async function resolveSseTicket(ticket: string): Promise<SSETicketPayload | null> {

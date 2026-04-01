@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
+    "db:push": "node -e \"if(process.env.NODE_ENV==='production') {console.error('ERROR: db:push blocked in production'); process.exit(1)}\" && drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed-plans": "npx tsx src/scripts/seed-plans.ts"
@@ -45,6 +45,7 @@
     "drizzle-kit": "^0.31.9",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "postgres": "^3.4.8",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

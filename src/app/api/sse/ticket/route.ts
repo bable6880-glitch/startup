@@ -13,11 +13,17 @@ export async function POST(request: NextRequest) {
         const ticket = randomUUID();
         const ticketKey = `st:sse:ticket:${ticket}`;
 
+        const body = await request.json().catch(() => ({}));
+        const channel = body?.channel as string | undefined;
+        const channelId = body?.channelId as string | undefined;
+
         // Store: userId + role, expires in 30 seconds (enough time to open SSE connection)
         const payload = JSON.stringify({
             userId: authUser.id,
             role: authUser.role,
             firebaseUid: authUser.firebaseUid,
+            channel,
+            channelId,
         });
 
         if (redis) {
@@ -29,6 +35,7 @@ export async function POST(request: NextRequest) {
 
         return apiSuccess({ ticket });
     } catch (error) {
+        console.error("Ticket generation error:", error);
         return apiError("Failed to create SSE ticket", "INTERNAL_ERROR", 500);
     }
 }

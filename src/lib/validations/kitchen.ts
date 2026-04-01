@@ -61,6 +61,9 @@ export const kitchenQuerySchema = z.object({
         .default("boost"),
     page: z.coerce.number().int().positive().default(1),
     limit: z.coerce.number().int().min(1).max(50).default(20),
+    lat: z.coerce.number().min(-90).max(90).optional(),
+    lng: z.coerce.number().min(-180).max(180).optional(),
+    radiusKm: z.coerce.number().min(1).max(50).default(10),
 });
 
 export type CreateKitchenInput = z.infer<typeof createKitchenSchema>;

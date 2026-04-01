@@ -36,7 +36,11 @@ export function useCustomerSSE({ customerId, onStatusChange }: UseCustomerSSEOpt
             // Step 1: Get one-time ticket
             const ticketRes = await fetch("/api/sse/ticket", {
                 method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
+                headers: { 
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ channel: "customer", channelId: customerId })
             });
             const { data: { ticket } } = await ticketRes.json();
 

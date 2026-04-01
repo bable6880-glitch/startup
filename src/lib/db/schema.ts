@@ -51,6 +51,7 @@ export const paymentMethodEnum = pgEnum("payment_method", [
     "BANK_TRANSFER",
     "SADAPAY",
     "FREE_TRIAL",
+    "COD",
 ]);
 
 export const subscriptionPlanTypeEnum = pgEnum("subscription_plan_type", [
@@ -646,6 +647,11 @@ export const reportsRelations = relations(reports, ({ one }) => ({
         fields: [reports.reviewedBy],
         references: [users.id],
     }),
+}));
+
+// ─── ADMIN AUDIT LOG ──────────────────────────────────────────────
+export const adminAuditLogRelations = relations(adminAuditLog, ({ one }) => ({
+    admin: one(users, { fields: [adminAuditLog.adminId], references: [users.id] }),
 }));
 
 // ─── USER FAVORITES ───────────────────────────────────────────────

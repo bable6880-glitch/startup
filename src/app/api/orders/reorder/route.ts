@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
+// TODO (P4): Refactor to use cart/checkout flow instead of direct DB insertion
 import { db } from "@/lib/db";
-import { orders, orderItems, meals } from "@/lib/db/schema";
+import { orders, orderItems, meals, kitchens } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { getAuthUser } from "@/lib/auth/get-auth-user";
 import { apiSuccess, apiUnauthorized, apiInternalError, apiNotFound, apiBadRequest } from "@/lib/utils/api-response";
@@ -22,7 +23,9 @@ export async function POST(request: NextRequest) {
         const oldOrder = await db.query.orders.findFirst({
             where: eq(orders.id, orderId),
             with: {
-                items: true,
+                items: {
+                    with: { meal: true }
+                },
             },
         });
 
@@ -30,24 +33,36 @@ export async function POST(request: NextRequest) {
             return apiNotFound("Original order not found");
         }
 
+        // Verify kitchen can accept orders
+        const kitchen = await db.query.kitchens.findFirst({
+            where: eq(kitchens.id, oldOrder.kitchenId),
+        });
+        const { getSubscriptionStatus } = await import("@/services/premium.service");
+        const subStatus = await getSubscriptionStatus(oldOrder.kitchenId);
+
+        if (!kitchen || kitchen.status !== "ACTIVE" || !subStatus.canAcceptOrders) {
+            return apiBadRequest("The source kitchen is currently unavailable and cannot accept orders.");
+        }
+
         // Check if meals are still available and fetch current prices
         const mealIds = oldOrder.items.map((i) => i.mealId);
         const currentMeals = await db.query.meals.findMany({
             where: inArray(meals.id, mealIds),
-            columns: { id: true, price: true, availabilityStatus: true },
+            columns: { id: true, price: true, availabilityStatus: true, isAvailable: true },
         });
 
         const currentMealsMap = new Map(currentMeals.map((m) => [m.id, m]));
 
         // Construct new items list and recalculate amount
         const newItems = [];
+        const warnings: string[] = [];
         let totalAmount = 0;
 
         for (const item of oldOrder.items) {
             const currentMeal = currentMealsMap.get(item.mealId);
             
             // Reorder only currently available meals
-            if (currentMeal && currentMeal.availabilityStatus === "AVAILABLE") {
+            if (currentMeal && currentMeal.availabilityStatus === "AVAILABLE" && currentMeal.isAvailable) {
                 const currentPrice = currentMeal.price;
                 const itemTotal = Number(currentPrice) * item.quantity;
                 totalAmount += itemTotal;
@@ -57,6 +72,8 @@ export async function POST(request: NextRequest) {
                     quantity: item.quantity,
                     priceAtOrder: currentPrice, // Re-price with current price
                 });
+            } else {
+                warnings.push(`Meal "${item.meal?.name || 'Unknown'}" is no longer available and was excluded.`);
             }
         }
 
@@ -84,7 +101,11 @@ export async function POST(request: NextRequest) {
             }))
         );
 
-        return apiSuccess({ orderId: newOrder.id, message: "Reorder placed successfully" }, 201);
+        // Notify cook
+        const { notifyOrderPlaced } = await import("@/services/notification.service");
+        await notifyOrderPlaced(oldOrder.kitchenId, newOrder.id, user.name || "A customer");
+
+        return apiSuccess({ newOrderId: newOrder.id, warnings }, 201);
     } catch (error) {
         if (error instanceof z.ZodError) return apiBadRequest("Validation error", error.flatten().fieldErrors);
         console.error("POST /api/orders/reorder error:", error);
