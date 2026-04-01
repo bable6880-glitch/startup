@@ -217,6 +217,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 syncAttemptCount.current = 0;
                 currentSyncUid.current = firebaseUser.uid;
 
+                const profileComplete = !!(profileInfo?.name && profileInfo?.phone && profileInfo?.defaultCity);
+                console.log('[Auth] syncUser result:', body.data);
+                console.log('[Auth] profile complete?', profileComplete);
+
                 setState({
                     user: body.data,
                     userProfile: profileInfo,

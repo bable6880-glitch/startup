@@ -20,7 +20,7 @@ type FormValues = z.infer<typeof schema>;
 function ProfileForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, userProfile, getIdToken, setUserProfile } = useAuth();
+  const { user, loading, getIdToken, setUserProfile } = useAuth();
 
   const [saving, setSaving] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -42,11 +42,11 @@ function ProfileForm() {
 
   // Protect route
   useEffect(() => {
-    // If auth has loaded and no user → redirect to login
-    if (!user && !loadingProfile) {
-      router.replace(`/login?redirect=${encodeURIComponent(redirectTo)}`);
-    }
-  }, [user, loadingProfile, redirectTo, router]);
+    // We do explicit redirect inside the render loop OR here.
+    // The prompt requested exact code:
+    // if (!user) { router.push('/login'); return null }
+    // Let's keep the standard structure but add the prompt's condition below.
+  }, []);
 
   // Pre-fill form with existing profile values on mount
   useEffect(() => {
@@ -72,9 +72,11 @@ function ProfileForm() {
       }
       finally { setLoadingProfile(false); }
     }
-    if (user) loadProfile();
-    else setLoadingProfile(false);
-  }, [user, getIdToken, reset]);
+    if (!loading) {
+      if (user) loadProfile();
+      else setLoadingProfile(false);
+    }
+  }, [user, loading, getIdToken, reset]);
 
   const onSubmit = async (data: FormValues) => {
     setSaving(true);
@@ -107,12 +109,17 @@ function ProfileForm() {
     }
   };
 
-  if (loadingProfile) {
+  if (loading || loadingProfile) {
     return (
       <div className="min-h-screen bg-orange-50 flex flex-col items-center justify-center dark:bg-neutral-900">
         <div className="w-8 h-8 border-4 border-orange-400 border-t-transparent rounded-full animate-spin dark:border-neutral-700 dark:border-t-orange-500" />
       </div>
     );
+  }
+
+  if (!user) {
+    router.push(`/login?redirect=${encodeURIComponent(redirectTo)}`);
+    return null;
   }
 
   return (
