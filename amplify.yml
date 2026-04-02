@@ -6,7 +6,7 @@ frontend:
         - nvm install 20
         - nvm use 20
         - node -v
-        - npm ci
+        - npm install --no-audit --no-fund
     build:
       commands:
         # Migrations are executed manually via a separate pipeline.
