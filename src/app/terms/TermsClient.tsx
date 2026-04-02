@@ -1,26 +1,12 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ShieldCheck, UserCheck, CreditCard, Star, AlertTriangle, Settings, FileText, Mail, ChevronRight, ArrowLeft } from "lucide-react";
 
-export default function TermsClient() {
-    const router = useRouter();
-    const [activeSection, setActiveSection] = useState<number>(1);
-    
-    // Smooth scrolling to section
-    const scrollToSection = (id: string, index: number) => {
-        setActiveSection(index);
-        const element = document.getElementById(id);
-        if (element) {
-            const y = element.getBoundingClientRect().top + window.scrollY - 100;
-            window.scrollTo({ top: y, behavior: "smooth" });
-        }
-    };
-
-    const sections = [
+export const termsSections = [
         {
             number: 1,
             id: "nature-of-service",
@@ -141,7 +127,7 @@ export default function TermsClient() {
                         </div>
                         <div className="flex-1 bg-white dark:bg-neutral-900 border-l-4 border-red-500 p-4 shadow-sm rounded-r-lg">
                             <h4 className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm mb-1">Strict Moderation</h4>
-                            <p className="text-sm text-neutral-500 dark:text-neutral-400">Fake or misleading reviews may result in your account's removal.</p>
+                            <p className="text-sm text-neutral-500 dark:text-neutral-400">Fake or misleading reviews may result in your account&apos;s removal.</p>
                         </div>
                     </div>
                 </div>
@@ -232,6 +218,20 @@ export default function TermsClient() {
         },
     ];
 
+export default function TermsClient() {
+    const router = useRouter();
+    const [activeSection, setActiveSection] = useState<number>(1);
+
+    // Smooth scrolling to section
+    const scrollToSection = (id: string, index: number) => {
+        setActiveSection(index);
+        const element = document.getElementById(id);
+        if (element) {
+            const y = element.getBoundingClientRect().top + window.scrollY - 100;
+            window.scrollTo({ top: y, behavior: "smooth" });
+        }
+    };
+
     // Intersection Observer to update active section in sidebar on scroll
     useEffect(() => {
         const observerOptions = {
@@ -243,7 +243,7 @@ export default function TermsClient() {
         const observerCallback: IntersectionObserverCallback = (entries) => {
             entries.forEach((entry) => {
                 if (entry.isIntersecting) {
-                    const index = sections.findIndex(sec => sec.id === entry.target.id);
+                    const index = termsSections.findIndex(sec => sec.id === entry.target.id);
                     if (index !== -1) setActiveSection(index + 1);
                 }
             });
@@ -251,13 +251,13 @@ export default function TermsClient() {
 
         const observer = new IntersectionObserver(observerCallback, observerOptions);
 
-        sections.forEach((sec) => {
+        termsSections.forEach((sec) => {
             const element = document.getElementById(sec.id);
             if (element) observer.observe(element);
         });
 
         return () => observer.disconnect();
-    }, [sections]);
+    }, []);
 
     return (
         <div className="bg-neutral-50 dark:bg-neutral-950 min-h-screen pb-24">
@@ -285,7 +285,7 @@ export default function TermsClient() {
                             Terms & Conditions
                         </h1>
                         <p className="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                            Please read these terms carefully. By accessing or using Smart Tiffin's marketplace, you agree to be bound by the following conditions.
+                            Please read these terms carefully. By accessing or using Smart Tiffin&apos;s marketplace, you agree to be bound by the following conditions.
                         </p>
                     </div>
                 </div>
@@ -308,7 +308,7 @@ export default function TermsClient() {
                                         height: '40px'
                                     }}
                                 />
-                                {sections.map((section, index) => {
+                                {termsSections.map((section, index) => {
                                     const isActive = activeSection === index + 1;
                                     const Icon = section.icon;
                                     return (
@@ -350,7 +350,7 @@ export default function TermsClient() {
                     <main className="flex-1 w-full max-w-full">
                         <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl shadow-sm overflow-hidden">
                             <div className="p-6 md:p-10 space-y-16">
-                                {sections.map((section) => {
+                                {termsSections.map((section) => {
                                     const Icon = section.icon;
                                     return (
                                         <section key={section.id} id={section.id} className="scroll-mt-32">

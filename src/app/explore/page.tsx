@@ -4,10 +4,11 @@ import SearchBar from "@/components/ui/SearchBar";
 import { listKitchens } from "@/services/kitchen.service";
 import { kitchenQuerySchema } from "@/lib/validations/kitchen";
 import type { Metadata } from "next";
+import ExploreSEO from "./ExploreSEO";
 
 export const metadata: Metadata = {
-    title: "Explore Kitchens",
-    description: "Browse home kitchens in your city. Filter by cuisine, price, and ratings.",
+    title: "Explore Home Kitchens in Pakistan | Smart Tiffin – Find Home Cooked Meals Near You",
+    description: "Browse verified home kitchens across Pakistan. Find affordable home-cooked meals in Lahore, Karachi, Islamabad & Rawalpindi. Compare menus, pricing, and ratings. Order directly via WhatsApp. No commission.",
 };
 
 type Props = { searchParams: Promise<Record<string, string | undefined>> };
@@ -170,6 +171,9 @@ export default async function ExplorePage({ searchParams }: Props) {
             <Suspense fallback={<GridSkeleton />}>
                 <KitchenGrid searchParams={params} />
             </Suspense>
+
+            {/* SEO Article Area */}
+            <ExploreSEO />
         </div>
     );
 }
