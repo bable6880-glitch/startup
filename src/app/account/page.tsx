@@ -155,7 +155,7 @@ export default function AccountPage() {
             {/* Stats row */}
             {analytics && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <StatCard title="Total Spent" value={`Rs. ${analytics.totalSpent.toLocaleString()}`} icon="💳" />
+                    <StatCard title="Total Spent" value={`Rs. ${(analytics.totalSpent ?? 0).toLocaleString()}`} icon="💳" />
                     <StatCard title="Total Orders" value={analytics.totalOrders} icon="🛍️" />
                     <StatCard title="Kitchens Tried" value={analytics.kitchensTried} icon="🍱" />
                     <StatCard title="Reviews Written" value={analytics.totalReviews} icon="⭐" />
@@ -178,7 +178,7 @@ export default function AccountPage() {
                                                 {order.kitchen?.name ?? "Kitchen"}
                                             </p>
                                             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                                                Rs. {Number(order.totalAmount).toLocaleString()} · {order.items?.length ?? 0} item(s)
+                                                Rs. {(Number(order.totalAmount) || 0).toLocaleString()} · {order.items?.length ?? 0} item(s)
                                             </p>
                                             <span className={`inline-block mt-2 rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusBadge(order.status)}`}>
                                                 {order.status}

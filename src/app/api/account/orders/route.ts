@@ -4,12 +4,17 @@ import { db } from "@/lib/db";
 import { orders, kitchens, orderItems, meals } from "@/lib/db/schema";
 import { eq, desc, inArray } from "drizzle-orm";
 import { apiSuccess, apiUnauthorized, apiInternalError } from "@/lib/utils/api-response";
+import { logger } from "@/lib/utils/logger";
 
 // GET /api/account/orders?page=1&limit=10
 export async function GET(req: NextRequest) {
+    const requestId = crypto.randomUUID();
+    let userId: string | null = null;
+
     try {
         const user = await getAuthUser(req);
         if (!user) return apiUnauthorized();
+        userId = user.id;
 
         const { searchParams } = new URL(req.url);
         const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
@@ -39,11 +44,13 @@ export async function GET(req: NextRequest) {
             .limit(limit)
             .offset(offset);
 
-        // Count total for pagination
-        const [{ total }] = await db
+        // Count total for pagination — safe destructure for zero-row case
+        const countRows = await db
             .select({ total: db.$count(orders, eq(orders.customerId, user.id)) })
             .from(orders)
             .where(eq(orders.customerId, user.id));
+
+        const total = countRows?.[0]?.total ?? 0;
 
         // Fetch items for each order (batch)
         const orderIds = orderRows.map((o) => o.id);
@@ -66,16 +73,16 @@ export async function GET(req: NextRequest) {
                 if (!itemMap[item.orderId]) itemMap[item.orderId] = [];
                 itemMap[item.orderId].push({
                     quantity: item.quantity,
-                    price: Number(item.price),
+                    price: Number(item.price ?? 0),
                     meal: { name: item.mealName ?? "Item" },
                 });
             }
         }
 
-        const result = orderRows.map((o) => ({
+        const result = (orderRows ?? []).map((o) => ({
             id: o.id,
             status: o.status,
-            totalAmount: Number(o.totalAmount),
+            totalAmount: Number(o.totalAmount ?? 0),
             deliveryMode: o.deliveryMode,
             notes: o.notes,
             createdAt: o.createdAt,
@@ -90,14 +97,20 @@ export async function GET(req: NextRequest) {
             items: itemMap[o.id] ?? [],
         }));
 
-        const totalPages = Math.ceil(Number(total) / limit);
+        const totalPages = Math.ceil(Number(total) / limit) || 1;
 
         return apiSuccess({
-            orders: result,
+            orders: result ?? [],
             pagination: { page, limit, total: Number(total), totalPages },
         });
     } catch (err) {
-        console.error("[GET /api/account/orders]", err);
+        logger.error("[GET /api/account/orders] Failed to fetch orders", {
+            requestId,
+            userId,
+            error: err instanceof Error ? err : undefined,
+            route: "/api/account/orders",
+            stack: err instanceof Error ? err.stack : String(err),
+        } as any);
         return apiInternalError();
     }
 }

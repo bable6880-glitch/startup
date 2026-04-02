@@ -237,6 +237,57 @@ export default async function HomePage() {
           </Link>
         </div>
       </section>
+
+      {/* ── About Platform (SEO) ─────────────────────────────────── */}
+      <section id="about-platform" className="bg-white dark:bg-neutral-900">
+        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-3xl text-center mb-12">
+            <h2 className="text-3xl font-bold text-neutral-900 sm:text-4xl dark:text-neutral-50 mb-6">
+              Pakistan&apos;s Home Cooked Food Marketplace
+            </h2>
+            <div className="space-y-4 text-lg text-neutral-600 leading-relaxed dark:text-neutral-300">
+              <p>
+                Smart Tiffin connects you with passionate local home cooks offering fresh, hygienic, and affordable meals. By empowering independent cooks, we bring you the authentic taste of homemade food without restaurant markups.
+              </p>
+              <p>
+                Whether you need a daily lunch delivery to your office, a reliable monthly tiffin service, or just a hearty home-cooked dinner for the family, our platform makes it easy to browse menus, read verified reviews, and connect directly with cooks.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            <div className="rounded-2xl bg-neutral-50 border border-neutral-200/60 p-6 text-center shadow-sm dark:bg-neutral-800 dark:border-neutral-700">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-100 text-primary-600 mb-4 dark:bg-primary-900/30 dark:text-primary-400">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold text-neutral-900 mb-2 dark:text-neutral-100">Freshly Prepared</h3>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                Every meal is made fresh to order using quality household ingredients, ensuring you get healthy food every day.
+              </p>
+            </div>
+            
+            <div className="rounded-2xl bg-neutral-50 border border-neutral-200/60 p-6 text-center shadow-sm dark:bg-neutral-800 dark:border-neutral-700">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent-100 text-accent-600 mb-4 dark:bg-accent-900/30 dark:text-accent-400">
+                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold text-neutral-900 mb-2 dark:text-neutral-100">Flexible Delivery</h3>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                Choose between individual on-demand meals or set up a recurring tiffin schedule that fits your routine.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-neutral-50 border border-neutral-200/60 p-6 text-center shadow-sm dark:bg-neutral-800 dark:border-neutral-700">
+               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-100 text-primary-600 mb-4 dark:bg-primary-900/30 dark:text-primary-400">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold text-neutral-900 mb-2 dark:text-neutral-100">Clean & Hygienic</h3>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                Our local cooks maintain strict home hygiene standards, giving you peace of mind with every bite.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

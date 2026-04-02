@@ -89,8 +89,8 @@ export default function BuyerAnalyticsPage() {
             {/* Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <MetricCard title="Total Orders" value={data.totalOrders} icon="🛍️" />
-                <MetricCard title="Total Spent" value={`Rs. ${data.totalSpendPkr.toLocaleString()}`} icon="💸" />
-                <MetricCard title="Avg. Order Value" value={`Rs. ${data.averageOrderValuePkr.toLocaleString()}`} icon="📊" />
+                <MetricCard title="Total Spent" value={`Rs. ${(data.totalSpendPkr ?? 0).toLocaleString()}`} icon="💸" />
+                <MetricCard title="Avg. Order Value" value={`Rs. ${(data.averageOrderValuePkr ?? 0).toLocaleString()}`} icon="📊" />
                 <MetricCard title="Kitchens Tried" value={data.kitchensTried} icon="👩‍🍳" />
             </div>
 

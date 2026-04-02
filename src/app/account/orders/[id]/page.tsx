@@ -218,7 +218,7 @@ export default function OrderDetailPage() {
                                 </div>
                             </div>
                             <p className="font-semibold text-neutral-900 dark:text-neutral-100">
-                                Rs. {(item.price * item.quantity).toLocaleString()}
+                                Rs. {((item.price ?? 0) * (item.quantity ?? 0)).toLocaleString()}
                             </p>
                         </div>
                     ))}
@@ -227,7 +227,7 @@ export default function OrderDetailPage() {
                 <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-neutral-700 flex justify-between">
                     <span className="font-bold text-neutral-900 dark:text-neutral-50">Total</span>
                     <span className="font-bold text-primary-600 dark:text-primary-400">
-                        Rs. {Number(order.totalAmount).toLocaleString()}
+                        Rs. {(Number(order.totalAmount) || 0).toLocaleString()}
                     </span>
                 </div>
             </div>
