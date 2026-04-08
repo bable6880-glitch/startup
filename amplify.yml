@@ -1,3 +1,9 @@
+# ╔══════════════════════════════════════════╗
+# ║  ARCHIVED — Amplify deployment config   ║
+# ║  Active deployment: Vercel               ║
+# ║  Kept for emergency rollback only        ║
+# ║  Do not delete this file                 ║
+# ╚══════════════════════════════════════════╝
 version: 1
 frontend:
   phases:

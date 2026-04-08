@@ -12,11 +12,9 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" }
 ];
 
-const AMPLIFY_URL = process.env.NEXT_PUBLIC_BASE_URL || "";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "";
 
 const nextConfig: NextConfig = {
-  reactCompiler: true,
-  output: "standalone",
   serverExternalPackages: ["firebase-admin"],
 
   // Replace deprecated `domains` with `remotePatterns`
@@ -43,7 +41,7 @@ const nextConfig: NextConfig = {
           { key: "Access-Control-Allow-Credentials", value: "true" },
           {
             key: "Access-Control-Allow-Origin",
-            value: AMPLIFY_URL || "*",
+            value: BASE_URL || "*",
           },
           {
             key: "Access-Control-Allow-Methods",

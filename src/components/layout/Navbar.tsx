@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/lib/firebase/auth-context";
 
@@ -71,9 +72,18 @@ export default function Navbar() {
         <header className="sticky top-0 z-50 glass border-b border-neutral-200/50 dark:border-neutral-800/50">
             <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
                 {/* Logo */}
-                <Link href="/" className="flex items-center gap-2 group">
-                    <span className="text-2xl" aria-hidden>🍱</span>
-                    <span className="text-xl font-bold text-gradient">Smart Tiffin</span>
+                <Link href="/" className="flex items-center gap-2.5 group transition-opacity hover:opacity-90">
+                    <div className="relative h-10 w-10 sm:h-12 sm:w-12 overflow-hidden rounded-full border-2 border-primary-100 bg-white/50 shadow-sm transition-transform duration-300 group-hover:scale-105 dark:border-primary-900 dark:bg-neutral-800/50">
+                        <Image
+                            src="/smart-tiffin-logo.png"
+                            alt="Smart Tiffin Logo"
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 640px) 40px, 48px"
+                            priority
+                        />
+                    </div>
+                    <span className="text-xl sm:text-2xl font-extrabold text-gradient tracking-tight">Smart Tiffin</span>
                 </Link>
 
                 {/* Desktop Nav */}
