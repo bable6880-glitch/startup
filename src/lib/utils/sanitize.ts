@@ -1,30 +1,61 @@
-import DOMPurify from "isomorphic-dompurify";
+const DANGEROUS_PATTERNS = [
+  /<script[\s\S]*?>[\s\S]*?<\/script>/gi,
+  /<iframe[\s\S]*?>[\s\S]*?<\/iframe>/gi,
+  /<object[\s\S]*?>[\s\S]*?<\/object>/gi,
+  /<embed[\s\S]*?>/gi,
+  /<link[\s\S]*?>/gi,
+  /javascript:/gi,
+  /vbscript:/gi,
+  /on\w+\s*=/gi,
+  /data:text\/html/gi,
+  /&#/gi,
+]
 
-// Strip ALL HTML — for plain text fields
-export function sanitizeText(input: string): string {
-    if (!input) return "";
-    return DOMPurify.sanitize(input, {
-        ALLOWED_TAGS: [],    // No HTML allowed
-        ALLOWED_ATTR: [],
-    }).trim();
+const HTML_ENTITIES: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#x27;',
+  '/': '&#x2F;',
 }
 
-// Allow basic formatting — for descriptions (bold, italic, lists only)
-export function sanitizeRichText(input: string): string {
-    if (!input) return "";
-    return DOMPurify.sanitize(input, {
-        ALLOWED_TAGS: ["b", "i", "em", "strong", "ul", "ol", "li", "br", "p"],
-        ALLOWED_ATTR: [], // No attributes (blocks onclick, href, etc.)
-    }).trim();
+export function sanitizeText(input: unknown): string {
+  if (input === null || input === undefined) return ''
+  const str = String(input).trim()
+  if (str.length === 0) return ''
+
+  // Remove dangerous patterns first
+  let cleaned = str
+  for (const pattern of DANGEROUS_PATTERNS) {
+    cleaned = cleaned.replace(pattern, '')
+  }
+
+  // Escape HTML entities
+  return cleaned.replace(
+    /[&<>"'/]/g,
+    (char) => HTML_ENTITIES[char] ?? char
+  )
 }
 
-// Sanitize an object's string fields recursively (useful for request bodies)
-export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
-    const result = { ...obj };
-    for (const key in result) {
-        if (typeof result[key] === "string") {
-            result[key] = sanitizeText(result[key] as string) as T[Extract<keyof T, string>];
-        }
-    }
-    return result;
+export function sanitizeRichText(input: unknown): string {
+  if (input === null || input === undefined) return ''
+  const str = String(input).trim()
+  if (str.length === 0) return ''
+
+  let cleaned = str
+  for (const pattern of DANGEROUS_PATTERNS) {
+    cleaned = cleaned.replace(pattern, '')
+  }
+  return cleaned
 }
+
+export function sanitizeUrl(input: unknown): string {
+  if (input === null || input === undefined) return ''
+  const str = String(input).trim()
+  if (/^(javascript|vbscript|data):/i.test(str)) return ''
+  return str
+}
+
+// Default export for backward compatibility
+export default sanitizeText
