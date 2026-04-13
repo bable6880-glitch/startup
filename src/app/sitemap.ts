@@ -37,13 +37,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .from(kitchens)
       .where(eq(kitchens.status, "ACTIVE"));
 
-    const kitchenRoutes = activeKitchens.map((kitchen) => ({
-      url: `${baseUrl}/kitchen/${kitchen.slug}`,
-      lastModified: kitchen.updatedAt,
-      changeFrequency: 'weekly' as const,
-      priority: 0.6,
-    }));
-
     const uniqueCities = Array.from(new Set(activeKitchens.map(k => k.citySlug)));
     const cityRoutes = uniqueCities.map((city) => ({
       url: `${baseUrl}/city/${city}`,
@@ -52,7 +45,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
-    return [...staticRoutes, ...cityRoutes, ...kitchenRoutes];
+    return [...staticRoutes, ...cityRoutes];
   } catch (error) {
     console.error("Failed to generate complete sitemap", error);
     return staticRoutes;
