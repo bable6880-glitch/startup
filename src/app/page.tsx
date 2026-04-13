@@ -3,15 +3,15 @@ import SearchBar from "@/components/ui/SearchBar";
 import { FeaturedKitchens } from "@/components/home/FeaturedKitchens";
 import { db } from "@/lib/db";
 import { kitchens, users, meals } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
-const cities = [
-  { name: "Lahore", emoji: "🏙️", count: "120+" },
-  { name: "Karachi", emoji: "🌊", count: "200+" },
-  { name: "Islamabad", emoji: "🏔️", count: "80+" },
-  { name: "Rawalpindi", emoji: "🏢", count: "60+" },
-  { name: "Faisalabad", emoji: "🏭", count: "50+" },
-  { name: "Multan", emoji: "☀️", count: "40+" },
+const baseCities = [
+  { name: "Lahore", emoji: "🏙️" },
+  { name: "Karachi", emoji: "🌊" },
+  { name: "Islamabad", emoji: "🏔️" },
+  { name: "Rawalpindi", emoji: "🏢" },
+  { name: "Faisalabad", emoji: "🏭" },
+  { name: "Multan", emoji: "☀️" },
 ];
 
 const features = [
@@ -67,20 +67,44 @@ async function getStats() {
       .select({ count: db.$count(users, eq(users.isActive, true)) })
       .from(users);
 
+    const cityCountsRaw = await db
+      .select({
+        city: kitchens.city,
+        count: sql<number>`count(${kitchens.id})`.mapWith(Number),
+      })
+      .from(kitchens)
+      .where(eq(kitchens.status, "ACTIVE"))
+      .groupBy(kitchens.city);
+
+    const cityCounts = cityCountsRaw.reduce((acc, curr) => {
+      acc[curr.city.toLowerCase()] = curr.count;
+      return acc;
+    }, {} as Record<string, number>);
+
     return {
       kitchens: Number(kitchenCount.count),
       meals: Number(mealCount.count),
       customers: Number(userCount.count),
+      cityCounts,
     };
-  } catch {
-    return { kitchens: 0, meals: 0, customers: 0 };
+  } catch (error) {
+    console.error("Failed to fetch stats:", error);
+    return { kitchens: 0, meals: 0, customers: 0, cityCounts: {} };
   }
 }
 
-export const revalidate = 300; // ISR: refresh every 5 minutes
+export const revalidate = 0; // Real-time updates as requested
 
 export default async function HomePage() {
   const stats = await getStats();
+
+  const cities = baseCities.map((city) => {
+    const rawCount = stats.cityCounts[city.name.toLowerCase()] || 0;
+    return {
+      ...city,
+      count: rawCount.toString(),
+    };
+  });
 
   return (
     <div className="flex flex-col">
