@@ -206,8 +206,28 @@ export default function KitchenSettingsPage() {
             )}
 
             <div className="space-y-8">
+
+                {/* ── Strict Profile Banner in Settings ── */}
+                {(!profileImage || !coverImage) && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm sm:p-5 dark:border-red-900/50 dark:bg-red-900/20">
+                        <div className="flex gap-4">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-base font-bold text-red-800 dark:text-red-400">Action Required</h3>
+                                <div className="mt-1 text-sm text-red-700 dark:text-red-300">
+                                    <p>Please upload both a <strong>Profile Image</strong> and a <strong>Cover Image</strong> below to complete your kitchen setup. This is mandatory to attract customers.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* ── Kitchen Images ── */}
-                <section className="rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-sm dark:bg-neutral-800 dark:border-neutral-700">
+                <section id="kitchen-images" className="rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-sm dark:bg-neutral-800 dark:border-neutral-700">
                     <h2 className="text-lg font-semibold text-neutral-900 mb-4 dark:text-neutral-100">Kitchen Images</h2>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

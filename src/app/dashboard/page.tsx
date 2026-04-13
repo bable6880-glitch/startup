@@ -17,7 +17,8 @@ type Kitchen = {
     avgRating: number;
     totalReviews: number;
     isVerified: boolean;
-    coverImage: string | null;
+    profileImageUrl: string | null;
+    coverImageUrl: string | null;
 };
 
 type Stats = {
@@ -278,6 +279,33 @@ function DashboardContent() {
                     </Link>
                 )}
             </div>
+
+            {/* ── Strict Profile Banner ── */}
+            {kitchen && (!kitchen.profileImageUrl || !kitchen.coverImageUrl) && (
+                <div className="mb-8 rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm sm:p-5 dark:border-red-900/50 dark:bg-red-900/20">
+                    <div className="flex gap-4">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-base font-bold text-red-800 dark:text-red-400">Action Required: Upload Kitchen Images</h3>
+                            <div className="mt-1 text-sm text-red-700 dark:text-red-300">
+                                <p>Your kitchen profile is currently missing essential images. To build trust with customers and stand out in search results, you must upload both a <strong>Profile Image</strong> and a <strong>Cover Image</strong>.</p>
+                            </div>
+                            <div className="mt-4">
+                                <Link
+                                    href="/dashboard/settings"
+                                    className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-900 transition-colors"
+                                >
+                                    Upload Images Now →
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* No Kitchen */}
             {!kitchen && (
