@@ -11,22 +11,22 @@ interface ReviewCardProps {
         createdAt: string;
         isVerifiedPurchase: boolean;
         sellerReply: string | null;
-        user: {
+        user?: {
             name: string | null;
             avatarUrl: string | null;
-        };
+        } | null;
     };
     onReply?: (reviewId: string) => void;
 }
 
 export default function ReviewCard({ review, onReply }: ReviewCardProps) {
-    const initials = review.user.name ? review.user.name.substring(0, 2).toUpperCase() : 'U';
+    const initials = review.user?.name ? review.user.name.substring(0, 2).toUpperCase() : 'U';
 
     return (
         <div className="p-4 border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow bg-white space-y-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    {review.user.avatarUrl ? (
+                    {review.user?.avatarUrl ? (
                         <Image src={review.user.avatarUrl} alt="Avatar" width={40} height={40} className="rounded-full object-cover" />
                     ) : (
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center text-orange-700 font-bold border border-orange-300">
@@ -35,7 +35,7 @@ export default function ReviewCard({ review, onReply }: ReviewCardProps) {
                     )}
                     <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-gray-900">{review.user.name || 'Anonymous User'}</span>
+                            <span className="font-semibold text-gray-900">{review.user?.name || 'Anonymous User'}</span>
                             {review.isVerifiedPurchase && (
                                 <span className="flex items-center text-green-700 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-green-50 border border-green-200 rounded-full" title="Verified Order">
                                     <BadgeCheck className="w-3 h-3 mr-1" strokeWidth={3} />
