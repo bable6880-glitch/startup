@@ -46,7 +46,12 @@ export async function createMeal(
             category: input.category,
             cuisineType: input.cuisineType,
             dietaryTags: input.dietaryTags,
-            isAvailable: input.isAvailable,
+            isAvailable: input.availabilityStatus !== undefined 
+                ? (input.availabilityStatus === "AVAILABLE") 
+                : input.isAvailable,
+            availabilityStatus: input.availabilityStatus !== undefined
+                ? input.availabilityStatus
+                : (input.isAvailable ? "AVAILABLE" : "OUT_OF_STOCK"),
             availableDays: input.availableDays,
             servingTime: input.servingTime,
             calories: input.calories,
@@ -106,6 +111,14 @@ export async function updateMeal(
     if (!meal) throw new NotFoundError("Meal");
 
     const updateData: Record<string, unknown> = { ...input, updatedAt: new Date() };
+    
+    // Sync availability status and boolean flag
+    if (input.availabilityStatus !== undefined) {
+        updateData.isAvailable = input.availabilityStatus === "AVAILABLE";
+    } else if (input.isAvailable !== undefined) {
+        updateData.availabilityStatus = input.isAvailable ? "AVAILABLE" : "OUT_OF_STOCK";
+    }
+
     if (input.description) {
         updateData.description = sanitizeRichText(input.description);
     }

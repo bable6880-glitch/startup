@@ -331,7 +331,7 @@ async function KitchenContent({ id }: { id: string }) {
                             <div className="mb-8 p-6 bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-100 dark:border-neutral-700">
                                 <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
                                     <div className="flex flex-col items-center">
-                                        <span className="text-5xl font-black text-neutral-900 dark:text-white">{reviewStats.averageRating.toFixed(1)}</span>
+                                        <span className="text-5xl font-black text-neutral-900 dark:text-white">{Number(reviewStats.averageRating || 0).toFixed(1)}</span>
                                         <span className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">out of 5</span>
                                     </div>
                                     <div className="flex-1 w-full max-w-sm">

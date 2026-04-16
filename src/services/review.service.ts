@@ -112,7 +112,7 @@ export async function getPlatformReviewStats() {
     }).from(platformReviews).where(eq(platformReviews.isVisible, true));
 
     const totalReviews = Number(stats.count);
-    const averageRating = Number(stats.avg.toFixed(1));
+    const averageRating = Number(Number(stats.avg || 0).toFixed(1));
 
     const rawBreakdown = await db.select({
         rating: platformReviews.rating,
@@ -159,7 +159,7 @@ export async function getKitchenReviewStats(kitchenId: string) {
     }).from(reviews).where(and(...conditions));
 
     const totalReviews = Number(stats.count);
-    const averageRating = Number(stats.avg.toFixed(1));
+    const averageRating = Number(Number(stats.avg || 0).toFixed(1));
 
     const rawBreakdown = await db.select({
         rating: reviews.rating,
@@ -289,7 +289,7 @@ async function recalculateKitchenRating(kitchenId: string) {
             )
         );
 
-    const avgRating = Number(result[0].avg);
+    const avgRating = Number(result[0].avg || 0);
     const newAvg = avgRating % 1 !== 0 ? avgRating.toFixed(2) : avgRating.toFixed(1);
 
     await db

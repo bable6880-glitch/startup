@@ -26,6 +26,7 @@ export const createMealSchema = z.object({
 
     // Availability
     isAvailable: z.boolean().default(true),
+    availabilityStatus: z.enum(["AVAILABLE", "OUT_OF_STOCK", "NOT_TODAY", "PREPARING"]).optional(),
     availableDays: z
         .array(
             z.enum([

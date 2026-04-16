@@ -117,6 +117,7 @@ export const users = pgTable(
         deletedAt: timestamp("deleted_at", { withTimezone: true }),
         defaultAddress: text("default_address"),
         defaultCity: varchar("default_city", { length: 100 }),
+        phoneNumber: varchar("phone_number", { length: 20 }),
     },
     (table) => [
         uniqueIndex("users_firebase_uid_idx").on(table.firebaseUid),

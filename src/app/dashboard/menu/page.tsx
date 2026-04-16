@@ -14,6 +14,7 @@ type Meal = {
     price: number;
     category: string;
     isAvailable: boolean;
+    availabilityStatus?: "AVAILABLE" | "OUT_OF_STOCK" | "NOT_TODAY" | "PREPARING";
     imageUrl: string | null;
     images: string[] | null;
     dietaryTags: string[] | null;
@@ -146,16 +147,20 @@ export default function MenuPage() {
         } finally { setSubmitting(false); }
     };
 
-    const toggleAvailability = async (meal: Meal) => {
+    const updateAvailabilityStatus = async (meal: Meal, status: "AVAILABLE" | "OUT_OF_STOCK" | "NOT_TODAY" | "PREPARING") => {
         if (!kitchenId) return;
         const token = await getIdToken();
         const res = await fetch(`/api/kitchens/${kitchenId}/menu/${meal.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ isAvailable: !meal.isAvailable }),
+            body: JSON.stringify({ availabilityStatus: status }),
         });
         if (res.ok) {
-            setMeals((prev) => prev.map((m) => m.id === meal.id ? { ...m, isAvailable: !m.isAvailable } : m));
+            setMeals((prev) => prev.map((m) => m.id === meal.id ? { 
+                ...m, 
+                availabilityStatus: status,
+                isAvailable: status === "AVAILABLE"
+            } : m));
         }
     };
 
@@ -306,15 +311,27 @@ export default function MenuPage() {
                                     <div className="flex items-center gap-2">
                                         <h3 className="font-semibold text-neutral-900 truncate dark:text-neutral-100">{meal.name}</h3>
                                         {!meal.isAvailable && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 dark:bg-red-900/30 dark:text-red-300">Paused</span>}
+                                        {meal.availabilityStatus === "NOT_TODAY" && <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full whitespace-nowrap ml-1 dark:bg-amber-900/50 dark:text-amber-200">Auto-resets tomorrow</span>}
                                     </div>
                                     <p className="text-sm font-medium text-primary-600 dark:text-primary-400">Rs. {meal.price.toLocaleString()}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => toggleAvailability(meal)} className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${meal.isAvailable ? "bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300" : "bg-accent-50 text-accent-700 hover:bg-accent-100 dark:bg-accent-900/30 dark:text-accent-300"
-                                    }`}>
-                                    {meal.isAvailable ? "Pause" : "Activate"}
-                                </button>
+                            <div className="flex items-center gap-3">
+                                <select 
+                                    value={meal.availabilityStatus || (meal.isAvailable ? "AVAILABLE" : "OUT_OF_STOCK")} 
+                                    onChange={(e) => updateAvailabilityStatus(meal, e.target.value as any)}
+                                    className={`rounded-lg px-2 py-1.5 text-xs font-medium border-0 ring-1 ring-inset outline-none transition-all ${
+                                        meal.availabilityStatus === "AVAILABLE" || (meal.isAvailable && !meal.availabilityStatus)
+                                            ? "bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-900/30 dark:text-green-300 dark:ring-green-500/30" 
+                                            : meal.availabilityStatus === "NOT_TODAY"
+                                                ? "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-500/30"
+                                                : "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-900/30 dark:text-red-300 dark:ring-red-500/30"
+                                    }`}
+                                >
+                                    <option value="AVAILABLE">✅ Available</option>
+                                    <option value="NOT_TODAY">⏳ Not Today</option>
+                                    <option value="OUT_OF_STOCK">❌ Out of Stock</option>
+                                </select>
                                 <button onClick={() => deleteMeal(meal.id)} className="rounded-lg px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-all dark:bg-red-900/30 dark:text-red-300">
                                     Delete
                                 </button>
