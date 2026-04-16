@@ -70,8 +70,17 @@ export async function GET(
                 }, pollInterval);
             });
 
+            // Prevent Vercel 300s timeout by gracefully closing just before the limit
+            const gracefulTimeoutId = setTimeout(() => {
+                try {
+                    send(`data: ${JSON.stringify({ type: "RECONNECT", timestamp: Date.now() })}\n\n`);
+                    controller.close();
+                } catch { }
+            }, 285000); // 285 seconds
+
             // Cleanup on client disconnect
             request.signal.addEventListener("abort", () => {
+                clearTimeout(gracefulTimeoutId);
                 unsubscribeFromChannel(channel).catch(() => {});
                 clearInterval(heartbeatInterval);
                 if (pollIntervalId) clearInterval(pollIntervalId);

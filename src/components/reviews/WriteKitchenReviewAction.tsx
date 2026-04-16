@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/firebase/auth-context';
 import { Loader2 } from 'lucide-react';
 import WriteReviewModal from './WriteReviewModal';
 import ReviewCard from './ReviewCard';
 
 export default function WriteKitchenReviewAction({ kitchenId, kitchenName }: { kitchenId: string, kitchenName: string }) {
+    const { user, getIdToken } = useAuth();
     const [status, setStatus] = useState<'loading'|'checked'>('loading');
     const [canReview, setCanReview] = useState(false);
     const [orderId, setOrderId] = useState<string | null>(null);
@@ -15,7 +17,14 @@ export default function WriteKitchenReviewAction({ kitchenId, kitchenName }: { k
     useEffect(() => {
         const checkEligibility = async () => {
             try {
-                const res = await fetch(`/api/reviews/check?kitchenId=${kitchenId}`);
+                const token = await getIdToken();
+                if (!token) {
+                    setStatus('checked');
+                    return;
+                }
+                const res = await fetch(`/api/reviews/check?kitchenId=${kitchenId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
                 if (res.ok) {
                     const data = await res.json();
                     setCanReview(data.data?.canReview || false);
@@ -28,8 +37,12 @@ export default function WriteKitchenReviewAction({ kitchenId, kitchenName }: { k
                 setStatus('checked');
             }
         };
-        checkEligibility();
-    }, [kitchenId]);
+        if (user) {
+            checkEligibility();
+        } else {
+            setStatus('checked');
+        }
+    }, [kitchenId, user, getIdToken]);
 
     if (status === 'loading') {
         return <div className="text-gray-400 text-sm flex items-center mt-6"><Loader2 className="w-4 h-4 animate-spin mr-2"/> Checking review eligibility...</div>;
@@ -51,7 +64,7 @@ export default function WriteKitchenReviewAction({ kitchenId, kitchenName }: { k
                     onClick={() => setIsModalOpen(true)}
                     className="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-lg shadow-sm transition-colors"
                 >
-                    Rate your experience
+                    ⭐ Rate your experience
                 </button>
                 
                 <WriteReviewModal 

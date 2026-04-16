@@ -81,7 +81,7 @@ export function CartPanel() {
 
             clearCart();
             // Show new Smart Modal instead of redirecting instantly
-            setSuccessData({ id: responseData.id });
+            setSuccessData({ id: responseData.data.id });
 
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : "Something went wrong");
