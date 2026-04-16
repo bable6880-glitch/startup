@@ -6,50 +6,66 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createMealSchema, type CreateMealInput } from "@/lib/validations/menu";
+import { Loader2, Plus, Edit2, Trash2, X, Image as ImageIcon, Search } from "lucide-react";
 
 type Meal = {
     id: string;
     name: string;
     description: string | null;
     price: number;
-    category: string;
+    category: "breakfast" | "lunch" | "dinner" | "snack" | "dessert" | "beverage" | "thali" | "other" | undefined;
     isAvailable: boolean;
-    availabilityStatus?: "AVAILABLE" | "OUT_OF_STOCK" | "NOT_TODAY" | "PREPARING";
     imageUrl: string | null;
-    images: string[] | null;
     dietaryTags: string[] | null;
 };
 
-export default function MenuPage() {
+export default function MenuManagementPage() {
     const { user, loading: authLoading, getIdToken } = useAuth();
     const router = useRouter();
+    
+    // Data state
     const [meals, setMeals] = useState<Meal[]>([]);
     const [kitchenId, setKitchenId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-    const [showForm, setShowForm] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [activeCategory, setActiveCategory] = useState("all");
+    
+    // Modal & Form state
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
     const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
+    const [pageError, setPageError] = useState<string | null>(null);
+    
+    // Image Upload
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const {
-        register, handleSubmit, reset, setValue, formState: { errors },
+        register, handleSubmit, reset, setValue, formState: { errors }, watch
     } = useForm<CreateMealInput>({
         resolver: zodResolver(createMealSchema) as never,
         defaultValues: { isAvailable: true, dietaryTags: [] },
     });
 
-    const loadMenu = useCallback(async () => {
+    const categories = ["breakfast", "lunch", "dinner", "snack", "dessert", "beverage", "thali", "other"];
+
+    useEffect(() => {
+        if (!authLoading && !user) { router.push("/login?redirect=/dashboard/menu"); return; }
+        if (user) loadMenu();
+    }, [user, authLoading, router]);
+
+    const loadMenu = async () => {
         try {
             const token = await getIdToken();
             if (!token) return;
-            const kitchenRes = await fetch("/api/kitchens?ownerId=me", {
+            const res = await fetch("/api/kitchens?ownerId=me", {
                 headers: { Authorization: `Bearer ${token}` },
             });
-            if (kitchenRes.ok) {
-                const d = await kitchenRes.json();
-                const k = (d.data || [])[0];
+            if (res.ok) {
+                const json = await res.json();
+                const k = (json.data || [])[0];
                 if (k) {
                     setKitchenId(k.id);
                     const menuRes = await fetch(`/api/kitchens/${k.id}/menu`);
@@ -57,287 +73,398 @@ export default function MenuPage() {
                         const m = await menuRes.json();
                         setMeals(m.data || []);
                     }
+                } else {
+                    setPageError("No kitchen profile found. Please create one on the dashboard.");
                 }
             }
-        } catch (err) { console.error(err); }
-        finally { setLoading(false); }
-    }, [getIdToken]);
+        } catch (err) {
+            console.error(err);
+            setPageError("Failed to load menu data.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    useEffect(() => {
-        if (!authLoading && !user) { router.push("/login?redirect=/dashboard/menu"); return; }
-        if (user) loadMenu();
-    }, [user, authLoading, router, loadMenu]);
+    const openModal = (meal?: Meal) => {
+        if (meal) {
+            setEditingMeal(meal);
+            setValue("name", meal.name);
+            setValue("description", meal.description || "");
+            setValue("price", meal.price);
+            setValue("category", meal.category);
+            setValue("isAvailable", meal.isAvailable);
+            setValue("imageUrl", meal.imageUrl || undefined);
+            setImagePreview(meal.imageUrl);
+        } else {
+            setEditingMeal(null);
+            reset({ isAvailable: true });
+            setImagePreview(null);
+        }
+        setFormError(null);
+        setIsModalOpen(true);
+    };
 
-    // ── Image Upload Handler ──
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setEditingMeal(null);
+        reset();
+        setImagePreview(null);
+        setFormError(null);
+    };
+
+    // ── Image Upload ──
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Validate on client-side too
-        if (!['image/jpeg', 'image/png', 'image/webp', 'image/jpg'].includes(file.type)) {
-            setError("Invalid file type. Only JPG, PNG, WebP allowed.");
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            setFormError("Invalid format. Only JPG, PNG, WebP allowed.");
             return;
         }
         if (file.size > 5 * 1024 * 1024) {
-            setError("Image too large. Maximum 5MB.");
+            setFormError("Image max size is 5MB.");
             return;
         }
 
-        // Preview
         const reader = new FileReader();
         reader.onload = (ev) => setImagePreview(ev.target?.result as string);
         reader.readAsDataURL(file);
 
-        // Upload to Cloudinary via API
         setUploading(true);
-        setError(null);
+        setFormError(null);
         try {
             const token = await getIdToken();
             const formData = new FormData();
             formData.append("file", file);
             formData.append("folder", "meals");
-
             const res = await fetch("/api/upload", {
-                method: "POST",
-                headers: { Authorization: `Bearer ${token}` },
-                body: formData,
+                method: "POST", headers: { Authorization: `Bearer ${token}` }, body: formData,
             });
-
             if (res.ok) {
                 const { data } = await res.json();
                 setValue("imageUrl", data.url);
             } else {
-                const err = await res.json();
-                setError(err.error?.message || "Image upload failed. Please try again.");
                 setImagePreview(null);
+                setFormError("Image upload failed.");
             }
         } catch {
-            setError("Image upload failed. Please try again.");
             setImagePreview(null);
+            setFormError("Upload network error.");
         } finally {
             setUploading(false);
         }
     };
 
-    const removeImage = () => {
-        setImagePreview(null);
-        setValue("imageUrl", undefined);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-    };
-
+    // ── Form Submit ──
     const onSubmit = async (data: CreateMealInput) => {
         if (!kitchenId) return;
         setSubmitting(true);
-        setError(null);
+        setFormError(null);
         try {
             const token = await getIdToken();
-            const res = await fetch(`/api/kitchens/${kitchenId}/menu`, {
-                method: "POST",
+            const method = editingMeal ? "PUT" : "POST";
+            const url = editingMeal 
+                ? `/api/kitchens/${kitchenId}/menu/${editingMeal.id}`
+                : `/api/kitchens/${kitchenId}/menu`;
+
+            const res = await fetch(url, {
+                method,
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                 body: JSON.stringify(data),
             });
-            if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || "Failed to add meal"); }
-            const { data: newMeal } = await res.json();
-            setMeals((prev) => [newMeal, ...prev]);
-            setShowForm(false);
-            setImagePreview(null);
-            reset();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Error");
-        } finally { setSubmitting(false); }
-    };
-
-    const updateAvailabilityStatus = async (meal: Meal, status: "AVAILABLE" | "OUT_OF_STOCK" | "NOT_TODAY" | "PREPARING") => {
-        if (!kitchenId) return;
-        const token = await getIdToken();
-        const res = await fetch(`/api/kitchens/${kitchenId}/menu/${meal.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ availabilityStatus: status }),
-        });
-        if (res.ok) {
-            setMeals((prev) => prev.map((m) => m.id === meal.id ? { 
-                ...m, 
-                availabilityStatus: status,
-                isAvailable: status === "AVAILABLE"
-            } : m));
+            
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.message || json.error?.message || "Failed to save meal");
+            
+            if (editingMeal) {
+                setMeals(prev => prev.map(m => m.id === editingMeal.id ? { ...m, ...json.data } : m));
+            } else {
+                setMeals(prev => [json.data, ...prev]);
+            }
+            closeModal();
+        } catch (err: any) {
+            setFormError(err.message || "An error occurred");
+        } finally {
+            setSubmitting(false);
         }
     };
 
+    // ── Actions ──
     const deleteMeal = async (mealId: string) => {
-        if (!kitchenId || !confirm("Delete this meal?")) return;
-        const token = await getIdToken();
-        const res = await fetch(`/api/kitchens/${kitchenId}/menu/${mealId}`, {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) setMeals((prev) => prev.filter((m) => m.id !== mealId));
+        if (!kitchenId || !confirm("Are you sure you want to delete this meal? This cannot be undone.")) return;
+        try {
+            const token = await getIdToken();
+            const res = await fetch(`/api/kitchens/${kitchenId}/menu/${mealId}`, {
+                method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) setMeals(prev => prev.filter(m => m.id !== mealId));
+        } catch (err) {
+            console.error("Failed to delete", err);
+        }
     };
+
+    const toggleAvailability = async (meal: Meal) => {
+        if (!kitchenId) return;
+        try {
+            const token = await getIdToken();
+            const res = await fetch(`/api/kitchens/${kitchenId}/menu/${meal.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ isAvailable: !meal.isAvailable }),
+            });
+            if (res.ok) {
+                setMeals(prev => prev.map(m => m.id === meal.id ? { ...m, isAvailable: !meal.isAvailable } : m));
+            }
+        } catch (err) {
+            console.error("Toggle failed", err);
+        }
+    };
+
+    // Filtering
+    const filteredMeals = meals.filter(m => {
+        const matchesSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesCat = activeCategory === "all" || m.category === activeCategory;
+        return matchesSearch && matchesCat;
+    });
 
     if (authLoading || loading) {
         return (
-            <div className="mx-auto max-w-4xl px-4 py-8">
-                <div className="space-y-4">
-                    {[1, 2, 3].map((i) => <div key={i} className="h-20 rounded-xl animate-shimmer" />)}
+            <div className="mx-auto max-w-5xl px-4 py-8">
+                <div className="animate-pulse space-y-6">
+                    <div className="h-10 w-48 bg-neutral-200 rounded-lg dark:bg-neutral-700" />
+                    <div className="h-20 bg-neutral-200 rounded-2xl dark:bg-neutral-700" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[1, 2, 3, 4].map(i => <div key={i} className="h-40 rounded-xl bg-neutral-100 dark:bg-neutral-800" />)}
+                    </div>
                 </div>
             </div>
         );
     }
 
+    if (pageError) {
+        return (
+            <div className="mx-auto max-w-5xl px-4 py-16 text-center">
+                <span className="text-5xl block mb-4">⚠️</span>
+                <p className="text-red-500 font-medium">{pageError}</p>
+                <button onClick={() => router.push("/dashboard")} className="mt-4 text-primary-600 hover:underline">Back to Dashboard</button>
+            </div>
+        );
+    }
+
     return (
-        <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between mb-6">
+        <div className="mx-auto max-w-5xl px-4 py-8 bg-neutral-50/50 min-h-[calc(100vh-80px)] dark:bg-neutral-900 border border-transparent">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                 <div>
-                    <a href="/dashboard" className="text-sm text-neutral-500 hover:text-primary-600 dark:text-neutral-400">← Dashboard</a>
-                    <h1 className="text-2xl font-bold text-neutral-900 mt-1 dark:text-neutral-50">Menu Management</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white">Menu Management</h1>
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Add, edit, or remove your delicious offerings.</p>
                 </div>
                 <button
-                    onClick={() => { setShowForm(!showForm); setImagePreview(null); setError(null); }}
-                    className="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition-all active:scale-95"
+                    onClick={() => openModal()}
+                    className="flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm shadow-primary-500/30 hover:bg-primary-700 transition-all active:scale-95"
                 >
-                    {showForm ? "Cancel" : "+ Add Meal"}
+                    <Plus className="w-5 h-5" /> Add New Item
                 </button>
             </div>
 
-            {/* Add Meal Form */}
-            {showForm && (
-                <div className="mb-8 rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-sm animate-slide-up dark:bg-neutral-800 dark:border-neutral-700">
-                    <h2 className="text-lg font-semibold text-neutral-900 mb-4 dark:text-neutral-100">Add New Meal</h2>
-                    {error && <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{error}</div>}
-                    <form onSubmit={handleSubmit(onSubmit as never)} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        {/* Image Upload */}
-                        <div className="sm:col-span-2">
-                            <label className="block text-sm font-medium text-neutral-700 mb-2 dark:text-neutral-300">Meal Image</label>
-                            <div className="flex items-center gap-4">
-                                <button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="relative flex-shrink-0 w-28 h-28 rounded-xl border-2 border-dashed border-neutral-300 hover:border-primary-400 transition-colors overflow-hidden bg-neutral-50 dark:bg-neutral-700 dark:border-neutral-600 group"
-                                >
-                                    {imagePreview ? (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="flex flex-col items-center justify-center h-full text-neutral-400 group-hover:text-primary-500">
-                                            <span className="text-2xl mb-1">📷</span>
-                                            <span className="text-xs">Upload</span>
-                                        </div>
-                                    )}
-                                    {uploading && (
-                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-xl">
-                                            <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
-                                        </div>
-                                    )}
-                                </button>
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/webp"
-                                    onChange={handleImageUpload}
-                                    className="hidden"
-                                />
-                                {imagePreview && !uploading && (
-                                    <button
-                                        type="button"
-                                        onClick={removeImage}
-                                        className="text-xs text-red-500 hover:text-red-700 font-medium"
-                                    >
-                                        Remove
-                                    </button>
-                                )}
-                                {!imagePreview && (
-                                    <p className="text-xs text-neutral-400 dark:text-neutral-500">
-                                        JPG, PNG, or WebP · Max 5MB
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="sm:col-span-2">
-                            <label className="block text-sm font-medium text-neutral-700 mb-1 dark:text-neutral-300">Name *</label>
-                            <input {...register("name")} className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none dark:bg-neutral-700 dark:border-neutral-600 dark:text-neutral-200" />
-                            {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
-                        </div>
-                        <div className="sm:col-span-2">
-                            <label className="block text-sm font-medium text-neutral-700 mb-1 dark:text-neutral-300">Description</label>
-                            <textarea {...register("description")} rows={2} className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none resize-none dark:bg-neutral-700 dark:border-neutral-600 dark:text-neutral-200" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1 dark:text-neutral-300">Price (Rs.) *</label>
-                            <input type="number" {...register("price", { valueAsNumber: true })} className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none dark:bg-neutral-700 dark:border-neutral-600 dark:text-neutral-200" />
-                            {errors.price && <p className="mt-1 text-xs text-red-500">{errors.price.message}</p>}
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-neutral-700 mb-1 dark:text-neutral-300">Category *</label>
-                            <select {...register("category")} className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none dark:bg-neutral-700 dark:border-neutral-600 dark:text-neutral-200">
-                                <option value="">Select</option>
-                                {["breakfast", "lunch", "dinner", "snack", "dessert", "beverage", "thali", "other"].map((c) => (
-                                    <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-                                ))}
-                            </select>
-                            {errors.category && <p className="mt-1 text-xs text-red-500">{errors.category.message}</p>}
-                        </div>
-                        <div className="sm:col-span-2 flex justify-end">
-                            <button type="submit" disabled={submitting || uploading} className="rounded-xl bg-accent-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-accent-600 transition-all disabled:opacity-60">
-                                {submitting ? "Adding..." : "Add Meal"}
-                            </button>
-                        </div>
-                    </form>
+            {/* Filters & Search */}
+            <div className="mb-6 flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1 max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                    <input 
+                        type="text" 
+                        placeholder="Search menu..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-neutral-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 dark:bg-neutral-800 dark:border-neutral-700 dark:text-white"
+                    />
                 </div>
-            )}
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide py-1">
+                    <button 
+                        onClick={() => setActiveCategory("all")}
+                        className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all ${activeCategory === "all" ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900" : "bg-neutral-200/50 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-400"}`}
+                    >
+                        All
+                    </button>
+                    {categories.map(c => (
+                        <button 
+                            key={c}
+                            onClick={() => setActiveCategory(c)}
+                            className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all ${activeCategory === c ? "bg-primary-600 text-white shadow-md shadow-primary-500/20" : "bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300"}`}
+                        >
+                            {c}
+                        </button>
+                    ))}
+                </div>
+            </div>
 
-            {/* Meals List */}
-            {meals.length === 0 ? (
-                <div className="text-center py-16 rounded-2xl border-2 border-dashed border-neutral-300 dark:border-neutral-600">
-                    <span className="text-4xl block mb-3">🍽️</span>
-                    <h3 className="font-semibold text-neutral-700 dark:text-neutral-300">No meals yet</h3>
-                    <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Add your first meal to the menu</p>
+            {/* Meal Grid */}
+            {filteredMeals.length === 0 ? (
+                <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-neutral-300 dark:bg-neutral-800/50 dark:border-neutral-700">
+                    <span className="text-5xl block mb-4">🍽️</span>
+                    <h3 className="font-bold text-neutral-800 dark:text-neutral-200 mb-1">
+                        {searchQuery ? "No matching items found" : "Your menu is empty"}
+                    </h3>
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                        {searchQuery ? "Try searching for something else." : "Start adding your signature dishes."}
+                    </p>
                 </div>
             ) : (
-                <div className="space-y-3">
-                    {meals.map((meal) => (
-                        <div key={meal.id} className={`rounded-xl border p-4 flex items-center justify-between gap-4 transition-all ${meal.isAvailable ? "bg-white border-neutral-200/60 dark:bg-neutral-800 dark:border-neutral-700" : "bg-neutral-50 border-neutral-200/40 opacity-70 dark:bg-neutral-800/50"
-                            }`}>
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {filteredMeals.map(meal => (
+                        <div key={meal.id} className="group flex flex-col bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow dark:bg-neutral-800 dark:border-neutral-700">
+                            {/* Image Header */}
+                            <div className="h-36 bg-neutral-100 relative dark:bg-neutral-700">
                                 {meal.imageUrl ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={meal.imageUrl} alt={meal.name} className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
+                                    <img src={meal.imageUrl} alt={meal.name} className={`w-full h-full object-cover ${!meal.isAvailable && 'grayscale'}`} />
                                 ) : (
-                                    <div className="w-14 h-14 rounded-lg bg-neutral-100 dark:bg-neutral-700 flex items-center justify-center flex-shrink-0">
-                                        <span className="text-xl">🍽️</span>
+                                    <div className="flex items-center justify-center h-full opacity-30"><ImageIcon className="w-10 h-10" /></div>
+                                )}
+                                {!meal.isAvailable && (
+                                    <div className="absolute inset-0 bg-neutral-900/60 flex items-center justify-center">
+                                        <span className="font-bold text-white uppercase tracking-wider bg-black/50 px-3 py-1 rounded-full text-xs">Out of Stock</span>
                                     </div>
                                 )}
-                                <div className="min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="font-semibold text-neutral-900 truncate dark:text-neutral-100">{meal.name}</h3>
-                                        {!meal.isAvailable && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600 dark:bg-red-900/30 dark:text-red-300">Paused</span>}
-                                        {meal.availabilityStatus === "NOT_TODAY" && <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full whitespace-nowrap ml-1 dark:bg-amber-900/50 dark:text-amber-200">Auto-resets tomorrow</span>}
-                                    </div>
-                                    <p className="text-sm font-medium text-primary-600 dark:text-primary-400">Rs. {meal.price.toLocaleString()}</p>
-                                </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <select 
-                                    value={meal.availabilityStatus || (meal.isAvailable ? "AVAILABLE" : "OUT_OF_STOCK")} 
-                                    onChange={(e) => updateAvailabilityStatus(meal, e.target.value as any)}
-                                    className={`rounded-lg px-2 py-1.5 text-xs font-medium border-0 ring-1 ring-inset outline-none transition-all ${
-                                        meal.availabilityStatus === "AVAILABLE" || (meal.isAvailable && !meal.availabilityStatus)
-                                            ? "bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-900/30 dark:text-green-300 dark:ring-green-500/30" 
-                                            : meal.availabilityStatus === "NOT_TODAY"
-                                                ? "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-500/30"
-                                                : "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-900/30 dark:text-red-300 dark:ring-red-500/30"
-                                    }`}
-                                >
-                                    <option value="AVAILABLE">✅ Available</option>
-                                    <option value="NOT_TODAY">⏳ Not Today</option>
-                                    <option value="OUT_OF_STOCK">❌ Out of Stock</option>
-                                </select>
-                                <button onClick={() => deleteMeal(meal.id)} className="rounded-lg px-3 py-1.5 text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-all dark:bg-red-900/30 dark:text-red-300">
-                                    Delete
-                                </button>
+
+                            {/* Content */}
+                            <div className="p-5 flex-1 flex flex-col pt-4">
+                                <div className="flex justify-between items-start gap-2 mb-2">
+                                    <h3 className={`font-bold leading-tight ${!meal.isAvailable ? 'text-neutral-500 dark:text-neutral-400' : 'text-neutral-900 dark:text-white'}`}>{meal.name}</h3>
+                                    <span className="font-bold text-primary-600 dark:text-primary-400 shrink-0">Rs. {meal.price.toLocaleString()}</span>
+                                </div>
+                                
+                                <p className="text-xs text-neutral-500 line-clamp-2 md:line-clamp-3 mb-4 flex-1 dark:text-neutral-400">
+                                    {meal.description || "No description provided."}
+                                </p>
+
+                                {/* Footer Actions */}
+                                <div className="flex items-center gap-2 mt-auto pt-4 border-t border-neutral-100 dark:border-neutral-700/50">
+                                    {/* Toggle Switch */}
+                                    <label className="flex items-center cursor-pointer gap-2 mr-auto" title="Click to toggle availability">
+                                        <div className="relative">
+                                            <input type="checkbox" className="sr-only" checked={meal.isAvailable} onChange={() => toggleAvailability(meal)} />
+                                            <div className={`block w-10 h-6 rounded-full transition-colors ${meal.isAvailable ? 'bg-green-500' : 'bg-neutral-300 dark:bg-neutral-600'}`}></div>
+                                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${meal.isAvailable ? 'translate-x-4' : ''}`}></div>
+                                        </div>
+                                        <span className={`text-[10px] font-bold uppercase tracking-wider ${meal.isAvailable ? 'text-green-600' : 'text-neutral-500'}`}>
+                                            {meal.isAvailable ? 'Active' : 'Hidden'}
+                                        </span>
+                                    </label>
+
+                                    <button onClick={() => openModal(meal)} className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors dark:hover:bg-primary-900/30">
+                                        <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={() => deleteMeal(meal.id)} className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:hover:bg-red-900/30">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Slide-out / Modal Form */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 sm:px-0">
+                    <div className="absolute inset-0 bg-neutral-900/50 backdrop-blur-sm transition-opacity" onClick={closeModal} />
+                    
+                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col dark:bg-neutral-900 animate-in fade-in slide-in-from-bottom-8">
+                        <div className="flex items-center justify-between p-6 border-b border-neutral-100 dark:border-neutral-800">
+                            <h2 className="text-xl font-bold text-neutral-900 dark:text-white">
+                                {editingMeal ? "Edit Item" : "Create New Item"}
+                            </h2>
+                            <button onClick={closeModal} className="text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 p-2 rounded-full transition-colors dark:hover:bg-neutral-800">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        
+                        <div className="p-6 overflow-y-auto">
+                            {formError && <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 text-sm font-medium text-red-600 dark:bg-red-900/20 dark:border-red-900/50 dark:text-red-400">{formError}</div>}
+                            
+                            <form id="mealForm" onSubmit={handleSubmit(onSubmit as never)} className="space-y-6">
+                                {/* Image Uploader */}
+                                <div className="flex flex-col items-center sm:items-start gap-4 sm:flex-row">
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="relative w-32 h-32 shrink-0 rounded-2xl border-2 border-dashed border-neutral-300 hover:border-primary-400 hover:bg-primary-50/50 transition-colors overflow-hidden bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 group"
+                                    >
+                                        {imagePreview ? (
+                                            <>
+                                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <span className="text-white text-xs font-bold uppercase shrink-0">Change</span>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center h-full text-neutral-400 group-hover:text-primary-500">
+                                                <ImageIcon className="w-8 h-8 mb-2" />
+                                                <span className="text-xs font-medium">Upload Phpto</span>
+                                            </div>
+                                        )}
+                                        {uploading && (
+                                            <div className="absolute inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center text-white">
+                                                <Loader2 className="w-6 h-6 animate-spin" />
+                                            </div>
+                                        )}
+                                    </button>
+                                    <div className="flex-1 space-y-1 text-center sm:text-left">
+                                        <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Item Photo</p>
+                                        <p className="text-xs text-neutral-500 leading-relaxed dark:text-neutral-400">High quality images generate 30% more orders. Use a clear, well-lit, and appetizing photo.</p>
+                                        <p className="text-xs font-medium text-neutral-400 pt-1">JPG, PNG up to 5MB.</p>
+                                        <input
+                                            ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
+                                            onChange={handleImageUpload} className="hidden"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-sm font-bold text-neutral-700 mb-1.5 dark:text-neutral-300">Name *</label>
+                                        <input {...register("name")} placeholder="e.g. Chicken Biryani" className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all dark:bg-neutral-900 dark:border-neutral-700 dark:text-white" />
+                                        {errors.name && <p className="mt-1.5 text-xs font-medium text-red-500">{errors.name.message}</p>}
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-bold text-neutral-700 mb-1.5 dark:text-neutral-300">Price (Rs.) *</label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 font-medium text-sm">Rs.</span>
+                                            <input type="number" {...register("price", { valueAsNumber: true })} placeholder="0.00" className="w-full rounded-xl border border-neutral-300 bg-white pl-10 pr-4 py-3 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all dark:bg-neutral-900 dark:border-neutral-700 dark:text-white" />
+                                        </div>
+                                        {errors.price && <p className="mt-1.5 text-xs font-medium text-red-500">{errors.price.message}</p>}
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-bold text-neutral-700 mb-1.5 dark:text-neutral-300">Category *</label>
+                                        <select {...register("category")} className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all cursor-pointer dark:bg-neutral-900 dark:border-neutral-700 dark:text-white">
+                                            <option value="">Select a category</option>
+                                            {categories.map((c) => (
+                                                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                                            ))}
+                                        </select>
+                                        {errors.category && <p className="mt-1.5 text-xs font-medium text-red-500">{errors.category.message}</p>}
+                                    </div>
+
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-sm font-bold text-neutral-700 mb-1.5 dark:text-neutral-300">Description</label>
+                                        <textarea {...register("description")} rows={3} placeholder="Describe the ingredients, flavor, and serving size..." className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none resize-none transition-all dark:bg-neutral-900 dark:border-neutral-700 dark:text-white" />
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div className="p-6 border-t border-neutral-100 bg-neutral-50 flex items-center justify-end gap-3 rounded-b-2xl dark:bg-neutral-800/80 dark:border-neutral-800">
+                            <button type="button" onClick={closeModal} className="px-5 py-2.5 text-sm font-bold text-neutral-600 hover:bg-neutral-200/50 rounded-xl transition-all dark:text-neutral-300 dark:hover:bg-neutral-700">
+                                Cancel
+                            </button>
+                            <button type="submit" form="mealForm" disabled={submitting || uploading} className="min-w-[140px] rounded-xl bg-primary-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-primary-700 transition-all active:scale-95 flex items-center justify-center disabled:opacity-50 disabled:active:scale-100">
+                                {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving</> : "Save Item"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
