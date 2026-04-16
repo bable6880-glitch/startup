@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react';
+import { useAuth } from '@/lib/firebase/auth-context';
 import StarRating from './StarRating';
 import { X, Loader2 } from 'lucide-react';
 
@@ -21,6 +22,7 @@ export default function WriteReviewModal({
     onClose,
     onSuccess
 }: WriteReviewModalProps) {
+    const { getIdToken } = useAuth();
     const [rating, setRating] = useState<number>(0);
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
@@ -62,9 +64,17 @@ export default function WriteReviewModal({
         const comment = textareaRef.current?.value.trim() || undefined;
 
         try {
+            const token = await getIdToken();
+            if (!token) {
+                throw new Error("Authentication failed. Please log in again.");
+            }
+
             const res = await fetch('/api/reviews', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
                 body: JSON.stringify({ kitchenId, orderId, rating, comment })
             });
 
@@ -95,14 +105,14 @@ export default function WriteReviewModal({
     if (status === 'success') {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-xl transform transition-all scale-100 opacity-100">
-                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-xl transform transition-all scale-100 opacity-100 dark:bg-neutral-900">
+                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 dark:bg-green-900/30 dark:text-green-400">
                         <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                         </svg>
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Thank You!</h3>
-                    <p className="text-gray-600">Your review helps our community.</p>
+                    <h3 className="text-xl font-bold text-neutral-900 mb-2 dark:text-white">Thank You! 🎉</h3>
+                    <p className="text-neutral-600 dark:text-neutral-400">Your review helps our community.</p>
                 </div>
             </div>
         );
@@ -110,36 +120,36 @@ export default function WriteReviewModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh]">
-                <div className="flex justify-between items-center p-5 border-b border-gray-100">
-                    <h2 className="text-lg font-bold text-gray-900">Rate your experience</h2>
-                    <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl flex flex-col max-h-[90vh] dark:bg-neutral-900">
+                <div className="flex justify-between items-center p-5 border-b border-neutral-100 dark:border-neutral-800">
+                    <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Rate your experience</h2>
+                    <button onClick={onClose} className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-colors dark:hover:bg-neutral-800 dark:hover:text-neutral-200">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
                 
                 <div className="p-5 overflow-y-auto">
-                    <p className="text-gray-600 text-sm mb-4">
-                        How was your meal from <span className="font-semibold text-gray-900">{kitchenName}</span>?
+                    <p className="text-neutral-600 text-sm mb-4 dark:text-neutral-400">
+                        How was your meal from <span className="font-semibold text-neutral-900 dark:text-white">{kitchenName}</span>?
                     </p>
 
                     <form id="review-form" onSubmit={handleSubmit} className="space-y-6">
                         <div className="flex flex-col items-center py-2">
                             <StarRating value={rating} onChange={setRating} size="lg" />
-                            <p className="text-xs text-gray-500 mt-2 font-medium">
+                            <p className="text-xs text-neutral-500 mt-2 font-medium dark:text-neutral-400">
                                 {rating === 0 ? "Select a rating" : rating === 5 ? "Excellent!" : rating >= 3 ? "Good" : "Needs Improvement"}
                             </p>
                         </div>
 
                         {errorMessage && (
-                            <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg text-center font-medium">
+                            <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg text-center font-medium dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
                                 {errorMessage}
                             </div>
                         )}
 
                         <div className="space-y-2">
-                            <label className="text-sm font-semibold text-gray-700 block">
-                                Add a comment <span className="text-gray-400 font-normal">(Optional)</span>
+                            <label className="text-sm font-semibold text-neutral-700 block dark:text-neutral-300">
+                                Add a comment <span className="text-neutral-400 font-normal dark:text-neutral-500">(Optional)</span>
                             </label>
                             <div className="relative">
                                 <textarea
@@ -147,10 +157,10 @@ export default function WriteReviewModal({
                                     onChange={handleTextareaChange}
                                     maxLength={500}
                                     rows={4}
-                                    className="w-full border border-gray-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-shadow outline-none resize-none"
+                                    className="w-full border border-neutral-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow outline-none resize-none dark:bg-neutral-800 dark:border-neutral-700 dark:text-white dark:placeholder-neutral-500"
                                     placeholder="What did you like or dislike?"
                                 />
-                                <div className={`absolute bottom-3 right-3 text-xs font-medium ${charCount >= 500 ? 'text-red-500' : 'text-gray-400'}`}>
+                                <div className={`absolute bottom-3 right-3 text-xs font-medium ${charCount >= 500 ? 'text-red-500' : 'text-neutral-400 dark:text-neutral-500'}`}>
                                     {charCount}/500
                                 </div>
                             </div>
@@ -158,17 +168,17 @@ export default function WriteReviewModal({
                     </form>
                 </div>
 
-                <div className="p-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+                <div className="p-5 border-t border-neutral-100 bg-neutral-50 rounded-b-2xl dark:bg-neutral-800/50 dark:border-neutral-800">
                     <button
                         type="submit"
                         form="review-form"
                         disabled={rating === 0 || status === 'loading'}
-                        className="w-full py-3 px-4 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl shadow-sm transition-colors flex items-center justify-center"
+                        className="w-full py-3 px-4 bg-primary-600 hover:bg-primary-700 disabled:bg-neutral-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl shadow-sm transition-colors flex items-center justify-center dark:disabled:bg-neutral-700"
                     >
                         {status === 'loading' ? (
                             <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Submitting...</>
                         ) : (
-                            'Submit Review'
+                            '⭐ Submit Review'
                         )}
                     </button>
                 </div>
