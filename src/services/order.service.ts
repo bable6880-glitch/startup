@@ -206,6 +206,10 @@ export async function updateOrderStatus(
         updatedAt: now,
     };
 
+    if (input.estimatedMinutes !== undefined) {
+        updateData.estimatedMinutes = input.estimatedMinutes;
+    }
+
     if (input.status === "ACCEPTED") updateData.acceptedAt = now;
     if (input.status === "COMPLETED") updateData.completedAt = now;
     if (input.status === "CANCELLED") updateData.cancelledAt = now;
@@ -225,6 +229,8 @@ export async function updateOrderStatus(
                 newStatus: input.status,
                 kitchenName: order.kitchen.name ?? "",
                 updatedAt: now.toISOString(),
+                estimatedMinutes: updated.estimatedMinutes,
+                acceptedAt: updated.acceptedAt ? updated.acceptedAt.toISOString() : undefined,
             },
         });
     } catch { /* Non-critical */ }

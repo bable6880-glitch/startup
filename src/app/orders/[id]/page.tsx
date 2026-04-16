@@ -7,7 +7,7 @@ import { useEffect, useState, use } from "react";
 import { MapLazy } from "@/components/map/MapLazy";
 import { calculateDistance } from "@/lib/utils/distance";
 import Link from "next/link";
-import WriteKitchenReviewAction from "@/components/reviews/WriteKitchenReviewAction";
+import { OrderTracker } from "@/components/orders/OrderTracker";
 
 interface OrderItem {
     id: string;
@@ -91,8 +91,7 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
         };
 
         fetchOrder();
-        const interval = setInterval(fetchOrder, 30000);
-        return () => clearInterval(interval);
+        // Removed polling setInterval to use SSE instead!
     }, [user, authLoading, getIdToken, params.id, router]);
 
     if (loading || authLoading) {
@@ -158,33 +157,24 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
                             Placed on {format(new Date(order.createdAt), "PPP p")}
                         </p>
                     </div>
-                    <span className={`px-4 py-2 rounded-full text-sm font-bold ${order.status === "PENDING" ? "bg-amber-100 text-amber-800" :
-                            order.status === "ACCEPTED" ? "bg-blue-100 text-blue-800" :
-                                order.status === "COMPLETED" ? "bg-green-100 text-green-800" :
-                                    "bg-red-100 text-red-800"
-                        }`}>
-                        {order.status}
-                    </span>
                 </div>
-
-                {order.status === "ACCEPTED" && order.estimatedMinutes && (
-                    <div className="mt-6 rounded-xl bg-blue-50 p-4 border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl">⏱️</span>
-                            <div>
-                                <p className="font-bold text-blue-900 dark:text-blue-100">Preparing your order</p>
-                                <p className="text-sm text-blue-700 dark:text-blue-300">
-                                    Estimated time: {order.estimatedMinutes} mins
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
 
             <div className="grid gap-8 lg:grid-cols-3">
                 {/* Main Content */}
                 <div className="lg:col-span-2 space-y-8">
+                    {/* Live Tracker replaces static blocks */}
+                    <OrderTracker 
+                        customerId={user?.uid ?? ""} 
+                        initialOrder={{
+                            id: order.id,
+                            status: order.status,
+                            estimatedMinutes: order.estimatedMinutes,
+                            acceptedAt: (order as any).acceptedAt || order.createdAt,
+                            kitchen: { id: order.kitchen.id, name: order.kitchen.name }
+                        }}
+                    />
+
                     {/* Map Section */}
                     <div className="rounded-2xl border border-neutral-200 overflow-hidden shadow-sm h-80 bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800">
                         {hasCustomerLocation ? (
@@ -232,14 +222,6 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
                             <span>Rs. {order.totalAmount}</span>
                         </div>
                     </div>
-
-                    {order.status === "COMPLETED" && (
-                        <div className="rounded-2xl border border-neutral-200 bg-white p-6 dark:bg-neutral-800 dark:border-neutral-700">
-                            <h2 className="font-bold text-lg mb-2 text-neutral-900 dark:text-neutral-100">Review your meal</h2>
-                            <p className="text-sm text-neutral-500 mb-4">Let others know how your food was!</p>
-                            <WriteKitchenReviewAction kitchenId={order.kitchen.id} kitchenName={order.kitchen.name} />
-                        </div>
-                    )}
                 </div>
 
                 {/* Sidebar */}

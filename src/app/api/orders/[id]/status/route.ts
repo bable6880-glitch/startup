@@ -37,21 +37,10 @@ export async function PATCH(
         const guard = await requireSeller(request, order.kitchenId);
         if (!guard.ok) return guard.response;
 
-        // Update status
-        const [updatedOrder] = await db
-            .update(orders)
-            .set({
-                status,
-                estimatedMinutes: estimatedMinutes || order.estimatedMinutes,
-                acceptedAt: status === "ACCEPTED" ? new Date() : order.acceptedAt,
-                completedAt: status === "COMPLETED" ? new Date() : order.completedAt,
-                cancelledAt: status === "CANCELLED" ? new Date() : order.cancelledAt,
-                updatedAt: new Date(),
-            })
-            .where(eq(orders.id, orderId))
-            .returning();
+        const { updateOrderStatus } = await import("@/services/order.service");
+        const updatedOrder = await updateOrderStatus(orderId, guard.user.id, parsed.data);
 
-        // N2: Notification on status change
+        // N2: Notification on status change (Email/Push notifications decoupled from SSE)
         if (status === "ACCEPTED" || status === "COMPLETED") {
             const { notifyOrderAccepted, notifyOrderCompleted } = await import("@/services/notification.service");
             if (status === "ACCEPTED") {

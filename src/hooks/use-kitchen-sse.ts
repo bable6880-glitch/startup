@@ -7,10 +7,11 @@ import type { SSEPayload } from "@/lib/redis/pubsub";
 interface UseKitchenSSEOptions {
     kitchenId: string | null;
     onNewOrder?: (payload: Record<string, unknown>) => void;
+    onOrderStatusChanged?: (payload: Record<string, unknown>) => void;
     onSubscriptionChanged?: (payload: Record<string, unknown>) => void;
 }
 
-export function useKitchenSSE({ kitchenId, onNewOrder, onSubscriptionChanged }: UseKitchenSSEOptions) {
+export function useKitchenSSE({ kitchenId, onNewOrder, onOrderStatusChanged, onSubscriptionChanged }: UseKitchenSSEOptions) {
     const { getIdToken } = useAuth();
     const [connected, setConnected] = useState(false);
     const [status, setStatus] = useState<"connecting" | "connected" | "disconnected">("disconnected");
@@ -22,8 +23,10 @@ export function useKitchenSSE({ kitchenId, onNewOrder, onSubscriptionChanged }: 
     const connectRef = useRef<() => void>(() => { });
 
     const onNewOrderRef = useRef(onNewOrder);
+    const onOrderStatusChangedRef = useRef(onOrderStatusChanged);
     const onSubChangedRef = useRef(onSubscriptionChanged);
     useLayoutEffect(() => { onNewOrderRef.current = onNewOrder; }, [onNewOrder]);
+    useLayoutEffect(() => { onOrderStatusChangedRef.current = onOrderStatusChanged; }, [onOrderStatusChanged]);
     useLayoutEffect(() => { onSubChangedRef.current = onSubscriptionChanged; }, [onSubscriptionChanged]);
 
     const connect = useCallback(async () => {
@@ -74,6 +77,9 @@ export function useKitchenSSE({ kitchenId, onNewOrder, onSubscriptionChanged }: 
                                     icon: "/favicon.ico",
                                 });
                             }
+                            break;
+                        case "ORDER_STATUS_CHANGED":
+                            onOrderStatusChangedRef.current?.(data.payload);
                             break;
                         case "SUBSCRIPTION_CHANGED":
                             onSubChangedRef.current?.(data.payload);

@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/firebase/auth-context";
 import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import { OrderSuccessCard } from "./OrderSuccessCard";
 
 export function CartPanel() {
     const { items, total, itemCount, kitchenName, kitchenId, updateQuantity, removeItem, clearCart } = useCart();
@@ -14,6 +15,9 @@ export function CartPanel() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isOpen, setIsOpen] = useState(false);
+    
+    // Order Success State
+    const [successData, setSuccessData] = useState<{ id: string } | null>(null);
 
     // Sellers (COOK role) cannot order — hide the entire cart
     const isCook = user?.role === "COOK" || user?.role === "ADMIN";
@@ -73,11 +77,11 @@ export function CartPanel() {
                 throw new Error(data.error?.message || "Failed to place order");
             }
 
-            await res.json();
+            const responseData = await res.json();
 
             clearCart();
-            alert("Order placed successfully! 🚀");
-            router.push(`/kitchen/${kitchenId}`);
+            // Show new Smart Modal instead of redirecting instantly
+            setSuccessData({ id: responseData.id });
 
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : "Something went wrong");
@@ -211,6 +215,16 @@ export function CartPanel() {
                 <div
                     className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
                     onClick={() => setIsOpen(false)}
+                />
+            )}
+
+            {/* Smart Success Card Overlay */}
+            {successData && userProfile && (
+                <OrderSuccessCard
+                    orderId={successData.id}
+                    customerName={userProfile.name ?? "Guest"}
+                    customerPhone={userProfile.phone ?? ""}
+                    onClose={() => setSuccessData(null)}
                 />
             )}
         </>

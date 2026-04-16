@@ -2,8 +2,9 @@
 
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { OrderCard } from "@/components/dashboard/OrderCard";
+import { useKitchenSSE } from "@/hooks/use-kitchen-sse";
 import Link from "next/link";
 
 export default function SellerOrdersPage() {
@@ -65,11 +66,19 @@ export default function SellerOrdersPage() {
         }
     }, [user, authLoading, router, fetchOrders]);
 
-    // Setup periodic refresh
-    useEffect(() => {
-        const interval = setInterval(fetchOrders, 30000); // Refresh every 30s
-        return () => clearInterval(interval);
+    // Real-Time SSE integration
+    const handleSseOrderChange = useCallback(() => {
+        // Optimistically drop-in or move cards by re-invoking the fetch
+        fetchOrders();
     }, [fetchOrders]);
+
+    const { connected } = useKitchenSSE({
+        kitchenId,
+        onNewOrder: handleSseOrderChange,
+        onOrderStatusChanged: handleSseOrderChange,
+    });
+
+    // We removed setInterval! The SSE hook natively handles pinging us exactly when an event occurs.
 
     const filteredOrders = orders.filter(order => {
         if (activeTab === "PENDING") return order.status === "PENDING";
@@ -106,13 +115,27 @@ export default function SellerOrdersPage() {
                     <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Kitchen Orders</h1>
                     <p className="text-neutral-500 dark:text-neutral-400">Manage your incoming food orders</p>
                 </div>
-                <button
-                    onClick={() => fetchOrders()}
-                    className="p-2 text-neutral-500 hover:bg-neutral-100 rounded-lg transition-colors dark:text-neutral-400 dark:hover:bg-neutral-800"
-                    title="Refresh Orders"
-                >
-                    🔄
-                </button>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 rounded-full border border-neutral-100 bg-white px-3 py-1.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+                        <span className={`relative flex h-2 w-2`}>
+                            {connected && (
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                            )}
+                            <span className={`relative inline-flex h-2 w-2 rounded-full ${connected ? 'bg-green-500' : 'bg-neutral-400'}`}></span>
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                            {connected ? "Live" : "Connecting"}
+                        </span>
+                    </div>
+
+                    <button
+                        onClick={() => fetchOrders()}
+                        className="p-2 text-neutral-500 hover:bg-neutral-100 rounded-lg transition-colors dark:text-neutral-400 dark:hover:bg-neutral-800"
+                        title="Refresh Orders"
+                    >
+                        🔄
+                    </button>
+                </div>
             </div>
 
             {/* Tabs */}
