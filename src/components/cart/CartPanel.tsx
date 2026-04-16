@@ -91,8 +91,20 @@ export function CartPanel() {
     };
 
     // Don't render anything if empty, or if the user is a Cook
-    if (itemCount === 0 || isCook) {
+    // Except if we are currently showing the success modal!
+    if ((itemCount === 0 && !successData) || isCook) {
         return null;
+    }
+
+    if (successData && userProfile) {
+        return (
+            <OrderSuccessCard
+                orderId={successData.id}
+                customerName={userProfile.name ?? "Guest"}
+                customerPhone={userProfile.phone ?? ""}
+                onClose={() => setSuccessData(null)}
+            />
+        );
     }
 
     return (
@@ -215,16 +227,6 @@ export function CartPanel() {
                 <div
                     className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
                     onClick={() => setIsOpen(false)}
-                />
-            )}
-
-            {/* Smart Success Card Overlay */}
-            {successData && userProfile && (
-                <OrderSuccessCard
-                    orderId={successData.id}
-                    customerName={userProfile.name ?? "Guest"}
-                    customerPhone={userProfile.phone ?? ""}
-                    onClose={() => setSuccessData(null)}
                 />
             )}
         </>
