@@ -1,8 +1,7 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { reviewQuerySchema } from "@/lib/validations/review";
-import { getKitchenReviews } from "@/services/review.service";
+import { getKitchenReviews, getKitchenReviewStats } from "@/services/review.service";
 import {
-    apiPaginated,
     apiBadRequest,
     apiInternalError,
 } from "@/lib/utils/api-response";
@@ -24,16 +23,24 @@ export async function GET(request: NextRequest, { params }: Params) {
             return apiBadRequest("Invalid query parameters", errors);
         }
 
-        const result = await getKitchenReviews(id, {
-            ...parsed.data,
-            page: Math.max(1, parseInt(queryParams.page ?? "1")),
-            limit: Math.min(50, Math.max(1, parseInt(queryParams.limit ?? "20"))),
-        });
+        const [result, stats] = await Promise.all([
+            getKitchenReviews(id, {
+                ...parsed.data,
+                page: Math.max(1, parseInt(queryParams.page ?? "1")),
+                limit: Math.min(50, Math.max(1, parseInt(queryParams.limit ?? "20"))),
+            }),
+            getKitchenReviewStats(id)
+        ]);
 
-        return apiPaginated(result.reviews, {
-            page: result.page,
-            limit: result.limit,
-            total: result.total,
+        return NextResponse.json({
+            success: true,
+            data: result.reviews,
+            stats,
+            meta: {
+                page: result.page,
+                limit: result.limit,
+                total: result.total,
+            }
         });
     } catch (error) {
         console.error("[List Reviews Error]", error);

@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCustomerSSE } from "@/hooks/use-customer-sse";
 import { OrderTimeline } from "@/components/dashboard/buyer/OrderTimeline";
+import WriteKitchenReviewAction from "@/components/reviews/WriteKitchenReviewAction";
 
 type OrderDetail = {
     id: string;
@@ -231,6 +232,14 @@ export default function OrderDetailPage() {
                     </span>
                 </div>
             </div>
+
+            {order.status === "COMPLETED" && (
+                <div className="rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-sm dark:bg-neutral-800 dark:border-neutral-700">
+                    <h2 className="font-bold text-neutral-900 dark:text-neutral-50 mb-2">Review your meal</h2>
+                    <p className="text-sm text-neutral-500 mb-4 dark:text-neutral-400">Let others know how your food was!</p>
+                    <WriteKitchenReviewAction kitchenId={order.kitchen.id} kitchenName={order.kitchen.name} />
+                </div>
+            )}
 
             {/* Order Meta */}
             <div className="rounded-2xl border border-neutral-200/60 bg-white p-5 shadow-sm dark:bg-neutral-800 dark:border-neutral-700">

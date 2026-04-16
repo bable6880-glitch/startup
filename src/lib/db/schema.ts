@@ -261,6 +261,32 @@ export const meals = pgTable(
     ]
 );
 
+// ─── Platform Reviews ───────────────────────────────────────────────────────
+
+export const platformReviews = pgTable(
+    "platform_reviews",
+    {
+        id: uuid("id").defaultRandom().primaryKey(),
+        userId: uuid("user_id")
+            .notNull()
+            .unique()
+            .references(() => users.id, { onDelete: "cascade" }),
+        rating: integer("rating").notNull(), // 1-5
+        comment: text("comment"), // max 500 chars enforced in validation
+        isVisible: boolean("is_visible").default(true).notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+    }
+);
+
+export const platformReviewsRelations = relations(platformReviews, ({ one }) => ({
+    user: one(users, {
+        fields: [platformReviews.userId],
+        references: [users.id],
+    }),
+}));
+
 // ─── Reviews ────────────────────────────────────────────────────────────────
 
 export const reviews = pgTable(
@@ -546,9 +572,10 @@ export const adminAuditLog = pgTable(
 
 // ─── Relations ──────────────────────────────────────────────────────────────
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ many, one }) => ({
     kitchens: many(kitchens),
     reviews: many(reviews),
+    platformReview: one(platformReviews),
     orders: many(orders),
     subscriptions: many(subscriptions),
     boosts: many(boosts),

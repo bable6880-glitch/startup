@@ -7,6 +7,7 @@ import { useEffect, useState, use } from "react";
 import { MapLazy } from "@/components/map/MapLazy";
 import { calculateDistance } from "@/lib/utils/distance";
 import Link from "next/link";
+import WriteKitchenReviewAction from "@/components/reviews/WriteKitchenReviewAction";
 
 interface OrderItem {
     id: string;
@@ -231,6 +232,14 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
                             <span>Rs. {order.totalAmount}</span>
                         </div>
                     </div>
+
+                    {order.status === "COMPLETED" && (
+                        <div className="rounded-2xl border border-neutral-200 bg-white p-6 dark:bg-neutral-800 dark:border-neutral-700">
+                            <h2 className="font-bold text-lg mb-2 text-neutral-900 dark:text-neutral-100">Review your meal</h2>
+                            <p className="text-sm text-neutral-500 mb-4">Let others know how your food was!</p>
+                            <WriteKitchenReviewAction kitchenId={order.kitchen.id} kitchenName={order.kitchen.name} />
+                        </div>
+                    )}
                 </div>
 
                 {/* Sidebar */}

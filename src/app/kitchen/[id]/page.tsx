@@ -7,8 +7,11 @@ import { KitchenHeader } from "@/components/kitchen/KitchenHeader";
 import { ClientOrderBanner } from "@/components/kitchen/ClientOrderBanner";
 import { getKitchenById, getKitchenBySlug } from "@/services/kitchen.service";
 import { getMealsByKitchen } from "@/services/menu.service";
-import { getKitchenReviews } from "@/services/review.service";
+import { getKitchenReviews, getKitchenReviewStats } from "@/services/review.service";
 import { reviewQuerySchema } from "@/lib/validations/review";
+import ReviewCard from "@/components/reviews/ReviewCard";
+import RatingBreakdown from "@/components/reviews/RatingBreakdown";
+import WriteKitchenReviewAction from "@/components/reviews/WriteKitchenReviewAction";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -168,67 +171,17 @@ function MealCard({ meal }: { meal: MealData }) {
     );
 }
 
-// ─── Review Card (U4a + U4d) ────────────────────────────────────────────────
-
 import { MealItem } from "@/components/menu/MealItem";
 import { CartPanel } from "@/components/cart/CartPanel";
 
-function ReviewCard({ review }: { review: ReviewData }) {
-    return (
-        <div className="rounded-xl border border-neutral-200/60 bg-white p-4 dark:bg-neutral-800 dark:border-neutral-700">
-            <div className="flex items-center gap-3 mb-3">
-                <div className="h-9 w-9 rounded-full bg-primary-100 flex items-center justify-center text-sm font-bold text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
-                    {review.user?.name?.[0]?.toUpperCase() || "U"}
-                </div>
-                <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-                            {review.user?.name || "Anonymous"}
-                        </p>
-                        {/* U4d: Verified purchase badge */}
-                        {review.isVerifiedPurchase && (
-                            <span className="rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-semibold text-accent-700 dark:bg-accent-900/30 dark:text-accent-300">
-                                ✓ Verified Order
-                            </span>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-1">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                            <svg
-                                key={i}
-                                className={`h-3.5 w-3.5 ${i < Number(review.rating) ? "text-amber-400" : "text-neutral-200 dark:text-neutral-600"}`}
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                            >
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                        ))}
-                    </div>
-                </div>
-            </div>
-            {review.comment && (
-                <p className="text-sm text-neutral-600 leading-relaxed dark:text-neutral-300">{review.comment}</p>
-            )}
-
-            {/* U4a: Seller reply */}
-            {review.sellerReply && (
-                <div className="mt-3 ml-4 pl-4 border-l-2 border-primary-200 dark:border-primary-800">
-                    <p className="text-xs font-semibold text-primary-700 dark:text-primary-400 mb-1">👨‍🍳 Cook&apos;s Reply</p>
-                    <p className="text-sm text-neutral-600 dark:text-neutral-300">{review.sellerReply}</p>
-                </div>
-            )}
-        </div>
-    );
-}
-
 // ─── Kitchen Content ────────────────────────────────────────────────────────
 
-// ─── Review Card (U4a + U4d) ────────────────────────────────────────────────
 async function KitchenContent({ id }: { id: string }) {
-    const [kitchen, menu, reviewData] = await Promise.all([
+    const [kitchen, menu, reviewData, reviewStats] = await Promise.all([
         getKitchen(id),
         getMenu(id),
         getReviews(id),
+        getKitchenReviewStats(id),
     ]);
 
     if (!kitchen) {
@@ -369,28 +322,36 @@ async function KitchenContent({ id }: { id: string }) {
                     </section>
 
                     {/* Reviews */}
-                    <section className="mt-12 mb-12">
+                    <section className="mt-12 mb-12" id="reviews">
                         <h2 className="text-xl font-bold text-neutral-900 mb-6 dark:text-neutral-50">
                             Reviews ({reviewData.total})
                         </h2>
+                        
+                        {reviewData.total > 0 && (
+                            <div className="mb-8 p-6 bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-100 dark:border-neutral-700">
+                                <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-5xl font-black text-neutral-900 dark:text-white">{reviewStats.averageRating.toFixed(1)}</span>
+                                        <span className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">out of 5</span>
+                                    </div>
+                                    <div className="flex-1 w-full max-w-sm">
+                                        <RatingBreakdown breakdown={reviewStats.breakdown} totalReviews={reviewStats.totalReviews} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {reviewData.reviews.length > 0 ? (
-                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                                {reviewData.reviews.map((r: ReviewData) => (
+                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 mt-6">
+                                {reviewData.reviews.map((r: any) => (
                                     <ReviewCard key={r.id} review={r} />
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-neutral-500 dark:text-neutral-400">No reviews yet.</p>
+                            <p className="text-neutral-500 dark:text-neutral-400 italic bg-neutral-50 p-6 rounded-xl dark:bg-neutral-800 dark:border-neutral-700">No reviews yet.</p>
                         )}
 
-                        <div className="mt-6">
-                            <Link
-                                href={`/login?redirect=/kitchen/${kitchen.id}`}
-                                className="text-sm font-medium text-primary-600 hover:underline dark:text-primary-400"
-                            >
-                                Write a review →
-                            </Link>
-                        </div>
+                        <WriteKitchenReviewAction kitchenId={kitchen.id} kitchenName={kitchen.name} />
                     </section>
 
                 </div>

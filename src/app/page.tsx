@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SearchBar from "@/components/ui/SearchBar";
+import PlatformReviewWidget from "@/components/reviews/PlatformReviewWidget";
 import { FeaturedKitchens } from "@/components/home/FeaturedKitchens";
 import { db } from "@/lib/db";
 import { kitchens, users, meals } from "@/lib/db/schema";
@@ -261,6 +262,9 @@ export default async function HomePage() {
           </Link>
         </div>
       </section>
+
+      {/* ── Platform Reviews ─────────────────────────────────────── */}
+      <PlatformReviewWidget />
 
       {/* ── About Platform (SEO) ─────────────────────────────────── */}
       <section id="about-platform" className="bg-white dark:bg-neutral-900">

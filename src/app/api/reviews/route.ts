@@ -1,17 +1,29 @@
 import { NextRequest } from "next/server";
-import { createReviewSchema } from "@/lib/validations/review";
-import { createReview, addSellerReply } from "@/services/review.service";
+import { createKitchenReviewSchema, sellerReplySchema } from "@/lib/validations/review";
+import { createKitchenReview, addSellerReply } from "@/services/review.service";
 import {
     apiCreated,
     apiSuccess,
     apiBadRequest,
     apiUnauthorized,
+    apiForbidden,
     apiConflict,
+    apiTooManyRequests,
     apiInternalError,
 } from "@/lib/utils/api-response";
 import { getAuthUser } from "@/lib/auth/get-auth-user";
 import { AppError } from "@/lib/utils/errors";
-import { z } from "zod";
+import { Ratelimit } from "@upstash/ratelimit";
+import { redis } from "@/lib/redis";
+
+// Allow 5 requests per hour
+const ratelimit = redis
+    ? new Ratelimit({
+          redis,
+          limiter: Ratelimit.slidingWindow(5, "1 h"),
+          analytics: true,
+      })
+    : null;
 
 /**
  * POST /api/reviews
@@ -22,32 +34,33 @@ export async function POST(request: NextRequest) {
         const user = await getAuthUser(request);
         if (!user) return apiUnauthorized();
 
+        if (ratelimit) {
+            const { success } = await ratelimit.limit(`rate_limit:review:${user.id}`);
+            if (!success) {
+                return apiTooManyRequests("Too many reviews. Please try again later.");
+            }
+        }
+
         const body = await request.json();
-        const parsed = createReviewSchema.safeParse(body);
+        const parsed = createKitchenReviewSchema.safeParse(body);
 
         if (!parsed.success) {
             const errors = parsed.error.flatten().fieldErrors as Record<string, string[]>;
             return apiBadRequest("Invalid review data", errors);
         }
 
-        const review = await createReview(user.id, parsed.data);
+        const review = await createKitchenReview(user.id, parsed.data);
         return apiCreated(review);
     } catch (error) {
         if (error instanceof AppError) {
             if (error.statusCode === 409) return apiConflict(error.message);
+            if (error.statusCode === 403) return apiForbidden(error.message);
             return apiBadRequest(error.message);
         }
         console.error("[Create Review Error]", error);
         return apiInternalError("Failed to submit review");
     }
 }
-
-// ─── Seller Reply Schema ────────────────────────────────────────────────────
-
-const sellerReplySchema = z.object({
-    reviewId: z.string().uuid("Invalid review ID"),
-    reply: z.string().min(1, "Reply cannot be empty").max(1000, "Reply too long"),
-});
 
 /**
  * PATCH /api/reviews
@@ -70,10 +83,11 @@ export async function PATCH(request: NextRequest) {
         return apiSuccess(updated);
     } catch (error) {
         if (error instanceof AppError) {
+            if (error.statusCode === 409) return apiConflict(error.message);
+            if (error.statusCode === 403) return apiForbidden(error.message);
             return apiBadRequest(error.message);
         }
         console.error("[Seller Reply Error]", error);
         return apiInternalError("Failed to submit reply");
     }
 }
-
