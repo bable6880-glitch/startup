@@ -13,6 +13,7 @@ export default function WriteKitchenReviewAction({ kitchenId, kitchenName }: { k
     const [orderId, setOrderId] = useState<string | null>(null);
     const [existingReview, setExistingReview] = useState<any>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [justSubmitted, setJustSubmitted] = useState(false);
     
     useEffect(() => {
         const checkEligibility = async () => {
@@ -57,6 +58,16 @@ export default function WriteKitchenReviewAction({ kitchenId, kitchenName }: { k
         );
     }
 
+    if (justSubmitted) {
+        return (
+            <div className="mt-6 rounded-xl bg-green-50 p-4 border border-green-100 dark:bg-green-900/10 dark:border-green-900/30 text-center">
+                <span className="text-2xl block mb-2">🎉</span>
+                <p className="text-sm font-semibold text-green-700 dark:text-green-300">Thank you for your review!</p>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">Your feedback helps our community.</p>
+            </div>
+        );
+    }
+
     if (canReview && orderId) {
         return (
             <div className="mt-6">
@@ -70,7 +81,10 @@ export default function WriteKitchenReviewAction({ kitchenId, kitchenName }: { k
                 <WriteReviewModal 
                     isOpen={isModalOpen}
                     onClose={() => setIsModalOpen(false)}
-                    onSuccess={() => window.location.reload()}
+                    onSuccess={() => {
+                        setJustSubmitted(true);
+                        setIsModalOpen(false);
+                    }}
                     kitchenId={kitchenId}
                     kitchenName={kitchenName}
                     orderId={orderId}

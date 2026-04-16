@@ -2,10 +2,12 @@
 
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useEffect, useState } from "react";
-import { Loader2, Reply } from "lucide-react";
+import { Loader2, Reply, Star, MessageSquare, ThumbsUp, Filter } from "lucide-react";
 import RatingBreakdown from "@/components/reviews/RatingBreakdown";
 import ReviewCard from "@/components/reviews/ReviewCard";
 import Link from "next/link";
+
+type ReviewFilter = "all" | "5" | "4" | "3" | "2" | "1" | "with_comment" | "no_reply";
 
 export default function DashboardReviewsPage() {
     const { user, loading: authLoading, getIdToken } = useAuth();
@@ -13,6 +15,7 @@ export default function DashboardReviewsPage() {
     const [reviews, setReviews] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [activeFilter, setActiveFilter] = useState<ReviewFilter>("all");
 
     // Reply state
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -24,6 +27,7 @@ export default function DashboardReviewsPage() {
             if (!user) return;
             try {
                 const token = await getIdToken();
+                if (!token) return;
                 
                 // Get Kitchen ID
                 const kRes = await fetch("/api/kitchens?ownerId=me", {
@@ -89,17 +93,48 @@ export default function DashboardReviewsPage() {
         }
     };
 
+    // Filter logic
+    const filteredReviews = reviews.filter(review => {
+        switch (activeFilter) {
+            case "5": case "4": case "3": case "2": case "1":
+                return review.rating === parseInt(activeFilter);
+            case "with_comment":
+                return review.comment && review.comment.trim().length > 0;
+            case "no_reply":
+                return !review.sellerReply && review.comment;
+            default:
+                return true;
+        }
+    });
+
+    const filterOptions: { key: ReviewFilter; label: string; icon?: React.ReactNode; count?: number }[] = [
+        { key: "all", label: "All", count: reviews.length },
+        { key: "5", label: "5 Stars", icon: <span className="text-yellow-400">★</span>, count: reviews.filter(r => r.rating === 5).length },
+        { key: "4", label: "4 Stars", icon: <span className="text-yellow-400">★</span>, count: reviews.filter(r => r.rating === 4).length },
+        { key: "3", label: "3 Stars", icon: <span className="text-yellow-400">★</span>, count: reviews.filter(r => r.rating === 3).length },
+        { key: "2", label: "2 Stars", icon: <span className="text-orange-400">★</span>, count: reviews.filter(r => r.rating === 2).length },
+        { key: "1", label: "1 Star", icon: <span className="text-red-400">★</span>, count: reviews.filter(r => r.rating === 1).length },
+        { key: "with_comment", label: "With Comments", icon: <MessageSquare className="w-3.5 h-3.5" /> },
+        { key: "no_reply", label: "Needs Reply", icon: <Reply className="w-3.5 h-3.5" /> },
+    ];
+
     if (authLoading || loading) {
         return (
-            <div className="flex justify-center items-center py-20">
-                <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+            <div className="mx-auto max-w-5xl px-4 py-8">
+                <div className="animate-pulse space-y-6">
+                    <div className="h-8 w-64 bg-neutral-200 rounded-lg dark:bg-neutral-700" />
+                    <div className="h-48 bg-neutral-200 rounded-2xl dark:bg-neutral-700" />
+                    <div className="space-y-4">
+                        {[1, 2, 3].map(i => <div key={i} className="h-32 rounded-xl bg-neutral-100 dark:bg-neutral-800" />)}
+                    </div>
+                </div>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="text-center py-20">
+            <div className="mx-auto max-w-5xl px-4 py-16 text-center">
                 <span className="text-5xl mb-4 block">😕</span>
                 <p className="text-red-500 font-medium">{error}</p>
                 <Link href="/dashboard" className="rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-all dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 mt-4 inline-block">Back to Dashboard</Link>
@@ -107,66 +142,169 @@ export default function DashboardReviewsPage() {
         );
     }
 
+    const avgRating = stats?.averageRating ?? 0;
+    const totalReviews = stats?.totalReviews ?? 0;
+
     return (
         <div className="mx-auto max-w-5xl px-4 py-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-50 mb-8">Manage Customer Reviews</h1>
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white">Customer Reviews</h1>
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Manage feedback and respond to your customers</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 rounded-full bg-primary-50 px-4 py-2 dark:bg-primary-900/20">
+                        <Star className="w-4 h-4 text-primary-500 fill-primary-500" />
+                        <span className="text-sm font-bold text-primary-700 dark:text-primary-300">
+                            {avgRating > 0 ? avgRating.toFixed(1) : "—"}
+                        </span>
+                        <span className="text-xs text-primary-500 dark:text-primary-400">
+                            ({totalReviews} {totalReviews === 1 ? "review" : "reviews"})
+                        </span>
+                    </div>
+                </div>
+            </div>
 
-            {stats && stats.totalReviews > 0 ? (
-                <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-sm border border-neutral-200/60 dark:border-neutral-700 p-8 mb-8">
-                    <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-50 mb-6">Aggregate Rating</h2>
-                    <div className="flex flex-col md:flex-row gap-12 items-center md:items-start">
-                        <div className="flex flex-col items-center">
-                            <span className="text-6xl font-black text-neutral-900 dark:text-white">{stats.averageRating.toFixed(1)}</span>
-                            <span className="text-sm text-neutral-500 mt-2 font-medium">out of 5</span>
+            {/* Stats Card */}
+            {stats && totalReviews > 0 && (
+                <div className="rounded-2xl border border-neutral-200/60 bg-white p-6 sm:p-8 shadow-sm mb-8 dark:bg-neutral-800 dark:border-neutral-700">
+                    <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-center md:items-start">
+                        {/* Big rating number */}
+                        <div className="flex flex-col items-center shrink-0">
+                            <span className="text-6xl font-black text-neutral-900 dark:text-white leading-none">
+                                {avgRating.toFixed(1)}
+                            </span>
+                            <div className="flex items-center gap-0.5 mt-3">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                    <Star
+                                        key={star}
+                                        className={`w-5 h-5 ${star <= Math.round(avgRating) ? "text-yellow-400 fill-yellow-400" : "text-neutral-200 dark:text-neutral-600"}`}
+                                    />
+                                ))}
+                            </div>
+                            <span className="text-xs text-neutral-500 mt-2 font-medium dark:text-neutral-400">
+                                {totalReviews} total {totalReviews === 1 ? "review" : "reviews"}
+                            </span>
                         </div>
+
+                        {/* Rating breakdown bars */}
                         <div className="flex-1 w-full max-w-md">
-                            <RatingBreakdown breakdown={stats.breakdown} totalReviews={stats.totalReviews} />
+                            <RatingBreakdown breakdown={stats.breakdown} totalReviews={totalReviews} />
+                        </div>
+
+                        {/* Quick stats */}
+                        <div className="flex flex-row md:flex-col gap-4 shrink-0">
+                            <div className="text-center px-4 py-3 rounded-xl bg-green-50 dark:bg-green-900/20">
+                                <ThumbsUp className="w-5 h-5 text-green-600 dark:text-green-400 mx-auto mb-1" />
+                                <span className="text-lg font-bold text-green-700 dark:text-green-300 block">
+                                    {reviews.filter(r => r.rating >= 4).length}
+                                </span>
+                                <span className="text-[10px] uppercase tracking-wider text-green-600 dark:text-green-400 font-semibold">Positive</span>
+                            </div>
+                            <div className="text-center px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/20">
+                                <MessageSquare className="w-5 h-5 text-amber-600 dark:text-amber-400 mx-auto mb-1" />
+                                <span className="text-lg font-bold text-amber-700 dark:text-amber-300 block">
+                                    {reviews.filter(r => !r.sellerReply && r.comment).length}
+                                </span>
+                                <span className="text-[10px] uppercase tracking-wider text-amber-600 dark:text-amber-400 font-semibold">Awaiting</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            ) : null}
+            )}
 
-            <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-sm border border-neutral-200/60 dark:border-neutral-700 p-6">
-                <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-50 mb-4">All Reviews ({reviews.length})</h2>
+            {/* Filter Chips — horizontally scrollable */}
+            <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                    <Filter className="w-4 h-4 text-neutral-400" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">Filter by</span>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap">
+                    {filterOptions.map(opt => (
+                        <button
+                            key={opt.key}
+                            onClick={() => setActiveFilter(opt.key)}
+                            className={`shrink-0 flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-all whitespace-nowrap ${
+                                activeFilter === opt.key
+                                    ? "bg-primary-600 text-white shadow-md shadow-primary-500/20"
+                                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                            }`}
+                        >
+                            {opt.icon}
+                            {opt.label}
+                            {opt.count !== undefined && (
+                                <span className={`ml-1 text-[10px] ${activeFilter === opt.key ? "text-white/70" : "text-neutral-400 dark:text-neutral-500"}`}>
+                                    {opt.count}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Reviews List */}
+            <div className="rounded-2xl border border-neutral-200/60 bg-white shadow-sm dark:bg-neutral-800 dark:border-neutral-700">
+                <div className="flex items-center justify-between p-5 border-b border-neutral-100 dark:border-neutral-700">
+                    <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+                        {activeFilter === "all" ? "All Reviews" : `Filtered Reviews`}
+                        <span className="ml-2 text-sm font-normal text-neutral-400">({filteredReviews.length})</span>
+                    </h2>
+                </div>
                 
-                {reviews.length === 0 ? (
-                    <p className="text-neutral-500 italic text-center py-12 bg-neutral-50 dark:bg-neutral-900/50 rounded-xl">No reviews received yet.</p>
+                {filteredReviews.length === 0 ? (
+                    <div className="text-center py-16 px-6">
+                        <span className="text-4xl block mb-3">🔍</span>
+                        <p className="text-neutral-500 dark:text-neutral-400 font-medium">
+                            {reviews.length === 0 ? "No reviews received yet." : "No reviews match this filter."}
+                        </p>
+                        {reviews.length === 0 && (
+                            <p className="text-xs text-neutral-400 mt-2 dark:text-neutral-500">
+                                Reviews will appear here once customers rate their orders.
+                            </p>
+                        )}
+                    </div>
                 ) : (
-                    <div className="space-y-6">
-                        {reviews.map(review => (
-                            <div key={review.id} className="pt-6 border-t border-neutral-100 dark:border-neutral-700 first:border-0 first:pt-0">
+                    <div className="divide-y divide-neutral-100 dark:divide-neutral-700/50 max-h-[600px] overflow-y-auto">
+                        {filteredReviews.map(review => (
+                            <div key={review.id} className="p-5 hover:bg-neutral-50/50 dark:hover:bg-neutral-700/20 transition-colors">
                                 <ReviewCard 
                                     review={review}
                                     onReply={(!review.sellerReply && review.comment) ? () => setReplyingTo(review.id) : undefined}
                                 />
                                 
                                 {replyingTo === review.id && (
-                                    <div className="mt-4 ml-12 p-4 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-100 dark:border-orange-800 animate-in fade-in slide-in-from-top-2">
-                                        <label className="text-sm font-semibold text-orange-900 dark:text-orange-300 mb-2 block flex items-center">
-                                            <Reply className="w-4 h-4 mr-2" /> Write your public response
+                                    <div className="mt-4 ml-8 sm:ml-12 p-4 bg-primary-50 dark:bg-primary-900/10 rounded-xl border border-primary-100 dark:border-primary-900/30">
+                                        <label className="text-sm font-semibold text-primary-800 dark:text-primary-300 mb-2 flex items-center gap-2">
+                                            <Reply className="w-4 h-4" /> Write your public response
                                         </label>
                                         <textarea
                                             value={replyText}
                                             onChange={e => setReplyText(e.target.value)}
                                             maxLength={500}
                                             rows={3}
-                                            className="w-full border border-orange-200 rounded-md p-3 text-sm focus:ring-2 focus:ring-orange-500 font-medium bg-white dark:bg-neutral-800 dark:border-neutral-600 dark:text-neutral-100 outline-none"
+                                            className="w-full border border-primary-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary-500 font-medium bg-white dark:bg-neutral-800 dark:border-neutral-600 dark:text-neutral-100 outline-none resize-none mt-2"
                                             placeholder="Thank the customer or address their concerns politely..."
+                                            autoFocus
                                         />
-                                        <div className="mt-3 flex justify-end gap-2">
-                                            <button 
-                                                onClick={() => { setReplyingTo(null); setReplyText(""); }}
-                                                className="px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700 rounded-md transition-colors"
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button 
-                                                onClick={() => handleReplySubmit(review.id)}
-                                                disabled={!replyText.trim() || submittingReply}
-                                                className="px-4 py-2 text-sm font-medium bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 transition-colors flex items-center"
-                                            >
-                                                {submittingReply ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Post Reply"}
-                                            </button>
+                                        <div className="mt-3 flex items-center justify-between">
+                                            <span className="text-[10px] text-neutral-400">{replyText.length}/500</span>
+                                            <div className="flex gap-2">
+                                                <button 
+                                                    onClick={() => { setReplyingTo(null); setReplyText(""); }}
+                                                    className="px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700 rounded-lg transition-colors"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleReplySubmit(review.id)}
+                                                    disabled={!replyText.trim() || submittingReply}
+                                                    className="px-5 py-2 text-sm font-bold bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors flex items-center shadow-sm"
+                                                >
+                                                    {submittingReply ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                                                    Post Reply
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
