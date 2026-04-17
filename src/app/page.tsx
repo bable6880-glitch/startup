@@ -1,6 +1,5 @@
 import Link from "next/link";
 import SearchBar from "@/components/ui/SearchBar";
-import { CityFilterWrapper } from "@/components/home/CityFilterWrapper";
 import PlatformReviewWidget from "@/components/reviews/PlatformReviewWidget";
 import { FeaturedKitchens } from "@/components/home/FeaturedKitchens";
 import { db } from "@/lib/db";
@@ -137,7 +136,6 @@ export default async function HomePage() {
             {/* Search Bar */}
             <div className="mt-10 animate-slide-up" style={{ animationDelay: "0.2s" }}>
               <SearchBar />
-              <CityFilterWrapper />
             </div>
 
             {/* Quick Stats — live from DB */}

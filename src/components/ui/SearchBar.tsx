@@ -37,7 +37,16 @@ export default function SearchBar({ initialCity = "", initialQuery = "", compact
     const abortRef = useRef<AbortController | undefined>(undefined)
     const wrapperRef = useRef<HTMLDivElement>(null)
 
-    const cities = ["Lahore", "Karachi", "Islamabad", "Rawalpindi", "Faisalabad", "Multan"]
+    const [cities, setCities] = useState<string[]>(["Lahore", "Karachi", "Islamabad", "Rawalpindi", "Faisalabad", "Multan"])
+
+    useEffect(() => {
+        fetch("/api/cities")
+            .then(res => res.json())
+            .then(data => {
+                if (data.data?.length > 0) setCities(data.data)
+            })
+            .catch(() => {})
+    }, [])
 
     const handleSearch = useCallback((overrideQuery?: string) => {
         const q = overrideQuery ?? query
@@ -186,7 +195,7 @@ export default function SearchBar({ initialCity = "", initialQuery = "", compact
 
                 {/* Suggestions Dropdown */}
                 {showDropdown && query.length >= 2 && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-neutral-100 dark:bg-neutral-800 dark:border-neutral-700 z-50 overflow-hidden" role="listbox">
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700 z-[100] overflow-hidden opacity-100 backdrop-blur-none" role="listbox" style={{ backgroundColor: 'var(--color-surface)', opacity: 1 }}>
                         {!loading && suggestions.length === 0 ? (
                             <div className="p-5 text-center">
                                 <span className="text-2xl block mb-2">🔍</span>
