@@ -69,7 +69,7 @@ export default function Navbar() {
     ];
 
     return (
-        <header className="sticky top-0 z-50 glass border-b border-neutral-200/50 dark:border-neutral-800/50">
+        <header className="sticky top-0 z-[100] glass border-b border-neutral-200/50 dark:border-neutral-800/50">
             <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-2.5 group transition-opacity hover:opacity-90">
