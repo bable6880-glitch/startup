@@ -91,6 +91,29 @@ export async function POST(request: NextRequest) {
 
         const { kitchenId, items, notes, customerAddress, customerLat, customerLng } = parsed.data;
 
+        // Verify valid coordinates
+        let validLat = customerLat;
+        let validLng = customerLng;
+        if (customerLat !== undefined && customerLat !== null) {
+            const numLat = Number(customerLat);
+            if (isNaN(numLat) || numLat < -90 || numLat > 90) validLat = undefined;
+        }
+        if (customerLng !== undefined && customerLng !== null) {
+            const numLng = Number(customerLng);
+            if (isNaN(numLng) || numLng < -180 || numLng > 180) validLng = undefined;
+        }
+
+        // Log to structured logger
+        if (validLat !== undefined && validLng !== undefined) {
+            console.log(JSON.stringify({
+                event: 'ORDER_LOCATION',
+                userId: user.id,
+                lat: validLat,
+                lng: validLng,
+                timestamp: new Date().toISOString()
+            }));
+        }
+
         // Verify kitchen exists and is active
         const kitchen = await db.query.kitchens.findFirst({
             where: eq(kitchens.id, kitchenId),
@@ -169,8 +192,7 @@ export async function POST(request: NextRequest) {
                 notes: notes ? sanitizeText(notes) : null,
                 deliveryMode,
                 customerAddress,
-                customerLat: customerLat ? customerLat.toString() : null,
-                customerLng: customerLng ? customerLng.toString() : null,
+                // Location data intentionally not stored in orders table
             })
             .returning();
 

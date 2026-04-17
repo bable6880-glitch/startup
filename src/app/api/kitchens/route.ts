@@ -11,6 +11,7 @@ import { setUserRoleClaim } from "@/lib/auth/firebase-admin";
 import { db } from "@/lib/db";
 import { kitchens } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { haversineKm } from "@/lib/utils/distance";
 import {
     apiSuccess,
     apiCreated,
@@ -66,7 +67,36 @@ export async function GET(request: NextRequest) {
             ...parsed.data,
             page: Math.max(1, parseInt(params.page ?? "1")),
             limit: Math.min(50, Math.max(1, parseInt(params.limit ?? "20"))),
+            sort: params.sort === 'distance' ? 'boost' : parsed.data.sort // handle distance sort manually below
         });
+
+        let finalKitchens: any[] = result.kitchens.map((k: any) => ({ ...k, distanceKm: null }));
+
+        if (params.lat && params.lng) {
+            const userLat = parseFloat(params.lat);
+            const userLng = parseFloat(params.lng);
+            if (!isNaN(userLat) && !isNaN(userLng)) {
+                finalKitchens = finalKitchens.map(k => {
+                    let distanceKm = null;
+                    if (k.latitude && k.longitude) {
+                        const kLat = parseFloat(k.latitude);
+                        const kLng = parseFloat(k.longitude);
+                        if (!isNaN(kLat) && !isNaN(kLng)) {
+                            distanceKm = Math.round(haversineKm(userLat, userLng, kLat, kLng) * 10) / 10;
+                        }
+                    }
+                    return { ...k, distanceKm };
+                });
+
+                if (params.sort === 'distance') {
+                    finalKitchens.sort((a, b) => {
+                        if (a.distanceKm === null) return 1;
+                        if (b.distanceKm === null) return -1;
+                        return a.distanceKm - b.distanceKm;
+                    });
+                }
+            }
+        }
 
         // Compute ETag
         const hash = createHash("sha256").update(JSON.stringify(result)).digest("hex").substring(0, 16);
@@ -77,7 +107,7 @@ export async function GET(request: NextRequest) {
             return new Response(null, { status: 304 });
         }
 
-        const response = apiPaginated(result.kitchens, {
+        const response = apiPaginated(finalKitchens, {
             page: result.page,
             limit: result.limit,
             total: result.total,

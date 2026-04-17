@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import KitchenCard, { KitchenCardSkeleton } from "@/components/ui/KitchenCard";
 import SearchBar from "@/components/ui/SearchBar";
+import { CityFilterWrapper } from "@/components/home/CityFilterWrapper";
 import { listKitchens } from "@/services/kitchen.service";
 import { kitchenQuerySchema } from "@/lib/validations/kitchen";
 import type { Metadata } from "next";
@@ -143,6 +144,7 @@ export default async function ExplorePage({ searchParams }: Props) {
             {/* Search + Filters */}
             <div className="mb-8">
                 <SearchBar initialCity={params.city} initialQuery={params.q} compact />
+                <CityFilterWrapper />
             </div>
 
             {/* Filter Pills */}

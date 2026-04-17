@@ -26,7 +26,8 @@ export const rateLimiters = {
     reviews: createLimiter(30, "1 m"),
     admin: createLimiter(30, "1 m"),
     premium: createLimiter(20, "1 m"),
-    search: createLimiter(60, "1 m"),
+    search: createLimiter(60, "1 m"), // general search
+    suggestions: createLimiter(30, "1 m"), // precise rate limit for location & search suggestions
     kitchens: createLimiter(60, "1 m"),
     upload: createLimiter(10, "1 m"),
     default: createLimiter(60, "1 m"),
@@ -42,6 +43,7 @@ export function getLimiterKey(pathname: string): RateLimiterKey {
     if (pathname.startsWith("/api/admin")) return "admin";
     if (pathname.startsWith("/api/premium")) return "premium";
     if (pathname.startsWith("/api/seller/subscription")) return "premium";
+    if (pathname.startsWith("/api/search/suggestions")) return "suggestions";
     if (pathname.startsWith("/api/search")) return "search";
     if (pathname.startsWith("/api/kitchens")) return "kitchens";
     if (pathname.startsWith("/api/upload")) return "upload";

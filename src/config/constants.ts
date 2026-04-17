@@ -45,3 +45,18 @@ export function sanitizeString(str: string): string {
         .replace(/&[^;]+;/g, "") // strip HTML entities
         .trim();
 }
+
+// ─── Cities Data ────────────────────────────────────────────────────────────
+export const PAKISTAN_CITIES = [
+  { name: 'All Cities', slug: 'all', lat: null, lng: null },
+  { name: 'Islamabad', slug: 'islamabad', lat: 33.6844, lng: 73.0479 },
+  { name: 'Rawalpindi', slug: 'rawalpindi', lat: 33.5651, lng: 73.0169 },
+  { name: 'Lahore', slug: 'lahore', lat: 31.5204, lng: 74.3587 },
+  { name: 'Karachi', slug: 'karachi', lat: 24.8607, lng: 67.0011 },
+  { name: 'Peshawar', slug: 'peshawar', lat: 34.0151, lng: 71.5249 },
+  { name: 'Quetta', slug: 'quetta', lat: 30.1798, lng: 66.9750 },
+  { name: 'Faisalabad', slug: 'faisalabad', lat: 31.4504, lng: 73.1350 },
+  { name: 'Multan', slug: 'multan', lat: 30.1575, lng: 71.5249 },
+  { name: 'Sialkot', slug: 'sialkot', lat: 32.4927, lng: 74.5317 },
+  { name: 'Gujranwala', slug: 'gujranwala', lat: 32.1877, lng: 74.1945 },
+];

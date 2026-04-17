@@ -32,6 +32,10 @@ export const metadata: Metadata = {
   },
 };
 
+import { LocationProvider } from "@/lib/location-context";
+import { LocationModal } from "@/components/location/LocationModal";
+import { LocationBanner } from "@/components/location/LocationBanner";
+
 export default function RootLayout({
   children,
 }: {
@@ -44,9 +48,13 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col font-sans">
         <AuthProvider>
           <CartProvider>
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <Footer />
+            <LocationProvider>
+              <Navbar />
+              <main className="flex-1">{children}</main>
+              <Footer />
+              <LocationModal />
+              <LocationBanner />
+            </LocationProvider>
           </CartProvider>
         </AuthProvider>
       </body>

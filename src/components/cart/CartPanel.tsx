@@ -6,10 +6,12 @@ import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { OrderSuccessCard } from "./OrderSuccessCard";
+import { useLocation } from "@/lib/location-context";
 
 export function CartPanel() {
     const { items, total, itemCount, kitchenName, kitchenId, updateQuantity, removeItem, clearCart } = useCart();
     const { user, userProfile, loading: authLoading, getIdToken } = useAuth();
+    const { location, requestLocation } = useLocation();
     const router = useRouter();
     const pathname = usePathname();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,24 +35,19 @@ export function CartPanel() {
         setIsSubmitting(true);
         setError(null);
 
+        if (location.status !== 'granted') {
+            requestLocation();
+            setError("Please allow location access to place your order");
+            setIsSubmitting(false);
+            return;
+        }
+
         try {
             const token = await getIdToken();
             if (!token) {
                 setError("Authentication failed. Please log in again.");
                 setIsSubmitting(false);
                 return;
-            }
-
-            // Get location for delivery
-            let lat: number | undefined, lng: number | undefined;
-            try {
-                const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
-                });
-                lat = pos.coords.latitude;
-                lng = pos.coords.longitude;
-            } catch {
-                // Location not available — continue without it
             }
 
             const res = await fetch("/api/orders", {
@@ -67,8 +64,8 @@ export function CartPanel() {
                     })),
                     // deliveryMode is auto-resolved on the server from kitchen config
                     notes: "",
-                    customerLat: lat,
-                    customerLng: lng,
+                    customerLat: location.lat,
+                    customerLng: location.lng,
                 }),
             });
 

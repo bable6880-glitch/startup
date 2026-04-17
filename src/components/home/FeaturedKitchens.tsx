@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useLocation } from "@/lib/location-context";
 
 type Kitchen = {
     id: string;
@@ -15,11 +17,17 @@ type Kitchen = {
     cuisineTypes: string[] | null;
     deliveryOptions: string[] | null;
     isVerified: boolean;
+    distanceKm?: number | null;
+    lat?: number | null;
+    lng?: number | null;
 };
 
 export function FeaturedKitchens() {
     const [kitchens, setKitchens] = useState<Kitchen[]>([]);
     const [loading, setLoading] = useState(true);
+    const searchParams = useSearchParams();
+    const city = searchParams.get('city') ?? 'all';
+    const { location } = useLocation();
 
     useEffect(() => {
         (async () => {
@@ -29,7 +37,22 @@ export function FeaturedKitchens() {
                     (typeof window !== "undefined"
                         ? window.location.origin
                         : "http://localhost:3000");
-                const res = await fetch(`${baseUrl}/api/kitchens?limit=6&sort=rating`, {
+                
+                const params = new URLSearchParams();
+                params.set("limit", "6");
+                params.set("sort", "rating");
+                if (city && city !== 'all') {
+                    params.set("city", city);
+                }
+                if (location.status === 'granted') {
+                    params.set("lat", location.lat.toString());
+                    params.set("lng", location.lng.toString());
+                    if (city === 'all') {
+                        params.set("sort", "distance"); // pseudo sort if API supports it, or we rely on client
+                    }
+                }
+
+                const res = await fetch(`${baseUrl}/api/kitchens?${params.toString()}`, {
                     headers: { "Cache-Control": "no-store" },
                 });
                 if (res.ok) {
@@ -42,7 +65,7 @@ export function FeaturedKitchens() {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, [city, location]);
 
     if (loading) {
         return (
@@ -67,11 +90,11 @@ export function FeaturedKitchens() {
     return (
         <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
             <div className="text-center mb-10">
-                <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl dark:text-neutral-50">
-                    ✨ Featured Kitchens
+                <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl dark:text-neutral-50 capitalize">
+                    {city !== 'all' ? `${city.replace('-', ' ')} Kitchens` : '✨ Featured Kitchens'}
                 </h2>
                 <p className="mt-2 text-neutral-500 dark:text-neutral-400">
-                    Top-rated home kitchens handpicked for you
+                    {city !== 'all' ? 'Top-rated home kitchens in your selected city' : 'Top-rated home kitchens handpicked for you'}
                 </p>
             </div>
 
@@ -100,6 +123,14 @@ export function FeaturedKitchens() {
                                 <div className="h-full w-full flex items-center justify-center text-5xl">
                                     🍱
                                 </div>
+                            )}
+
+                            {/* Distance Badge */}
+                            {kitchen.distanceKm != null && location.status === 'granted' && (
+                                <span className="absolute top-3 left-3 rounded-full bg-black/60 px-2 py-1 text-xs font-bold text-white shadow-sm backdrop-blur-md">
+                                    {kitchen.distanceKm < 1 ? '🟢 ' : kitchen.distanceKm <= 3 ? '🟡 ' : '🟠 '}
+                                    {kitchen.distanceKm} km away
+                                </span>
                             )}
 
                             {/* Verified Badge */}

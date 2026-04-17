@@ -12,6 +12,7 @@ type KitchenCardProps = {
     priceRange?: string | null;
     isVerified?: boolean;
     isBoosted?: boolean;
+    distanceKm?: number | null;
 };
 
 export default function KitchenCard({
@@ -26,6 +27,7 @@ export default function KitchenCard({
     priceRange,
     isVerified,
     isBoosted,
+    distanceKm,
 }: KitchenCardProps) {
     return (
         <Link
@@ -48,7 +50,7 @@ export default function KitchenCard({
                 )}
 
                 {/* Badges */}
-                <div className="absolute top-3 left-3 flex gap-1.5">
+                <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
                     {isVerified && (
                         <span className="rounded-full bg-accent-500 px-2.5 py-1 text-xs font-semibold text-white shadow-sm flex items-center gap-1">
                             ✓ Verified
@@ -60,6 +62,14 @@ export default function KitchenCard({
                         </span>
                     )}
                 </div>
+
+                {/* Distance Badge */}
+                {distanceKm != null && (
+                    <span className="absolute top-3 right-3 rounded-full bg-black/60 px-2.5 py-1 text-xs font-bold text-white shadow-sm backdrop-blur-md">
+                        {distanceKm < 1 ? '🟢 ' : distanceKm <= 3 ? '🟡 ' : '🟠 '}
+                        {distanceKm} km away
+                    </span>
+                )}
 
                 {/* Price */}
                 {priceRange && (
