@@ -195,7 +195,7 @@ export default function SearchBar({ initialCity = "", initialQuery = "", compact
 
                 {/* Suggestions Dropdown */}
                 {showDropdown && query.length >= 2 && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700 z-[100] overflow-hidden opacity-100 backdrop-blur-none" role="listbox" style={{ backgroundColor: 'var(--color-surface)', opacity: 1 }}>
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700 z-[100] overflow-hidden" role="listbox">
                         {!loading && suggestions.length === 0 ? (
                             <div className="p-5 text-center">
                                 <span className="text-2xl block mb-2">🔍</span>
