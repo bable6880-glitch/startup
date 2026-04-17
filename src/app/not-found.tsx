@@ -270,8 +270,8 @@ export default function NotFound() {
             className="inline-flex items-center gap-2 rounded-full bg-primary-100/80 px-5 py-2 text-sm font-bold text-primary-700 mb-8 dark:bg-primary-900/40 dark:text-primary-300"
             aria-hidden="true"
           >
-            <span className="text-base">🚫</span>
-            Error 404
+            <span className="text-base">😅</span>
+            Even our best chef couldn&apos;t cook up this page!
           </div>
 
           {/* Animation */}

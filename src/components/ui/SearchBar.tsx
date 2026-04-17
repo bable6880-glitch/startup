@@ -15,6 +15,7 @@ type Suggestion = {
     mealName: string
     kitchenId: string
     kitchenName: string
+    kitchenCity?: string
     price: number
     distanceKm: number | null
     category: string
@@ -187,11 +188,13 @@ export default function SearchBar({ initialCity = "", initialQuery = "", compact
                 {showDropdown && query.length >= 2 && (
                     <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-neutral-100 dark:bg-neutral-800 dark:border-neutral-700 z-50 overflow-hidden" role="listbox">
                         {!loading && suggestions.length === 0 ? (
-                            <div className="p-4 text-center text-sm text-neutral-500 dark:text-neutral-400">
-                                Try a different search
+                            <div className="p-5 text-center">
+                                <span className="text-2xl block mb-2">🔍</span>
+                                <p className="text-sm font-medium text-neutral-600 dark:text-neutral-300">No results found</p>
+                                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-1">Try a different keyword or city name</p>
                             </div>
                         ) : (
-                            <ul className="max-h-80 overflow-y-auto">
+                            <ul className="max-h-80 overflow-y-auto divide-y divide-neutral-50 dark:divide-neutral-700/50">
                                 {suggestions.map((item, idx) => (
                                     <li 
                                         key={idx}
@@ -202,19 +205,22 @@ export default function SearchBar({ initialCity = "", initialQuery = "", compact
                                             router.push(`/kitchen/${item.kitchenId}`)
                                             setShowDropdown(false)
                                         }}
-                                        className={`px-4 py-3 cursor-pointer flex items-center justify-between transition-colors ${activeIndex === idx ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-neutral-50 dark:hover:bg-neutral-700'}`}
+                                        className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors ${activeIndex === idx ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-neutral-50 dark:hover:bg-neutral-700/50'}`}
                                     >
-                                        <div className="flex flex-col">
-                                            <span className="font-semibold text-neutral-900 dark:text-white text-sm">
-                                                🥢 {item.mealName}
+                                        <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-base">
+                                            🍽️
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <span className="font-semibold text-neutral-900 dark:text-white text-sm block truncate">
+                                                {item.mealName}
                                             </span>
-                                            <span className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-                                                {item.category}
+                                            <span className="text-xs text-neutral-500 dark:text-neutral-400 truncate block">
+                                                {item.kitchenName} · {item.kitchenCity || item.category}
                                             </span>
                                         </div>
-                                        <div className="flex flex-col items-end gap-1">
-                                            <span className="text-xs text-neutral-600 dark:text-neutral-300 font-medium">
-                                                {item.kitchenName}
+                                        <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                                            <span className="text-xs font-bold text-primary-600 dark:text-primary-400">
+                                                Rs. {Number(item.price).toLocaleString()}
                                             </span>
                                             {getDistanceBadge(item.distanceKm)}
                                         </div>

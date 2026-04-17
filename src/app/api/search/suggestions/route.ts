@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { apiSuccess } from "@/lib/utils/api-response"
 import { getMealSearchIndex } from "@/lib/redis/search-index"
-import { normalizeQuery, fuzzySearchMeals } from "@/lib/utils/fuzzy-search"
+import { normalizeQuery, fuzzySearchMeals, resolveCityAlias } from "@/lib/utils/fuzzy-search"
 import { isWithinRadius, haversineKm } from "@/lib/utils/distance"
 import { sanitizeText } from "@/lib/utils/sanitize"
 import { redis } from "@/lib/redis"
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   const lat = validateCoord(searchParams.get('lat'), -90, 90)
   const lng = validateCoord(searchParams.get('lng'), -180, 180)
   
-  let radius = 5
+  let radius = 15 // increased default for broader coverage
   const rawRadius = searchParams.get('radius')
   if (rawRadius) {
     const r = parseFloat(rawRadius)
@@ -48,6 +48,9 @@ export async function GET(request: NextRequest) {
 
   const normalizedQ = normalizeQuery(q)
   const corrected = normalizedQ !== q.toLowerCase().trim()
+
+  // Check if query is a city search
+  const cityAlias = resolveCityAlias(normalizedQ)
 
   // Try fetching from Redis cache
   let cacheKey = `search:suggest:${normalizedQ}:global`
@@ -69,9 +72,16 @@ export async function GET(request: NextRequest) {
   const allMeals = await getMealSearchIndex()
   let filteredMeals = allMeals
 
-  if (lat !== null && lng !== null) {
+  // For city searches, do NOT filter by GPS radius — show all meals in that city
+  if (cityAlias) {
+    filteredMeals = allMeals.filter(m =>
+      m.kitchenCity.toLowerCase().trim() === cityAlias ||
+      m.kitchenCitySlug === cityAlias
+    )
+  } else if (lat !== null && lng !== null) {
+    // Only apply radius filter for non-city searches with coords
     filteredMeals = allMeals.filter(m => {
-      if (m.lat === null || m.lng === null) return false
+      if (m.lat === null || m.lng === null) return true // include kitchens without coords
       return isWithinRadius(lat, lng, m.lat, m.lng, radius)
     })
   }
@@ -88,28 +98,40 @@ export async function GET(request: NextRequest) {
       mealName: meal.name,
       kitchenId: meal.kitchenId,
       kitchenName: meal.kitchenName,
+      kitchenCity: meal.kitchenCity,
       price: meal.price,
       distanceKm,
       category: meal.category
     }
   })
 
+  // Deduplicate by kitchenId for city searches (show 1 result per kitchen)
+  let finalSuggestions = suggestions
+  if (cityAlias) {
+    const seen = new Set<string>()
+    finalSuggestions = suggestions.filter(s => {
+      if (seen.has(s.kitchenId)) return false
+      seen.add(s.kitchenId)
+      return true
+    })
+  }
+
   // Distance Sort
   if (lat !== null && lng !== null) {
-    suggestions.sort((a, b) => {
+    finalSuggestions.sort((a, b) => {
       if (a.distanceKm === null) return 1
       if (b.distanceKm === null) return -1
       return a.distanceKm - b.distanceKm
     })
-  } else {
-    // Already sorted by fuzzy score in fuzzySearchMeals
   }
 
   const resultData = {
-    suggestions,
+    suggestions: finalSuggestions,
     query: normalizedQ,
     originalQuery: rawQ,
-    corrected
+    corrected,
+    isCitySearch: !!cityAlias,
+    resolvedCity: cityAlias || null,
   }
 
   if (redis) {
