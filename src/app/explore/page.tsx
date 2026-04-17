@@ -141,7 +141,7 @@ export default async function ExplorePage({ searchParams }: Props) {
             </div>
 
             {/* Search + Filters */}
-            <div className="mb-8">
+            <div className="mb-8 relative z-[60]">
                 <SearchBar initialCity={params.city} initialQuery={params.q} compact />
             </div>
 

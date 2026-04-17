@@ -134,7 +134,7 @@ export default async function HomePage() {
             </p>
 
             {/* Search Bar */}
-            <div className="mt-10 animate-slide-up" style={{ animationDelay: "0.2s" }}>
+            <div className="mt-10 animate-slide-up relative z-[60]" style={{ animationDelay: "0.2s" }}>
               <SearchBar />
             </div>
 
