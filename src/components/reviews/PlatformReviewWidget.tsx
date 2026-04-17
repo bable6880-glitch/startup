@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { Loader2, MessageSquareText, ShieldCheck, X } from 'lucide-react';
 import { useAuth } from '@/lib/firebase/auth-context';
+import { ClientsSection } from '../ui/testimonial-card';
 
 interface PlatformStats {
     averageRating: number;
@@ -20,7 +21,7 @@ interface PlatformStats {
 }
 
 export default function PlatformReviewWidget() {
-    const { user } = useAuth();
+    const { user, getIdToken } = useAuth();
     const isLoggedIn = !!user;
     const [stats, setStats] = useState<PlatformStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -63,68 +64,32 @@ export default function PlatformReviewWidget() {
 
     if (!stats) return null;
 
+    const mappedTestimonials = stats.recentReviews.map(r => ({
+        id: r.id,
+        name: r.user.name || "Anonymous",
+        quote: r.comment,
+        rating: r.rating,
+        avatarSrc: r.user.avatarUrl,
+        createdAt: r.createdAt
+    }));
+
+    const derivedStats = [
+        { value: stats.totalReviews >= 100 ? "100+" : stats.totalReviews, label: "Happy Customers" },
+        { value: stats.averageRating.toFixed(1), label: "Average Rating" },
+        { value: "50+", label: "Verified Kitchens" } // Placeholder representing platform scale
+    ];
+
     return (
-        <div id="platform-reviews" className="bg-gradient-to-b from-white to-orange-50/50 py-16 px-4">
-            <div className="max-w-4xl mx-auto text-center space-y-8">
-                
-                {/* Header Stats */}
-                <div className="space-y-4">
-                    <h2 className="text-3xl font-bold font-heading text-gray-900">
-                        Loved by thousands across Pakistan
-                    </h2>
-                    
-                    <div className="flex flex-col items-center justify-center space-y-2">
-                        <div className="flex items-end gap-3">
-                            <span className="text-5xl font-black text-gray-900">
-                                {stats.averageRating.toFixed(1)}
-                            </span>
-                            <div className="pb-1">
-                                <StarRating value={Math.round(stats.averageRating)} size="lg" />
-                            </div>
-                        </div>
-                        <p className="text-gray-600 font-medium flex items-center gap-1.5">
-                            <ShieldCheck className="w-4 h-4 text-green-600" />
-                            Based on {stats.totalReviews.toLocaleString()} reviews from real customers
-                        </p>
-                    </div>
-
-                    <button 
-                        onClick={handleWriteReviewClick}
-                        className="mt-4 px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 flex items-center gap-2 mx-auto"
-                    >
-                        <MessageSquareText className="w-5 h-5" />
-                        Write a Review
-                    </button>
-                </div>
-
-                {/* Recent Reviews Grid */}
-                {stats.recentReviews.length > 0 && (
-                    <div className="grid md:grid-cols-3 gap-6 pt-8 text-left">
-                        {stats.recentReviews.slice(0, 3).map((review) => (
-                            <div key={review.id} className="bg-white p-6 rounded-2xl shadow-sm border border-orange-100 flex flex-col h-full">
-                                <StarRating value={review.rating} size="sm" />
-                                <p className="mt-3 text-gray-700 text-sm leading-relaxed flex-grow italic">
-                                    "{review.comment || 'Great experience with Smart Tiffin!'}"
-                                </p>
-                                <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-700 flex justify-center items-center font-bold text-xs">
-                                        {review.user.avatarUrl ? (
-                                            <img src={review.user.avatarUrl} alt="avatar" className="rounded-full w-full h-full object-cover" />
-                                        ) : review.user.name?.charAt(0).toUpperCase() || 'U'}
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold text-gray-900 text-xs">{review.user.name || 'Anonymous'}</p>
-                                        <p className="text-[10px] text-gray-400">
-                                            {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true })}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
+        <div id="platform-reviews" className="relative w-full overflow-hidden">
+            <ClientsSection 
+                tagLabel="Real Voices"
+                title="Loved by thousands across Pakistan"
+                description="Our platform connects passionate home chefs with hungry professionals, creating a secure marketplace of authentic meals."
+                stats={derivedStats}
+                testimonials={mappedTestimonials}
+                primaryActionLabel="Write a Review"
+                onPrimaryAction={handleWriteReviewClick}
+            />
             {/* Inlined Write Platform Review Modal */}
             {isModalOpen && (
                 <PlatformReviewModal 
@@ -133,13 +98,14 @@ export default function PlatformReviewWidget() {
                         setIsModalOpen(false);
                         fetchStats();
                     }}
+                    getIdToken={getIdToken}
                 />
             )}
         </div>
     );
 }
 
-function PlatformReviewModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: () => void }) {
+function PlatformReviewModal({ onClose, onSuccess, getIdToken }: { onClose: () => void, onSuccess: () => void, getIdToken: () => Promise<string | null> }) {
     const [rating, setRating] = useState(0);
     const [status, setStatus] = useState<'idle'|'loading'|'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
@@ -163,9 +129,15 @@ function PlatformReviewModal({ onClose, onSuccess }: { onClose: () => void, onSu
         const comment = textareaRef.current?.value.trim() || undefined;
 
         try {
+            const token = await getIdToken();
+            if (!token) throw new Error("Authentication session expired.");
+
             const res = await fetch('/api/reviews/platform', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({ rating, comment })
             });
 
