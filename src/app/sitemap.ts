@@ -42,17 +42,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${baseUrl}/city/${city}`,
       lastModified: new Date(),
       changeFrequency: 'daily' as const,
-      priority: 0.8,
-    }));
-
-    const kitchenRoutes = activeKitchens.map((kitchen) => ({
-      url: `${baseUrl}/kitchen/${kitchen.slug}`,
-      lastModified: kitchen.updatedAt || new Date(),
-      changeFrequency: 'weekly' as const,
       priority: 0.7,
     }));
 
-    return [...staticRoutes, ...cityRoutes, ...kitchenRoutes];
+    return [...staticRoutes, ...cityRoutes];
   } catch (error) {
     console.error("Failed to generate complete sitemap", error);
     return staticRoutes;
