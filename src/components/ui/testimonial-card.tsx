@@ -60,17 +60,17 @@ const StickyTestimonialCard = ({ testimonial, index }: { testimonial: Testimonia
         {/* Top section: Image and Author */}
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-full bg-orange-100 text-orange-700 flex justify-center items-center font-bold text-xl overflow-hidden shrink-0">
-             {testimonial.avatarSrc ? (
-                 <img src={testimonial.avatarSrc} alt="avatar" className="w-full h-full object-cover" />
-             ) : testimonial.name?.charAt(0).toUpperCase() || 'U'}
+            {testimonial.avatarSrc ? (
+              <img src={testimonial.avatarSrc} alt="avatar" className="w-full h-full object-cover" />
+            ) : testimonial.name?.charAt(0).toUpperCase() || 'U'}
           </div>
           <div className="flex-grow min-w-0">
             <p className="font-bold text-lg text-gray-900 dark:text-gray-100 truncate">{testimonial.name}</p>
             {testimonial.title && <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{testimonial.title}</p>}
             {testimonial.createdAt && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {formatDistanceToNow(new Date(testimonial.createdAt), { addSuffix: true })}
-                </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                {formatDistanceToNow(new Date(testimonial.createdAt), { addSuffix: true })}
+              </p>
             )}
           </div>
         </div>
@@ -95,7 +95,7 @@ const StickyTestimonialCard = ({ testimonial, index }: { testimonial: Testimonia
 
         {/* Bottom section: Quote */}
         <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300 leading-relaxed italic">
-            &ldquo;{testimonial.quote || 'Great experience with Smart Tiffin! Highly recommended.'}&rdquo;
+          &ldquo;{testimonial.quote || 'Great experience with Smart Tiffin! Highly recommended.'}&rdquo;
         </p>
       </div>
     </motion.div>
@@ -116,14 +116,14 @@ export const ClientsSection = ({
 }: ClientsSectionProps) => {
   // Cap how many render so Mobile views aren't a mile long
   const displayTestimonials = testimonials.slice(0, 5);
-  
+
   // Calculate a height for the scroll container to ensure all cards can stack smoothly
   const scrollContainerHeight = `calc(100vh + ${displayTestimonials.length * 120}px)`;
 
   return (
     <section className={cn("w-full bg-white dark:bg-[#0a0a0a] text-gray-900 dark:text-gray-50 py-20 px-4", className)}>
       <div className="container mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
-        
+
         {/* Left Column: Sticky Content */}
         <div className="flex flex-col gap-6 lg:sticky lg:top-32 z-10">
           <div className="inline-flex items-center gap-2 self-start rounded-full border border-orange-200 dark:border-orange-900 bg-orange-50 dark:bg-orange-900/30 px-4 py-1.5 text-sm font-semibold">
@@ -133,21 +133,21 @@ export const ClientsSection = ({
 
           <h2 className="text-4xl md:text-5xl font-black tracking-tight">{title}</h2>
           <p className="text-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-lg">{description}</p>
-          
+
           <div className="grid grid-cols-2 gap-4 mt-4 max-w-lg">
             {stats.map((stat) => (
               <StatCard key={stat.label} {...stat} />
             ))}
           </div>
-          
+
           <div className="flex items-center mt-6">
-            <Button 
-                size="lg" 
-                onClick={onPrimaryAction}
-                className="rounded-full bg-orange-600 hover:bg-orange-700 text-white font-bold px-8 shadow-xl shadow-orange-600/20 transition-all hover:-translate-y-0.5 gap-2"
+            <Button
+              size="lg"
+              onClick={onPrimaryAction}
+              className="rounded-full bg-orange-600 hover:bg-orange-700 text-white font-bold px-8 shadow-xl shadow-orange-600/20 transition-all hover:-translate-y-0.5 gap-2"
             >
-                <MessageSquareText className="w-5 h-5" />
-                {primaryActionLabel}
+              <MessageSquareText className="w-5 h-5" />
+              {primaryActionLabel}
             </Button>
           </div>
         </div>
@@ -155,17 +155,17 @@ export const ClientsSection = ({
         {/* Right Column: Container for the sticky card stack */}
         <div className="relative flex flex-col gap-6" style={{ height: displayTestimonials.length > 0 ? scrollContainerHeight : 'auto' }}>
           {displayTestimonials.length > 0 ? (
-              displayTestimonials.map((testimonial, index) => (
-                <StickyTestimonialCard
-                  key={testimonial.id || testimonial.name}
-                  index={index}
-                  testimonial={testimonial}
-                />
-              ))
+            displayTestimonials.map((testimonial, index) => (
+              <StickyTestimonialCard
+                key={testimonial.id || testimonial.name}
+                index={index}
+                testimonial={testimonial}
+              />
+            ))
           ) : (
-              <div className="flex items-center justify-center h-full min-h-[300px] border border-dashed border-gray-200 dark:border-neutral-800 rounded-3xl bg-gray-50 dark:bg-neutral-900/50">
-                  <p className="text-gray-500 font-medium">Be the first to review!</p>
-              </div>
+            <div className="flex items-center justify-center h-full min-h-[300px] border border-dashed border-gray-200 dark:border-neutral-800 rounded-3xl bg-gray-50 dark:bg-neutral-900/50">
+              <p className="text-gray-500 font-medium">Be the first to review!</p>
+            </div>
           )}
         </div>
       </div>

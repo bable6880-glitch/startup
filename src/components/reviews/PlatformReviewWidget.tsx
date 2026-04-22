@@ -81,7 +81,7 @@ export default function PlatformReviewWidget() {
 
     return (
         <div id="platform-reviews" className="relative w-full overflow-hidden">
-            <ClientsSection 
+            <ClientsSection
                 tagLabel="Real Voices"
                 title="Loved by thousands across Pakistan"
                 description="Our platform connects passionate home chefs with hungry professionals, creating a secure marketplace of authentic meals."
@@ -92,8 +92,8 @@ export default function PlatformReviewWidget() {
             />
             {/* Inlined Write Platform Review Modal */}
             {isModalOpen && (
-                <PlatformReviewModal 
-                    onClose={() => setIsModalOpen(false)} 
+                <PlatformReviewModal
+                    onClose={() => setIsModalOpen(false)}
                     onSuccess={() => {
                         setIsModalOpen(false);
                         fetchStats();
@@ -107,7 +107,7 @@ export default function PlatformReviewWidget() {
 
 function PlatformReviewModal({ onClose, onSuccess, getIdToken }: { onClose: () => void, onSuccess: () => void, getIdToken: () => Promise<string | null> }) {
     const [rating, setRating] = useState(0);
-    const [status, setStatus] = useState<'idle'|'loading'|'error'>('idle');
+    const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
     const [errorMessage, setErrorMessage] = useState('');
     const [charCount, setCharCount] = useState(0);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -134,7 +134,7 @@ function PlatformReviewModal({ onClose, onSuccess, getIdToken }: { onClose: () =
 
             const res = await fetch('/api/reviews/platform', {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
@@ -160,7 +160,7 @@ function PlatformReviewModal({ onClose, onSuccess, getIdToken }: { onClose: () =
                         <X className="w-5 h-5" />
                     </button>
                 </div>
-                
+
                 <form id="platform-review-form" onSubmit={handleSubmit} className="p-5 space-y-6">
                     <div className="flex flex-col items-center">
                         <StarRating value={rating} onChange={setRating} size="lg" />

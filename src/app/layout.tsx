@@ -6,35 +6,34 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://smarttiffinfood.vercel.app'),
   title: {
-    default: "Smart Tiffin – Home-Cooked Meals Near You",
-    template: "%s | Smart Tiffin",
+    default: 'Smart Tiffin – Daily Tiffin Service in Pakistan',
+    template: '%s | Smart Tiffin',
   },
-  description:
-    "Discover authentic home-cooked meals from local kitchens. Browse menus, check ratings, and contact cooks directly. Fresh, affordable, and made with love.",
-  keywords: [
-    "home food",
-    "tiffin service",
-    "home-cooked meals",
-    "local kitchen",
-    "food delivery",
-    "homemade food",
-  ],
-  openGraph: {
-    type: "website",
-    siteName: "Smart Tiffin",
-    title: "Smart Tiffin – Home-Cooked Meals Near You",
-    description:
-      "Discover authentic home-cooked meals from local kitchens in your city.",
-  },
+  description: 'Pakistan\'s home food marketplace. Fresh daily tiffin from trusted home cooks.',
+  manifest: '/manifest.json',
   verification: {
-    google: "pc-7mt4zNiUbk0CsFxXoqMybykQ9ZbZH-GJpFgevx94",
+    // Add Google Search Console verification later
+    // google: 'your-verification-code',
   },
+};
+
+export const viewport = {
+  themeColor: '#ea580c',
 };
 
 import { LocationProvider } from "@/lib/location-context";
 import { LocationModal } from "@/components/location/LocationModal";
 import { LocationBanner } from "@/components/location/LocationBanner";
+
+import { Inter } from "next/font/google";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export default function RootLayout({
   children,
@@ -42,7 +41,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
       <head>
       </head>
       <body className="min-h-screen flex flex-col font-sans">

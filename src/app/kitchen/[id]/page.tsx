@@ -46,8 +46,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { id } = await params;
     try {
         const kitchen = await getKitchenById(id);
-        const title = `${kitchen.name} – Tiffin Service & Home Cooked Food | Smart Tiffin`;
-        const description = `Order fresh home cooked food from ${kitchen.name}. Affordable meal delivery and monthly tiffin service in Pakistan. View menu, reviews, and place your order today.`;
+        const cityName = kitchen.city || "Pakistan";
+        const title = `${kitchen.name} – Home Cooked Food in ${cityName} | Smart Tiffin`;
+        const description = `Order fresh home cooked food from ${kitchen.name} in ${cityName}. Affordable meal delivery and monthly tiffin service. View menu, reviews, and place your order today.`;
         return {
             title,
             description,
@@ -55,16 +56,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                 "tiffin service",
                 "home cooked food",
                 "meal delivery",
-                "monthly tiffin service in Pakistan",
-                "home cooked food delivery near me",
-                kitchen.city || "Pakistan",
+                "monthly tiffin service",
+                `home cooked food delivery ${cityName}`,
+                cityName,
                 kitchen.name,
             ].filter(Boolean),
+            alternates: {
+                canonical: `https://smarttiffinfood.vercel.app/kitchen/${id}`,
+            },
             openGraph: {
                 title,
                 description,
                 type: "website",
                 siteName: "Smart Tiffin",
+                url: `https://smarttiffinfood.vercel.app/kitchen/${id}`,
                 ...(kitchen.coverImageUrl ? { images: [{ url: kitchen.coverImageUrl }] } : {}),
             },
         };
@@ -204,10 +209,10 @@ async function KitchenContent({ id }: { id: string }) {
                 dangerouslySetInnerHTML={{
                     __html: JSON.stringify({
                         "@context": "https://schema.org",
-                        "@type": "LocalBusiness",
+                        "@type": "Restaurant",
                         name: kitchen.name,
-                        description: "Tiffin service and home cooked food meal delivery provider.",
-                        servesCuisine: kitchen.cuisineTypes?.join(", ") || "Home Style",
+                        description: kitchen.description || "Tiffin service and home cooked food meal delivery provider.",
+                        servesCuisine: kitchen.cuisineTypes?.length ? kitchen.cuisineTypes.join(", ") : "Home Style",
                         areaServed: kitchen.city || "Pakistan",
                         ...(kitchen.addressLine ? { address: { "@type": "PostalAddress", streetAddress: kitchen.addressLine, addressLocality: kitchen.city || "" } } : {}),
                         ...(kitchen.coverImageUrl ? { image: kitchen.coverImageUrl } : {}),
@@ -220,6 +225,7 @@ async function KitchenContent({ id }: { id: string }) {
                                 },
                             }
                             : {}),
+                        priceRange: "₨200 - ₨600"
                     }),
                 }}
             />

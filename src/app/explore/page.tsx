@@ -9,6 +9,15 @@ import ExploreSEO from "./ExploreSEO";
 export const metadata: Metadata = {
     title: "Explore Home Kitchens in Pakistan | Smart Tiffin – Find Home Cooked Meals Near You",
     description: "Browse verified home kitchens across Pakistan. Find affordable home-cooked meals in Lahore, Karachi, Islamabad & Rawalpindi. Compare menus, pricing, and ratings. Order directly via WhatsApp. No commission.",
+    alternates: {
+        canonical: "https://smarttiffinfood.vercel.app/explore",
+    },
+    openGraph: {
+        title: "Explore Home Kitchens in Pakistan | Smart Tiffin",
+        description: "Browse verified home kitchens across Pakistan. Find affordable home-cooked meals in Lahore, Karachi, Islamabad & Rawalpindi.",
+        type: "website",
+        url: "https://smarttiffinfood.vercel.app/explore",
+    }
 };
 
 type Props = { searchParams: Promise<Record<string, string | undefined>> };
