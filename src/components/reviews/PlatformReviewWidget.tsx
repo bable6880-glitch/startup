@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, MessageSquareText, ShieldCheck, X } from 'lucide-react';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { ClientsSection } from '../ui/testimonial-card';
+import ReviewList from './ReviewList';
 
 interface PlatformStats {
     averageRating: number;
@@ -79,6 +80,17 @@ export default function PlatformReviewWidget() {
         { value: "50+", label: "Verified Kitchens" } // Placeholder representing platform scale
     ];
 
+    // Map platform reviews to ReviewList format
+    const mappedReviews = stats.recentReviews.map(r => ({
+        id: r.id,
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt,
+        isVerifiedPurchase: false as const,
+        sellerReply: null,
+        user: { name: r.user.name, avatarUrl: r.user.avatarUrl },
+    }));
+
     return (
         <div id="platform-reviews" className="relative w-full overflow-hidden">
             <ClientsSection
@@ -90,6 +102,17 @@ export default function PlatformReviewWidget() {
                 primaryActionLabel="Write a Review"
                 onPrimaryAction={handleWriteReviewClick}
             />
+
+            {/* Platform Reviews — Top 4 + scrollable rest */}
+            {mappedReviews.length > 0 && (
+                <div className="max-w-3xl mx-auto px-4 pb-16 -mt-4">
+                    <ReviewList
+                        reviews={mappedReviews}
+                        emptyMessage="Be the first to review Smart Tiffin!"
+                    />
+                </div>
+            )}
+
             {/* Inlined Write Platform Review Modal */}
             {isModalOpen && (
                 <PlatformReviewModal
