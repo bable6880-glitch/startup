@@ -7,23 +7,29 @@ import L from "leaflet";
 import { useLocation } from "@/lib/location-context";
 import Link from "next/link";
 
-// Fix default marker icon issue in Next.js
-const icon = L.icon({
-    iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
-    iconRetinaUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
-    shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
+// All marker icons use inline styles — Leaflet injects raw HTML outside
+// React/Tailwind so CSS utility classes won't be processed.
+
+const defaultPinIcon = L.divIcon({
+    className: '',
+    html: `
+      <div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 1px 2px rgba(0,0,0,.3))">
+        <div style="width:30px;height:30px;background:#e85d04;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;box-shadow:0 2px 4px rgba(0,0,0,.2)">📍</div>
+        <div style="width:3px;height:8px;background:#e85d04;border-radius:0 0 2px 2px"></div>
+      </div>
+    `,
+    iconSize: [30, 40],
+    iconAnchor: [15, 40],
 });
 
-// Custom Icons
 const userPulseIcon = L.divIcon({
     className: '',
     html: `
-      <div class="relative flex h-4 w-4">
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-        <span class="relative inline-flex rounded-full h-4 w-4 bg-blue-600 border-2 border-white"></span>
+      <div style="position:relative;width:16px;height:16px">
+        <span style="position:absolute;display:inline-flex;width:100%;height:100%;border-radius:50%;background:rgba(59,130,246,.5);animation:ping 1.5s cubic-bezier(0,0,.2,1) infinite"></span>
+        <span style="position:relative;display:inline-flex;width:16px;height:16px;border-radius:50%;background:#2563eb;border:2px solid #fff"></span>
       </div>
+      <style>@keyframes ping{75%,100%{transform:scale(2);opacity:0}}</style>
     `,
     iconSize: [16, 16],
     iconAnchor: [8, 8]
@@ -31,16 +37,16 @@ const userPulseIcon = L.divIcon({
 
 const kitchenOrangeIcon = L.divIcon({
     className: '',
-    html: `<div class="h-6 w-6 bg-orange-500 rounded-full border-2 border-white shadow-md flex items-center justify-center text-[10px]">🥡</div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12]
+    html: `<div style="width:26px;height:26px;background:#f97316;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;font-size:12px">🥡</div>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13]
 });
 
 const kitchenGreyIcon = L.divIcon({
     className: '',
-    html: `<div class="h-6 w-6 bg-gray-400 rounded-full border-2 border-white shadow-md flex items-center justify-center text-[10px] opacity-70">🥡</div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12]
+    html: `<div style="width:26px;height:26px;background:#9ca3af;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;font-size:12px;opacity:.7">🥡</div>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13]
 });
 
 type KitchenMarker = {
@@ -140,7 +146,7 @@ export default function Map({ center, zoom = 13, markers = [], route = [], kitch
 
                 {/* Legacy Markers */}
                 {markers.map((marker, i) => (
-                    <Marker key={i} position={marker.position} icon={icon}>
+                    <Marker key={i} position={marker.position} icon={defaultPinIcon}>
                         <Popup>{marker.title}</Popup>
                     </Marker>
                 ))}

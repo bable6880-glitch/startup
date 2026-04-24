@@ -338,9 +338,15 @@ function DashboardContent() {
                             <span className="text-2xl block">🍱</span>
                             <h3 className="mt-1 text-sm font-semibold text-neutral-900 group-hover:text-primary-600 dark:text-neutral-100">Menu</h3>
                         </Link>
-                        <Link href="/dashboard/orders" className="rounded-2xl border border-neutral-200/60 bg-white p-4 shadow-sm hover:shadow-md transition-all group text-center dark:bg-neutral-800 dark:border-neutral-700">
+                        <Link href="/dashboard/orders" className="rounded-2xl border border-neutral-200/60 bg-white p-4 shadow-sm hover:shadow-md transition-all group text-center relative dark:bg-neutral-800 dark:border-neutral-700">
                             <span className="text-2xl block">📦</span>
                             <h3 className="mt-1 text-sm font-semibold text-neutral-900 group-hover:text-primary-600 dark:text-neutral-100">Orders</h3>
+                            {/* Real-time pending order count badge */}
+                            {orders.filter(o => o.status === "PENDING").length > 0 && (
+                                <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-lg ring-2 ring-white dark:ring-neutral-800 animate-bounce">
+                                    {orders.filter(o => o.status === "PENDING").length}
+                                </span>
+                            )}
                         </Link>
                         <Link href="/dashboard/reviews" className="rounded-2xl border border-neutral-200/60 bg-white p-4 shadow-sm hover:shadow-md transition-all group text-center dark:bg-neutral-800 dark:border-neutral-700">
                             <span className="text-2xl block">⭐</span>

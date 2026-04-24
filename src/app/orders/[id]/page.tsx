@@ -166,7 +166,7 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
                 <div className="lg:col-span-2 space-y-8">
                     {/* Live Tracker replaces static blocks */}
                     <OrderTracker 
-                        customerId={user?.uid ?? ""} 
+                        customerId={user?.id ?? ""} 
                         initialOrder={{
                             id: order.id,
                             status: order.status,
@@ -264,13 +264,21 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
                         </div>
                     </div>
 
-                    <div className="text-center">
+                    {/* Action Buttons */}
+                    <div className="space-y-3">
                         <Link
-                            href={user?.role === "COOK" ? "/dashboard/orders" : "/explore"}
-                            className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline"
+                            href={`/kitchen/${order.kitchen.id}`}
+                            className="flex items-center justify-center gap-2 w-full rounded-xl bg-primary-600 px-4 py-3 text-sm font-bold text-white hover:bg-primary-700 transition-colors shadow-sm"
                         >
-                            &larr; Back to {user?.role === "COOK" ? "Dashboard" : "Explore"}
+                            <span>🍳</span>
+                            Visit {order.kitchen.name}
                         </Link>
+                        <button
+                            onClick={() => router.back()}
+                            className="flex items-center justify-center gap-2 w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 transition-colors dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                        >
+                            ← Go Back
+                        </button>
                     </div>
                 </div>
             </div>
