@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/firebase/auth-context";
 
 import { NotificationBell } from "@/components/ui/NotificationBell";
@@ -13,6 +14,14 @@ export default function Navbar() {
     const [profileOpen, setProfileOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const pathname = usePathname();
+
+    const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        if (pathname === "/") {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+    };
 
     const isCook = user?.role === "COOK" || user?.role === "ADMIN";
     const isCustomer = user?.role === "CUSTOMER";
@@ -45,7 +54,7 @@ export default function Navbar() {
         <header className="sticky top-0 z-[100] glass border-b border-neutral-200/50 dark:border-neutral-800/50">
             <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
                 {/* Logo */}
-                <Link href="/" className="flex items-center gap-2.5 group transition-opacity hover:opacity-90">
+                <Link href="/" onClick={handleLogoClick} className="flex items-center gap-2.5 group transition-opacity hover:opacity-90">
                     <div className="relative h-10 w-10 sm:h-12 sm:w-12 overflow-hidden rounded-full border-2 border-primary-100 bg-white/50 shadow-sm transition-transform duration-300 group-hover:scale-105 dark:border-primary-900 dark:bg-neutral-800/50">
                         <Image
                             src="/smart-tiffin-logo.png"
