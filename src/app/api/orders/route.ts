@@ -192,7 +192,11 @@ export async function POST(request: NextRequest) {
                 notes: notes ? sanitizeText(notes) : null,
                 deliveryMode,
                 customerAddress,
-                // Location data intentionally not stored in orders table
+                // Store customer location for map display on order detail page
+                customerLat: validLat !== undefined ? String(validLat) : null,
+                customerLng: validLng !== undefined ? String(validLng) : null,
+                // Snapshot customer info
+                customerName: user.name ?? null,
             })
             .returning();
 

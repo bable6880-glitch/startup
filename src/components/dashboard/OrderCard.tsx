@@ -38,9 +38,16 @@ type Order = {
     deliveryAddress: string | null;
 };
 
-export function OrderCard({ order, getToken }: { order: Order; getToken: () => Promise<string | null> }) {
+interface OrderCardProps {
+    order: Order;
+    getToken: () => Promise<string | null>;
+    onStatusChange?: (orderId: string, newStatus: string) => void;
+}
+
+export function OrderCard({ order, getToken, onStatusChange }: OrderCardProps) {
     const router = useRouter();
     const [updating, setUpdating] = useState(false);
+    const [localStatus, setLocalStatus] = useState(order.status);
     const [estimatedTime, setEstimatedTime] = useState(order.estimatedMinutes || 30);
 
     const updateStatus = async (status: string) => {
@@ -61,7 +68,13 @@ export function OrderCard({ order, getToken }: { order: Order; getToken: () => P
 
             if (!res.ok) throw new Error("Failed to update status");
 
-            router.refresh(); // Refresh data
+            // Optimistic local update — card will visually transition
+            setLocalStatus(status as Order["status"]);
+
+            // Notify parent to move card between tabs without full page refresh
+            if (onStatusChange) {
+                onStatusChange(order.id, status);
+            }
         } catch (error) {
             alert("Failed to update order status");
             console.error(error);
@@ -78,7 +91,7 @@ export function OrderCard({ order, getToken }: { order: Order; getToken: () => P
     };
 
     return (
-        <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm transition-all hover:shadow-md dark:bg-neutral-800 dark:border-neutral-700">
+        <div className={`rounded-xl border border-neutral-200 bg-white p-5 shadow-sm transition-all hover:shadow-md dark:bg-neutral-800 dark:border-neutral-700 ${updating ? 'opacity-60 pointer-events-none' : ''}`}>
             {/* Header */}
             <div className="flex items-start justify-between gap-4 mb-4">
                 <div>
@@ -86,8 +99,8 @@ export function OrderCard({ order, getToken }: { order: Order; getToken: () => P
                         <span className="font-bold text-lg text-neutral-900 dark:text-neutral-100">
                             Order #{order.id.slice(0, 8)}
                         </span>
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold border ${statusColors[order.status]}`}>
-                            {order.status}
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold border ${statusColors[localStatus]}`}>
+                            {localStatus}
                         </span>
                     </div>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -153,7 +166,7 @@ export function OrderCard({ order, getToken }: { order: Order; getToken: () => P
 
             {/* Actions */}
             <div className="mt-4 flex flex-wrap gap-2 pt-4 border-t border-neutral-100 dark:border-neutral-700">
-                {order.status === "PENDING" && (
+                {localStatus === "PENDING" && (
                     <>
                         <div className="flex items-center gap-2 mr-auto">
                             <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Est. Time:</label>
@@ -171,42 +184,42 @@ export function OrderCard({ order, getToken }: { order: Order; getToken: () => P
                         <button
                             onClick={() => updateStatus("ACCEPTED")}
                             disabled={updating}
-                            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50"
+                            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
                         >
-                            Accept
+                            {updating ? "Accepting..." : "Accept"}
                         </button>
                         <button
                             onClick={() => updateStatus("CANCELLED")}
                             disabled={updating}
-                            className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:bg-neutral-800 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20"
+                            className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:bg-neutral-800 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
                         >
                             Decline
                         </button>
                     </>
                 )}
 
-                {order.status === "ACCEPTED" && (
+                {localStatus === "ACCEPTED" && (
                     <>
                         <button
                             onClick={() => updateStatus("COMPLETED")}
                             disabled={updating}
-                            className="flex-1 rounded-lg bg-primary-600 px-4 py-2 text-sm font-bold text-white hover:bg-primary-700 disabled:opacity-50"
+                            className="flex-1 rounded-lg bg-primary-600 px-4 py-2 text-sm font-bold text-white hover:bg-primary-700 disabled:opacity-50 transition-colors"
                         >
-                            Mark Completed
+                            {updating ? "Completing..." : "Mark Completed ✓"}
                         </button>
                         <button
                             onClick={() => router.push(`/orders/${order.id}`)}
-                            className="rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-bold text-neutral-700 hover:bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                            className="rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-bold text-neutral-700 hover:bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
                         >
                             View Map 🗺️
                         </button>
                     </>
                 )}
 
-                {["COMPLETED", "CANCELLED", "PENDING"].includes(order.status) && (
+                {["COMPLETED", "CANCELLED", "PENDING"].includes(localStatus) && (
                     <button
                         onClick={() => router.push(`/orders/${order.id}`)}
-                        className="w-full rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-bold text-neutral-700 hover:bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                        className="w-full rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-bold text-neutral-700 hover:bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
                     >
                         View Order Details
                     </button>

@@ -69,7 +69,7 @@ export default function SellerOrdersPage() {
 
     // Real-Time SSE integration
     const handleSseOrderChange = useCallback(() => {
-        // Optimistically drop-in or move cards by re-invoking the fetch
+        // Re-fetch all orders when SSE fires — keeps data in sync
         fetchOrders();
     }, [fetchOrders]);
 
@@ -79,7 +79,19 @@ export default function SellerOrdersPage() {
         onOrderStatusChanged: handleSseOrderChange,
     });
 
-    // We removed setInterval! The SSE hook natively handles pinging us exactly when an event occurs.
+    // Optimistic status change — move card between tabs instantly
+    const handleOrderStatusChange = useCallback((orderId: string, newStatus: string) => {
+        setOrders(prev => prev.map(o => 
+            o.id === orderId ? { ...o, status: newStatus } : o
+        ));
+        
+        // Auto-switch tab to show where the order went
+        if (newStatus === "ACCEPTED") {
+            setActiveTab("ACTIVE");
+        } else if (newStatus === "COMPLETED" || newStatus === "CANCELLED") {
+            setActiveTab("HISTORY");
+        }
+    }, []);
 
     const filteredOrders = orders.filter(order => {
         if (activeTab === "PENDING") return order.status === "PENDING";
@@ -157,6 +169,11 @@ export default function SellerOrdersPage() {
                                 {orders.filter(o => o.status === "PENDING").length}
                             </span>
                         )}
+                        {tab === "ACTIVE" && orders.filter(o => o.status === "ACCEPTED").length > 0 && (
+                            <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+                                {orders.filter(o => o.status === "ACCEPTED").length}
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>
@@ -165,7 +182,7 @@ export default function SellerOrdersPage() {
             <div className="space-y-4">
                 {filteredOrders.length > 0 ? (
                     filteredOrders.map((order) => (
-                        <OrderCard key={order.id} order={order} getToken={getIdToken} />
+                        <OrderCard key={order.id} order={order} getToken={getIdToken} onStatusChange={handleOrderStatusChange} />
                     ))
                 ) : (
                     <div className="text-center py-12 rounded-xl border-2 border-dashed border-neutral-200 dark:border-neutral-700">

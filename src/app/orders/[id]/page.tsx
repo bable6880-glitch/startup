@@ -122,6 +122,7 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
     }
 
     // Map data — use kitchen coords if available, otherwise offset from customer
+    const hasKitchenLocation = !!(order.kitchen.latitude && order.kitchen.longitude);
     const kitchenLat = order.kitchen.latitude ? Number(order.kitchen.latitude) : (order.customerLat ? Number(order.customerLat) + 0.01 : 31.5204);
     const kitchenLng = order.kitchen.longitude ? Number(order.kitchen.longitude) : (order.customerLng ? Number(order.customerLng) + 0.01 : 74.3587);
 
@@ -177,17 +178,22 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
 
                     {/* Map Section */}
                     <div className="rounded-2xl border border-neutral-200 overflow-hidden shadow-sm h-80 bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800">
-                        {hasCustomerLocation ? (
+                        {(hasCustomerLocation || hasKitchenLocation) ? (
                             <div className="relative h-full w-full">
                                 <MapLazy
                                     center={mapCenter}
-                                    zoom={14}
+                                    zoom={hasCustomerLocation ? 14 : 15}
                                     markers={markers}
-                                    route={[[kitchenLat, kitchenLng], [Number(order.customerLat), Number(order.customerLng)]]}
+                                    route={hasCustomerLocation ? [[kitchenLat, kitchenLng], [Number(order.customerLat), Number(order.customerLng)]] : []}
                                 />
                                 {distance !== null && (
                                     <div className="absolute top-4 right-4 z-[400] bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg shadow-md text-xs font-bold text-neutral-800">
                                         📏 Distance: {distance} km
+                                    </div>
+                                )}
+                                {!hasCustomerLocation && (
+                                    <div className="absolute bottom-4 left-4 z-[400] bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg shadow-md text-xs text-neutral-600">
+                                        📍 Kitchen location shown • Customer location not available
                                     </div>
                                 )}
                             </div>
