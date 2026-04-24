@@ -353,7 +353,7 @@ export default async function HomePage() {
 
       {/* ── SEO Image 2: Tiffin Delivery Service ──────────────────── */}
       <SeoImageSection
-        src="/images/seo/affordable-tiffin-delivery-lahore.jpg"
+        src="/images/seo/professional-tiffin-lunchbox.png"
         alt="Tiffin delivery service in Lahore with homemade food lunchbox"
         title="Affordable Tiffin Delivery in Lahore"
         caption="Affordable lunchbox delivery from home cooks near you"
@@ -389,7 +389,7 @@ export default async function HomePage() {
             </ul>
           </div>
           <div className="hidden md:block rounded-2xl overflow-hidden shadow-lg">
-            <Image src="/images/seo/affordable-tiffin-delivery-lahore.jpg" alt="Home cooked tiffin delivery benefits" width={800} height={450} className="w-full h-full object-cover aspect-video" />
+            <Image src="/images/seo/professional-tiffin-lunchbox.png" alt="Home cooked tiffin delivery benefits" width={800} height={450} className="w-full h-full object-cover aspect-video" />
           </div>
         </div>
       </section>
