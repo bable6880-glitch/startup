@@ -5,14 +5,7 @@ import Image from "next/image";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/lib/firebase/auth-context";
 
-function BellIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
-    );
-}
+import { NotificationBell } from "@/components/ui/NotificationBell";
 
 export default function Navbar() {
     const { user, loading, signOutUser, getIdToken } = useAuth();
@@ -35,29 +28,9 @@ export default function Navbar() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [profileOpen]);
 
-    // Poll unread notification count for customers
-    const fetchUnread = useCallback(async () => {
-        if (!user || user.role !== "CUSTOMER") return;
-        try {
-            const token = await getIdToken();
-            const res = await fetch("/api/account/notifications?page=1&limit=50", {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (!res.ok) return;
-            const data = await res.json();
-            const count = (data.data ?? []).filter((n: { isRead: boolean }) => !n.isRead).length;
-            setUnreadCount(count);
-        } catch {
-            // silent
-        }
-    }, [user, getIdToken]);
-
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        fetchUnread();
-        const interval = setInterval(fetchUnread, 60_000);
-        return () => clearInterval(interval);
-    }, [fetchUnread]);
+    // Notification count is now handled inside NotificationBell
+    // The link badge in the customer dropdown will still be available but let's keep it simple
+    // or we could remove it from here if we don't need it. For now, we'll keep unreadCount as 0 here.
 
     // Customer dropdown links
     const customerLinks = [
@@ -100,20 +73,7 @@ export default function Navbar() {
                     ) : user ? (
                         <div className="flex items-center gap-3">
                             {/* Notification Bell — customers only */}
-                            {isCustomer && (
-                                <Link
-                                    href="/account/notifications"
-                                    className="relative p-2 rounded-xl text-neutral-500 hover:text-primary-600 hover:bg-primary-50 transition-all dark:text-neutral-400 dark:hover:text-primary-400 dark:hover:bg-primary-900/20"
-                                    aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
-                                >
-                                    <BellIcon className="h-5 w-5" />
-                                    {unreadCount > 0 && (
-                                        <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white ring-2 ring-white dark:ring-neutral-900">
-                                            {unreadCount > 9 ? "9+" : unreadCount}
-                                        </span>
-                                    )}
-                                </Link>
-                            )}
+                            {isCustomer && <NotificationBell />}
 
                             {/* Avatar Dropdown */}
                             <div className="relative" ref={dropdownRef}>
@@ -253,20 +213,7 @@ export default function Navbar() {
 
                 {/* Mobile: Bell + Menu Button */}
                 <div className="flex items-center gap-2 md:hidden">
-                    {isCustomer && !loading && (
-                        <Link
-                            href="/account/notifications"
-                            className="relative p-2 rounded-xl text-neutral-500 hover:bg-neutral-100 transition-colors dark:text-neutral-400 dark:hover:bg-neutral-800"
-                            aria-label="Notifications"
-                        >
-                            <BellIcon className="h-5 w-5" />
-                            {unreadCount > 0 && (
-                                <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white ring-2 ring-white dark:ring-neutral-900">
-                                    {unreadCount > 9 ? "9+" : unreadCount}
-                                </span>
-                            )}
-                        </Link>
-                    )}
+                    {isCustomer && !loading && <NotificationBell />}
                     <button
                         onClick={() => setMobileOpen(!mobileOpen)}
                         className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"

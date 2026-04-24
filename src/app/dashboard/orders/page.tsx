@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { OrderCard } from "@/components/dashboard/OrderCard";
 import { useKitchenSSE } from "@/hooks/use-kitchen-sse";
 import Link from "next/link";
+import { BackButton } from "@/components/ui/BackButton";
 
 export default function SellerOrdersPage() {
     const { user, loading: authLoading, getIdToken } = useAuth();
@@ -110,7 +111,8 @@ export default function SellerOrdersPage() {
 
     return (
         <div className="mx-auto max-w-5xl px-4 py-8">
-            <div className="flex items-center justify-between mb-8">
+            <BackButton label="Dashboard" />
+            <div className="flex items-center justify-between mb-8 mt-2">
                 <div>
                     <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Kitchen Orders</h1>
                     <p className="text-neutral-500 dark:text-neutral-400">Manage your incoming food orders</p>

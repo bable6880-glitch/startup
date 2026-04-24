@@ -210,6 +210,19 @@ export async function POST(request: NextRequest) {
         const { notifyOrderPlaced } = await import("@/services/notification.service");
         await notifyOrderPlaced(kitchen.ownerId, newOrder.id, user.name || "A customer");
 
+        // PHASE 2: Publish SSE event for new order
+        const { publishEvent, CHANNELS } = await import("@/lib/redis/pubsub");
+        await publishEvent(CHANNELS.kitchenOrders(kitchen.id), {
+            type: "NEW_ORDER",
+            payload: {
+                orderId: newOrder.id,
+                customerName: user.name ?? "Customer",
+                itemCount: items.length,
+                totalAmount: Number(totalAmount),
+                createdAt: new Date().toISOString(),
+            }
+        });
+
         // N3: Invalidate buyer analytics cache
         const { invalidateCache } = await import("@/lib/redis");
         await invalidateCache(`account:analytics:${user.id}`);

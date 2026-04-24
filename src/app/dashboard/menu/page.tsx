@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createMealSchema, type CreateMealInput } from "@/lib/validations/menu";
 import { Loader2, Plus, Edit2, Trash2, X, Image as ImageIcon, Search } from "lucide-react";
+import { BackButton } from "@/components/ui/BackButton";
 
 type Meal = {
     id: string;
@@ -253,8 +254,9 @@ export default function MenuManagementPage() {
 
     return (
         <div className="mx-auto max-w-5xl px-4 py-8 bg-neutral-50/50 min-h-[calc(100vh-80px)] dark:bg-neutral-900 border border-transparent">
+            <BackButton label="Dashboard" />
             {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 mt-2">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white">Menu Management</h1>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Add, edit, or remove your delicious offerings.</p>

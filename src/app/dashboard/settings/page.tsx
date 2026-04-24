@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/firebase/auth-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { BackButton } from "@/components/ui/BackButton";
 
 type Kitchen = {
     id: string;
@@ -186,14 +187,12 @@ export default function KitchenSettingsPage() {
 
     return (
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between mb-8">
+            <BackButton label="Dashboard" />
+            <div className="flex items-center justify-between mb-8 mt-2">
                 <div>
                     <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">Kitchen Settings</h1>
                     <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Update your kitchen profile, images, and delivery options</p>
                 </div>
-                <Link href="/dashboard" className="text-sm text-neutral-500 hover:text-neutral-700 dark:text-neutral-400">
-                    ← Dashboard
-                </Link>
             </div>
 
             {message && (

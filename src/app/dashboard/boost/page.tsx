@@ -3,6 +3,7 @@
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
+import { BackButton } from "@/components/ui/BackButton";
 
 export default function BoostPage() {
     const { user, loading: authLoading, getIdToken } = useAuth();
@@ -73,8 +74,8 @@ export default function BoostPage() {
 
     return (
         <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-            <div className="text-center mb-10">
-                <a href="/dashboard" className="text-sm text-neutral-500 hover:text-primary-600 dark:text-neutral-400">← Dashboard</a>
+            <BackButton label="Dashboard" />
+            <div className="text-center mb-10 mt-2">
                 <h1 className="text-3xl font-bold text-neutral-900 mt-2 dark:text-neutral-50">⚡ Boost Priority</h1>
                 <p className="mt-2 text-neutral-500 dark:text-neutral-400">Jump to the top of search results in your city.</p>
             </div>

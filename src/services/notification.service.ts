@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { users, notifications } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull, desc, count } from "drizzle-orm";
+import { redis } from "@/lib/redis";
 
 // CHANGED [N2]: Notification service — in-app notifications + FCM push stub
 // Firebase Cloud Messaging requires firebase-admin and service account setup.
@@ -42,6 +43,7 @@ export async function sendNotification(payload: NotificationPayload): Promise<vo
             body: payload.body,
             link: payload.data?.url || null,
             metadata: payload.data || {},
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         });
 
         // Log for terminal debugging
@@ -53,6 +55,65 @@ export async function sendNotification(payload: NotificationPayload): Promise<vo
     } catch (error) {
         console.error("[Notification Error]", error);
         // Notifications should never break the main flow
+    }
+}
+
+export async function clearAllNotifications(userId: string): Promise<void> {
+    await db
+        .update(notifications)
+        .set({ clearedAt: new Date() })
+        .where(
+            and(
+                eq(notifications.userId, userId),
+                isNull(notifications.clearedAt)
+            )
+        );
+
+    // Invalidate notification cache for this user
+    if (redis) {
+        await redis.del(`notifications:${userId}`).catch(() => {});
+    }
+}
+
+export async function getActiveNotifications(userId: string, limit = 20) {
+    return db.query.notifications.findMany({
+        where: and(
+            eq(notifications.userId, userId),
+            isNull(notifications.clearedAt)
+        ),
+        orderBy: [desc(notifications.createdAt)],
+        limit,
+    });
+}
+
+export async function getUnreadCount(userId: string): Promise<number> {
+    const result = await db
+        .select({ count: count() })
+        .from(notifications)
+        .where(
+            and(
+                eq(notifications.userId, userId),
+                eq(notifications.isRead, false),
+                isNull(notifications.clearedAt)
+            )
+        );
+    return result[0]?.count ?? 0;
+}
+
+export async function markAllAsRead(userId: string): Promise<void> {
+    await db
+        .update(notifications)
+        .set({ isRead: true })
+        .where(
+            and(
+                eq(notifications.userId, userId),
+                eq(notifications.isRead, false),
+                isNull(notifications.clearedAt)
+            )
+        );
+
+    if (redis) {
+        await redis.del(`notifications:${userId}`).catch(() => {});
     }
 }
 

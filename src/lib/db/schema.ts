@@ -745,12 +745,16 @@ export const notifications = pgTable(
         isRead: boolean("is_read").default(false).notNull(),
         link: varchar("link", { length: 500 }),  // e.g. /account/orders/[id]
         metadata: jsonb("metadata"),                 // { orderId, kitchenId, etc. }
+        clearedAt: timestamp("cleared_at", { withTimezone: true }),
+        expiresAt: timestamp("expires_at", { withTimezone: true }),
         createdAt: timestamp("created_at").defaultNow().notNull(),
     },
     (t) => [
         index("notifications_user_id_idx").on(t.userId),
         index("notifications_is_read_idx").on(t.isRead),
         index("notifications_created_at_idx").on(t.createdAt),
+        index("idx_notifications_expires_at").on(t.expiresAt),
+        index("idx_notifications_user_cleared").on(t.userId, t.clearedAt),
     ]
 );
 

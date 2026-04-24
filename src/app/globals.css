@@ -143,6 +143,15 @@ body {
   }
 }
 
+@keyframes shrink-width {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 0.4s ease-out both;
 }
@@ -159,6 +168,10 @@ body {
   background: linear-gradient(90deg, var(--color-neutral-200) 25%, var(--color-neutral-100) 50%, var(--color-neutral-200) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+.animate-shrink-width {
+  animation: shrink-width linear forwards;
 }
 
 /* ─── Utilities ───────────────────────────────────────────────────────────── */

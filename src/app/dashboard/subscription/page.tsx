@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/firebase/auth-context";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { SUBSCRIPTION_PLANS } from "@/lib/validations/subscription";
+import { BackButton } from "@/components/ui/BackButton";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -244,8 +245,9 @@ function SubscriptionContent() {
 
     return (
         <div className="mx-auto max-w-4xl px-4 py-8">
+            <BackButton label="Dashboard" />
             {/* Header */}
-            <div className="mb-8">
+            <div className="mb-8 mt-2">
                 <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-50">
                     Subscription
                 </h1>
