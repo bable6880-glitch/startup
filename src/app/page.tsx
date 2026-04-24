@@ -353,7 +353,7 @@ export default async function HomePage() {
 
       {/* ── SEO Image 2: Tiffin Delivery Service ──────────────────── */}
       <SeoImageSection
-        src="/images/seo/professional-tiffin-lunchbox.png"
+        src="/images/seo/professional-tiffin-delivery.png"
         alt="Tiffin delivery service in Lahore with homemade food lunchbox"
         title="Affordable Tiffin Delivery in Lahore"
         caption="Affordable lunchbox delivery from home cooks near you"
