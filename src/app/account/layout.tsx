@@ -100,6 +100,14 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                         ) : null}
                     </Link>
                 ))}
+                
+                <button
+                    onClick={() => router.back()}
+                    className="flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300"
+                >
+                    <span>🔙</span>
+                    Go Back
+                </button>
             </div>
 
             {/* Desktop: sidebar + content */}
@@ -125,6 +133,16 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
                                 ) : null}
                             </Link>
                         ))}
+
+                        <div className="pt-2 mt-2 border-t border-neutral-200 dark:border-neutral-800">
+                            <button
+                                onClick={() => router.back()}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800 text-left"
+                            >
+                                <span className="text-base">🔙</span>
+                                <span className="flex-1">Go Back</span>
+                            </button>
+                        </div>
                     </nav>
                 </aside>
 
