@@ -41,13 +41,13 @@ export default function Navbar() {
     // The link badge in the customer dropdown will still be available but let's keep it simple
     // or we could remove it from here if we don't need it. For now, we'll keep unreadCount as 0 here.
 
-    // Customer dropdown links
     const customerLinks = [
         { href: "/account", label: "My Account", icon: "👤" },
         { href: "/account/orders", label: "My Orders", icon: "📦" },
         { href: "/account/favorites", label: "Favorites", icon: "❤️" },
         { href: "/account/notifications", label: "Notifications", icon: "🔔", badge: unreadCount },
         { href: "/account/analytics", label: "Analytics", icon: "📈" },
+        { href: "/explore", label: "Explore Kitchens", icon: "🍽️" },
     ];
 
     return (

@@ -75,6 +75,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
         { href: "/account/notifications", label: "Notifications", icon: "🔔", badge: unreadCount },
         { href: "/account/analytics", label: "Analytics", icon: "📈" },
         { href: "/account/profile", label: "Profile", icon: "👤" },
+        { href: "/explore", label: "Explore Kitchens", icon: "🍽️" },
     ];
 
     return (
