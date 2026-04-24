@@ -10,6 +10,7 @@ import { getMealsByKitchen } from "@/services/menu.service";
 import { getKitchenReviews, getKitchenReviewStats } from "@/services/review.service";
 import { reviewQuerySchema } from "@/lib/validations/review";
 import ReviewCard from "@/components/reviews/ReviewCard";
+import ReviewList from "@/components/reviews/ReviewList";
 import RatingBreakdown from "@/components/reviews/RatingBreakdown";
 import WriteKitchenReviewAction from "@/components/reviews/WriteKitchenReviewAction";
 
@@ -118,7 +119,7 @@ async function getMenu(id: string) {
 
 async function getReviews(id: string): Promise<{ reviews: ReviewData[]; total: number }> {
     try {
-        const parsed = reviewQuerySchema.parse({ limit: "10" });
+        const parsed = reviewQuerySchema.parse({ limit: "50" });
         const result = await getKitchenReviews(id, parsed);
         return { reviews: result.reviews as ReviewData[], total: result.total };
     } catch {
@@ -347,15 +348,10 @@ async function KitchenContent({ id }: { id: string }) {
                             </div>
                         )}
 
-                        {reviewData.reviews.length > 0 ? (
-                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 mt-6">
-                                {reviewData.reviews.map((r: any) => (
-                                    <ReviewCard key={r.id} review={r} />
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="text-neutral-500 dark:text-neutral-400 italic bg-neutral-50 p-6 rounded-xl dark:bg-neutral-800 dark:border-neutral-700">No reviews yet.</p>
-                        )}
+                        <ReviewList
+                            reviews={reviewData.reviews as any[]}
+                            emptyMessage="No reviews yet. Order from this kitchen and be the first to review!"
+                        />
 
                         <WriteKitchenReviewAction kitchenId={kitchen.id} kitchenName={kitchen.name} />
                     </section>

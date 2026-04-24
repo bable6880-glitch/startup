@@ -270,7 +270,6 @@ export const platformReviews = pgTable(
         id: uuid("id").defaultRandom().primaryKey(),
         userId: uuid("user_id")
             .notNull()
-            .unique()
             .references(() => users.id, { onDelete: "cascade" }),
         rating: integer("rating").notNull(), // 1-5
         comment: text("comment"), // max 500 chars enforced in validation
@@ -325,8 +324,8 @@ export const reviews = pgTable(
         deletedAt: timestamp("deleted_at", { withTimezone: true }),
     },
     (table) => [
-        // One review per user per kitchen
-        uniqueIndex("reviews_user_kitchen_idx").on(table.userId, table.kitchenId),
+        // Multiple reviews per user per kitchen allowed
+        index("reviews_user_kitchen_idx").on(table.userId, table.kitchenId),
         index("reviews_kitchen_idx").on(table.kitchenId),
         index("reviews_user_idx").on(table.userId),
         index("reviews_visible_idx").on(table.kitchenId, table.isVisible),
@@ -576,7 +575,7 @@ export const adminAuditLog = pgTable(
 export const usersRelations = relations(users, ({ many, one }) => ({
     kitchens: many(kitchens),
     reviews: many(reviews),
-    platformReview: one(platformReviews),
+    platformReviews: many(platformReviews),
     orders: many(orders),
     subscriptions: many(subscriptions),
     boosts: many(boosts),

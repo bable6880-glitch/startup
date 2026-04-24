@@ -33,20 +33,8 @@ export async function createKitchenReview(userId: string, input: CreateKitchenRe
         throw new ValidationError("Order does not belong to this kitchen");
     }
 
-    // 4. No existing review
-    const existing = await db.query.reviews.findFirst({
-        where: and(
-            eq(reviews.userId, userId),
-            eq(reviews.kitchenId, input.kitchenId),
-            isNull(reviews.deletedAt)
-        ),
-    });
 
-    if (existing) {
-        throw new ConflictError("You have already reviewed this kitchen");
-    }
-
-    // 5. Kitchen exists and isVisible/Active
+    // 4. Kitchen exists and isVisible/Active
     const kitchen = await db.query.kitchens.findFirst({
         where: and(eq(kitchens.id, input.kitchenId), isNull(kitchens.deletedAt)),
     });
@@ -82,14 +70,6 @@ export async function createKitchenReview(userId: string, input: CreateKitchenRe
 // ─── Create Platform Review ─────────────────────────────────────────────────
 
 export async function createPlatformReview(userId: string, input: CreatePlatformReviewInput) {
-    const existing = await db.query.platformReviews.findFirst({
-        where: eq(platformReviews.userId, userId)
-    });
-
-    if (existing) {
-        throw new ConflictError("You have already reviewed Smart Tiffin");
-    }
-
     const sanitizedComment = input.comment ? sanitizeText(input.comment) : input.comment;
 
     const [review] = await db.insert(platformReviews).values({

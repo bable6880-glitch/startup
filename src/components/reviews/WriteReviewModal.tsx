@@ -81,9 +81,6 @@ export default function WriteReviewModal({
             const data = await res.json();
 
             if (!res.ok) {
-                if (res.status === 409) {
-                    throw new Error("You've already reviewed this kitchen");
-                }
                 if (res.status === 403) {
                     throw new Error("You can only review completed orders");
                 }
@@ -111,8 +108,8 @@ export default function WriteReviewModal({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                         </svg>
                     </div>
-                    <h3 className="text-xl font-bold text-neutral-900 mb-2 dark:text-white">Thank You! 🎉</h3>
-                    <p className="text-neutral-600 dark:text-neutral-400">Your review helps our community.</p>
+                    <h3 className="text-xl font-bold text-neutral-900 mb-2 dark:text-white">Your review has been submitted! ✓</h3>
+                    <p className="text-neutral-600 dark:text-neutral-400">Your feedback helps our community.</p>
                 </div>
             </div>
         );

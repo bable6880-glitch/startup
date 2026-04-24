@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDistanceToNow } from 'date-fns';
 
+import UserAvatar from "@/components/ui/UserAvatar";
+
 // --- Type Definitions for props ---
 export interface Stat {
   value: string | number;
@@ -59,11 +61,12 @@ const StickyTestimonialCard = ({ testimonial, index }: { testimonial: Testimonia
       )}>
         {/* Top section: Image and Author */}
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-orange-100 text-orange-700 flex justify-center items-center font-bold text-xl overflow-hidden shrink-0">
-            {testimonial.avatarSrc ? (
-              <img src={testimonial.avatarSrc} alt="avatar" className="w-full h-full object-cover" />
-            ) : testimonial.name?.charAt(0).toUpperCase() || 'U'}
-          </div>
+          <UserAvatar
+            src={testimonial.avatarSrc}
+            name={testimonial.name}
+            size="lg"
+            className="ring-2 ring-orange-100 dark:ring-neutral-700"
+          />
           <div className="flex-grow min-w-0">
             <p className="font-bold text-lg text-gray-900 dark:text-gray-100 truncate">{testimonial.name}</p>
             {testimonial.title && <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{testimonial.title}</p>}

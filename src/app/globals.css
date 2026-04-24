@@ -321,3 +321,37 @@ body {
     padding: 5rem 2rem;
   }
 }
+
+/* ─── Review Scroll Container ────────────────────────────────────────────── */
+
+.review-scroll-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.review-scroll-container::-webkit-scrollbar-track {
+  background: #f9fafb;
+  border-radius: 2px;
+}
+
+.review-scroll-container::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 2px;
+}
+
+.review-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+
+@media (prefers-color-scheme: dark) {
+  .review-scroll-container::-webkit-scrollbar-track {
+    background: #1c1917;
+  }
+  
+  .review-scroll-container::-webkit-scrollbar-thumb {
+    background: #404040;
+  }
+  
+  .review-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #525252;
+  }
+}

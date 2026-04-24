@@ -239,12 +239,12 @@ export default async function HomePage() {
             </span>
 
             <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 sm:text-5xl lg:text-6xl animate-slide-up dark:text-neutral-50">
-              Affordable Daily Tiffin Service in Lahore, Karachi &amp; Islamabad –{" "}
-              <span className="text-gradient">Fresh Ghar Ka Khana from PKR 200</span>
+              Affordable Daily Tiffin Service in Pakistan –{" "}
+              <span className="text-gradient">Fresh Ghar Ka Khana from PKR 200 </span>
             </h1>
 
             <p className="mt-6 text-lg text-neutral-600 leading-relaxed max-w-2xl mx-auto animate-slide-up dark:text-neutral-300" style={{ animationDelay: "0.1s" }}>
-              Looking for an affordable tiffin service in Gulberg Lahore or fresh ghar ka khana in Karachi?
+              Looking for an affordable tiffin service in Pakistan?
               Smart Tiffin connects you with trusted home cooks offering healthy homemade meals from PKR 200.
               Browse menus, read reviews, and order directly on WhatsApp — no app, no commission.
             </p>

@@ -1,7 +1,6 @@
 import StarRating from "./StarRating";
-import { formatDistanceToNow } from "date-fns";
-import { BadgeCheck, Flag, Reply } from "lucide-react";
-import Image from "next/image";
+import { Flag, Reply } from "lucide-react";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 interface ReviewCardProps {
     review: {
@@ -20,29 +19,20 @@ interface ReviewCardProps {
     onReply?: (reviewId: string) => void;
 }
 
-function getInitials(name: string | null | undefined): string {
-    if (!name) return "?";
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) {
-        return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-}
-
-function getAvatarColor(name: string | null | undefined): string {
-    if (!name) return "from-neutral-300 to-neutral-400";
-    const colors = [
-        "from-orange-400 to-orange-500",
-        "from-amber-400 to-amber-500",
-        "from-emerald-400 to-emerald-500",
-        "from-sky-400 to-sky-500",
-        "from-violet-400 to-violet-500",
-        "from-rose-400 to-rose-500",
-        "from-teal-400 to-teal-500",
-        "from-indigo-400 to-indigo-500",
-    ];
-    const hash = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-    return colors[hash % colors.length];
+function timeAgo(date: Date | string): string {
+    const seconds = Math.floor(
+        (Date.now() - new Date(date).getTime()) / 1000
+    );
+    if (seconds < 0) return 'just now';
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    if (seconds < 2592000) return `${Math.floor(seconds / 604800)}w ago`;
+    return new Date(date).toLocaleDateString('en-PK', {
+        month: 'short',
+        day: 'numeric',
+    });
 }
 
 function getRatingLabel(rating: number): string {
@@ -54,16 +44,8 @@ function getRatingLabel(rating: number): string {
 }
 
 export default function ReviewCard({ review, onReply }: ReviewCardProps) {
-    const initials = getInitials(review.user?.name);
-    const avatarGradient = getAvatarColor(review.user?.name);
     const userName = review.user?.name || "Anonymous";
-    const timeAgo = (() => {
-        try {
-            return formatDistanceToNow(new Date(review.createdAt), { addSuffix: true });
-        } catch {
-            return "recently";
-        }
-    })();
+    const reviewTime = timeAgo(review.createdAt);
 
     return (
         <div className="group relative rounded-2xl border border-neutral-100 bg-white p-5 sm:p-6 transition-all duration-300 hover:shadow-lg hover:border-neutral-200/80 dark:bg-neutral-800 dark:border-neutral-700 dark:hover:border-neutral-600">
@@ -71,23 +53,12 @@ export default function ReviewCard({ review, onReply }: ReviewCardProps) {
             {/* ─── Header Row ────────────────────────────────── */}
             <div className="flex items-start gap-3 sm:gap-4">
                 {/* Avatar */}
-                <div className="flex-shrink-0">
-                    {review.user?.avatarUrl ? (
-                        <Image
-                            src={review.user.avatarUrl}
-                            alt={`${userName}'s avatar`}
-                            width={44}
-                            height={44}
-                            className="rounded-full object-cover ring-2 ring-neutral-100 dark:ring-neutral-700"
-                        />
-                    ) : (
-                        <div
-                            className={`w-11 h-11 rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-white text-sm font-bold shadow-sm`}
-                        >
-                            {initials}
-                        </div>
-                    )}
-                </div>
+                <UserAvatar
+                    src={review.user?.avatarUrl}
+                    name={review.user?.name}
+                    size="md"
+                    className="ring-2 ring-neutral-100 dark:ring-neutral-700"
+                />
 
                 {/* Name + Meta */}
                 <div className="flex-1 min-w-0">
@@ -96,15 +67,14 @@ export default function ReviewCard({ review, onReply }: ReviewCardProps) {
                             {userName}
                         </span>
                         {review.isVerifiedPurchase && (
-                            <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-accent-50 text-accent-700 border border-accent-200 dark:bg-accent-900/30 dark:text-accent-400 dark:border-accent-800">
-                                <BadgeCheck className="w-3 h-3" strokeWidth={3} />
-                                Verified
+                            <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">
+                                ✓ Verified
                             </span>
                         )}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-neutral-400 dark:text-neutral-500">
-                            {timeAgo}
+                            {reviewTime}
                         </span>
                     </div>
                 </div>
@@ -140,11 +110,11 @@ export default function ReviewCard({ review, onReply }: ReviewCardProps) {
                     <div className="flex items-center gap-1.5 mb-1.5">
                         <Reply className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
                         <span className="text-xs font-bold text-primary-700 dark:text-primary-300 uppercase tracking-wide">
-                            Cook&apos;s Reply
+                            🍳 Cook&apos;s Reply
                         </span>
                         {review.sellerRepliedAt && (
                             <span className="text-[10px] text-neutral-400 dark:text-neutral-500 ml-1">
-                                · {(() => { try { return formatDistanceToNow(new Date(review.sellerRepliedAt), { addSuffix: true }); } catch { return ""; } })()}
+                                · {timeAgo(review.sellerRepliedAt)}
                             </span>
                         )}
                     </div>
