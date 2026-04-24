@@ -117,11 +117,15 @@ export const ClientsSection = ({
   onPrimaryAction,
   className,
 }: ClientsSectionProps) => {
-  // Cap how many render so Mobile views aren't a mile long
-  const displayTestimonials = testimonials.slice(0, 5);
+  const [showAll, setShowAll] = React.useState(false);
+  const maxInitial = 4;
+  
+  // Cap how many render initially
+  const displayTestimonials = showAll ? testimonials : testimonials.slice(0, maxInitial);
 
   // Calculate a height for the scroll container to ensure all cards can stack smoothly
-  const scrollContainerHeight = `calc(100vh + ${displayTestimonials.length * 120}px)`;
+  // Add some extra padding at the bottom for the toggle button
+  const scrollContainerHeight = `calc(100vh + ${displayTestimonials.length * 120}px + 100px)`;
 
   return (
     <section className={cn("w-full bg-white dark:bg-[#0a0a0a] text-gray-900 dark:text-gray-50 py-20 px-4", className)}>
@@ -156,15 +160,36 @@ export const ClientsSection = ({
         </div>
 
         {/* Right Column: Container for the sticky card stack */}
-        <div className="relative flex flex-col gap-6" style={{ height: displayTestimonials.length > 0 ? scrollContainerHeight : 'auto' }}>
+        <div className="relative flex flex-col gap-6 pb-24" style={{ height: displayTestimonials.length > 0 ? scrollContainerHeight : 'auto' }}>
           {displayTestimonials.length > 0 ? (
-            displayTestimonials.map((testimonial, index) => (
-              <StickyTestimonialCard
-                key={testimonial.id || testimonial.name}
-                index={index}
-                testimonial={testimonial}
-              />
-            ))
+            <>
+              {displayTestimonials.map((testimonial, index) => (
+                <StickyTestimonialCard
+                  key={testimonial.id || testimonial.name}
+                  index={index}
+                  testimonial={testimonial}
+                />
+              ))}
+              
+              {testimonials.length > maxInitial && (
+                <div className="absolute bottom-4 left-0 w-full flex justify-center z-20">
+                  <Button
+                    variant="outline"
+                    className="rounded-full bg-white dark:bg-neutral-900 border-orange-200 dark:border-orange-900 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 font-semibold px-8 py-6 shadow-lg transition-all"
+                    onClick={() => {
+                        if (showAll) {
+                            // Scroll back to the top of the reviews section smoothly
+                            const el = document.getElementById('platform-reviews');
+                            if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        }
+                        setShowAll(!showAll);
+                    }}
+                  >
+                    {showAll ? "Show less" : `View all reviews (${testimonials.length})`}
+                  </Button>
+                </div>
+              )}
+            </>
           ) : (
             <div className="flex items-center justify-center h-full min-h-[300px] border border-dashed border-gray-200 dark:border-neutral-800 rounded-3xl bg-gray-50 dark:bg-neutral-900/50">
               <p className="text-gray-500 font-medium">Be the first to review!</p>

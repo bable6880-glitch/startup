@@ -239,7 +239,7 @@ export default async function HomePage() {
             </span>
 
             <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 sm:text-5xl lg:text-6xl animate-slide-up dark:text-neutral-50">
-              Affordable Daily Tiffin Service in Pakistan –{" "}
+              Affordable Daily Tiffin Service in Pakistan -
               <span className="text-gradient">Fresh Ghar Ka Khana from PKR 200 </span>
             </h1>
 
