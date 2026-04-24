@@ -19,22 +19,22 @@ export interface MealSearchItem {
 
 export async function getMealSearchIndex(): Promise<MealSearchItem[]> {
   if (!redis) return fetchMealIndexFromDb()
-  
+
   try {
     const cached = await redis.get<MealSearchItem[]>('search:meals:index')
     if (cached && Array.isArray(cached) && cached.length > 0) {
       return cached
     }
   } catch { /* fall through */ }
-  
+
   const fresh = await fetchMealIndexFromDb()
-  
+
   try {
     if (redis) {
       await redis.set('search:meals:index', JSON.stringify(fresh), { ex: 300 })
     }
   } catch { /* ignore */ }
-  
+  // i want to igonre this code for a reason 
   return fresh
 }
 

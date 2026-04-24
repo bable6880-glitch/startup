@@ -95,6 +95,129 @@ body {
   border-radius: 9999px;
 }
 
+/* ─── Landing Background System ───────────────────────────────────────────── */
+
+.landing-bg-hero {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.landing-bg-hero__gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    145deg,
+    #ffffff 0%,
+    #fefcfb 15%,
+    #fef7f0 30%,
+    #f9fdf9 55%,
+    #f6fbf7 75%,
+    #f0fdf4 100%
+  );
+}
+
+.landing-bg-hero__blobs {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.landing-bg-hero__decor {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Section background variants */
+.landing-bg-section {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.landing-bg-section--subtle {
+  background: linear-gradient(180deg, #ffffff 0%, #fafaf9 50%, #f6fbf7 100%);
+}
+
+.landing-bg-section--warm {
+  background: linear-gradient(135deg, #fffbf5 0%, #fef7f0 40%, #ffffff 100%);
+}
+
+.landing-bg-section--green {
+  background: linear-gradient(135deg, #f6fbf7 0%, #f0fdf4 40%, #fafaf9 100%);
+}
+
+/* Mobile: hide decorative elements on very small screens */
+@media (max-width: 480px) {
+  .landing-bg-hero__decor {
+    display: none;
+  }
+}
+
+/* Mobile: simplify gradient for performance */
+@media (max-width: 640px) {
+  .landing-bg-hero__gradient {
+    background: linear-gradient(145deg, #ffffff 0%, #f6fbf7 100%);
+  }
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  .landing-bg-hero__gradient {
+    background: linear-gradient(
+      145deg,
+      #0c0a09 0%,
+      #121110 40%,
+      #0f1510 70%,
+      #0c0a09 100%
+    );
+  }
+
+  .landing-bg-hero__blobs ellipse {
+    opacity: 0.06;
+  }
+
+  .landing-bg-hero__decor {
+    opacity: 0.4;
+  }
+
+  .landing-bg-section--subtle {
+    background: linear-gradient(180deg, #0c0a09 0%, #121110 100%);
+  }
+
+  .landing-bg-section--warm {
+    background: linear-gradient(135deg, #0c0a09 0%, #1a1412 50%, #0c0a09 100%);
+  }
+
+  .landing-bg-section--green {
+    background: linear-gradient(135deg, #0c0a09 0%, #0f1510 50%, #0c0a09 100%);
+  }
+}
+
+/* Subtle float animation for hero blobs — <1KB, GPU-composited (transform only) */
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.landing-bg-hero__blobs {
+  animation: float-gentle 20s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Reduce motion preference — kill animation instantly */
+@media (prefers-reduced-motion: reduce) {
+  .landing-bg-hero__blobs {
+    animation: none;
+  }
+}
+
 /* ─── Animations ──────────────────────────────────────────────────────────── */
 
 @keyframes fade-in {
@@ -152,6 +275,18 @@ body {
   }
 }
 
+@keyframes gradient-x {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 .animate-fade-in {
   animation: fade-in 0.4s ease-out both;
 }
@@ -172,6 +307,10 @@ body {
 
 .animate-shrink-width {
   animation: shrink-width linear forwards;
+}
+
+.animate-gradient-x {
+  animation: gradient-x 6s ease infinite;
 }
 
 /* ─── Utilities ───────────────────────────────────────────────────────────── */

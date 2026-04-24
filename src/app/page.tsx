@@ -6,6 +6,7 @@ import PlatformReviewWidget from "@/components/reviews/PlatformReviewWidget";
 import { FeaturedKitchens } from "@/components/home/FeaturedKitchens";
 import SeoImageSection from "@/components/home/SeoImageSection";
 import Image from "next/image";
+import { HeroBackground, SectionBackground } from "@/components/home/LandingBackground";
 
 export const metadata: Metadata = {
   title: 'Smart Tiffin – Daily Tiffin Service in Lahore, Karachi & Islamabad | From PKR 200',
@@ -225,12 +226,9 @@ export default async function HomePage() {
         }}
       />
       {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary-50 via-white to-accent-50 dark:from-neutral-900 dark:via-neutral-900 dark:to-neutral-800">
-        {/* Background decoration */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-primary-200/30 blur-3xl dark:bg-primary-900/20" />
-          <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-accent-200/30 blur-3xl dark:bg-accent-900/20" />
-        </div>
+      <section className="relative overflow-hidden">
+        {/* Lightweight SVG + CSS background — replaces heavy blur-3xl blobs */}
+        <HeroBackground />
 
         <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-36">
           <div className="text-center max-w-3xl mx-auto">
@@ -238,8 +236,12 @@ export default async function HomePage() {
               🍱 Pakistan&apos;s #1 Home Food Platform
             </span>
 
-            <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 sm:text-5xl lg:text-6xl animate-slide-up dark:text-neutral-50">
-              Affordable Daily Tiffin Service in Pakistan -
+            <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 sm:text-5xl lg:text-6xl animate-slide-up dark:text-neutral-50 leading-[1.15]">
+              Affordable 😊<br className="hidden sm:block" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 via-accent-500 to-primary-600 animate-gradient-x bg-[length:200%_auto]">
+                Daily Tiffin Service  in Pakistan
+              </span>{" "}
+
             </h1>
 
             <p className="mt-6 text-lg text-neutral-600 leading-relaxed max-w-2xl mx-auto animate-slide-up dark:text-neutral-300" style={{ animationDelay: "0.1s" }}>
@@ -320,7 +322,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── How It Works ────────────────────────────────────────── */}
-      <section className="bg-neutral-50 dark:bg-neutral-900">
+      <section className="relative bg-neutral-50 dark:bg-neutral-900">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl dark:text-neutral-50">
@@ -393,7 +395,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── SEO Section 2: Daily Menu ─────────────────────────────── */}
-      <section className="bg-neutral-50 dark:bg-neutral-900 py-16">
+      <section className="relative bg-neutral-50 dark:bg-neutral-900 py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl dark:text-neutral-50">
@@ -468,7 +470,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── SEO Section 4: FAQ ────────────────────────────────────── */}
-      <section className="bg-neutral-50 dark:bg-neutral-900 py-16">
+      <section className="relative bg-neutral-50 dark:bg-neutral-900 py-16">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl dark:text-neutral-50">
