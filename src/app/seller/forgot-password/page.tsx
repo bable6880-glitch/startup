@@ -83,19 +83,19 @@ export default function ForgotPasswordPage() {
                             <div className="text-center py-4">
                                 <span className="text-5xl block mb-4">✅</span>
                                 <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
-                                    Check Your Email!
+                                    Check Your Email 😊!
                                 </h2>
                                 <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
                                     We&apos;ve sent a password reset link to <br />
                                     <strong className="text-neutral-900 dark:text-neutral-200">{email}</strong>
                                 </p>
                                 <p className="mt-4 text-xs text-neutral-400 dark:text-neutral-500">
-                                    Didn&apos;t receive it? Check your spam folder or{" "}
+                                    Didn&apos;t receive it? Check your spam folder 😎 or{" "}
                                     <button
                                         onClick={() => setSent(false)}
                                         className="text-orange-600 font-semibold hover:underline dark:text-orange-400"
                                     >
-                                        try again
+                                        try again 😋
                                     </button>
                                 </p>
 
@@ -103,7 +103,7 @@ export default function ForgotPasswordPage() {
                                     href="/seller/login"
                                     className="mt-8 inline-block rounded-xl bg-neutral-100 px-6 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-200 transition-all dark:bg-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-600"
                                 >
-                                    ← Back to Login
+                                    ← Back to Login 🚀
                                 </Link>
                             </div>
                         )}
@@ -115,7 +115,7 @@ export default function ForgotPasswordPage() {
                                     href="/seller/login"
                                     className="font-bold text-orange-600 hover:underline dark:text-orange-400"
                                 >
-                                    Login here →
+                                    Login here → 🌟
                                 </Link>
                             </div>
                         )}
