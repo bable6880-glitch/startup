@@ -377,53 +377,110 @@ function SubscriptionContent() {
             )}
 
             {/* Plan Selection */}
-            <section className="mb-8">
-                <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50 mb-4">
-                    {hasActiveSub
-                        ? "Switch Plan"
-                        : "Choose Your Plan"}
+            <section className="mb-12">
+                <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50 mb-6 text-center">
+                    {hasActiveSub ? "Switch Plan" : "Choose Your Premium Plan"}
                 </h2>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {plans.map((plan) => {
                         const isSelected = selectedPlan === plan.planId;
                         const isRecommended = plan.planId === "pro";
+                        const isElite = plan.planId === "elite";
+                        
+                        const featuresByPlan: Record<string, string[]> = {
+                            starter: [
+                                "Kitchen listing",
+                                "Full menu management",
+                                "Basic analytics",
+                                "Accept digital orders"
+                            ],
+                            pro: [
+                                "All Starter features",
+                                "Customer reviews",
+                                "Priority search ranking",
+                                "Advanced analytics"
+                            ],
+                            elite: [
+                                "All Pro features",
+                                "Community Potluck deals",
+                                "Digital Khata (Ledger)",
+                                "AI Chef Assistant",
+                                "Premium support"
+                            ]
+                        };
+
+                        const features = featuresByPlan[plan.planId] || featuresByPlan.starter;
 
                         return (
-                            <button
+                            <div
                                 key={plan.id}
-                                onClick={() => setSelectedPlan(plan.planId)}
-                                className={`relative rounded-2xl border-2 p-5 text-left transition-all ${isSelected
-                                    ? "border-primary-500 bg-primary-50/50 shadow-md dark:bg-primary-900/20"
-                                    : "border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm dark:bg-neutral-800 dark:border-neutral-700 dark:hover:border-neutral-600"
-                                    }`}
+                                className={`relative flex flex-col rounded-3xl border-2 transition-all duration-300 ${isSelected 
+                                    ? "border-primary-500 shadow-xl scale-[1.02]" 
+                                    : "border-neutral-200 bg-white shadow-sm hover:shadow-md hover:border-neutral-300 dark:bg-neutral-800 dark:border-neutral-700"
+                                } ${isElite ? "bg-gradient-to-b from-purple-50/50 to-white dark:from-purple-900/10 dark:to-neutral-800" : isSelected ? "bg-primary-50/30 dark:bg-primary-900/10" : ""}`}
                             >
                                 {isRecommended && (
-                                    <span className="absolute -top-2.5 left-4 rounded-full bg-primary-500 px-3 py-0.5 text-xs font-bold text-white shadow-sm">
-                                        RECOMMENDED
-                                    </span>
-                                )}
-                                <div className="mb-3">
-                                    <h3 className="font-bold text-neutral-900 dark:text-neutral-50">
-                                        {plan.displayName}
-                                    </h3>
-                                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                                        {plan.description}
-                                    </p>
-                                </div>
-                                <div className="mb-2">
-                                    <span className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
-                                        Rs {plan.priceRs}
-                                    </span>
-                                </div>
-                                <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                                    /{plan.billingPeriodMonths === 1 ? 'month' : `${plan.billingPeriodMonths} months`}
-                                </p>
-                                {isSelected && (
-                                    <div className="absolute top-4 right-4 flex h-6 w-6 items-center justify-center rounded-full bg-primary-500 text-white text-xs">
-                                        ✓
+                                    <div className="absolute -top-4 left-0 right-0 flex justify-center">
+                                        <span className="rounded-full bg-primary-500 px-4 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-md">
+                                            Most Popular
+                                        </span>
                                     </div>
                                 )}
-                            </button>
+                                {isElite && (
+                                    <div className="absolute -top-4 left-0 right-0 flex justify-center">
+                                        <span className="rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 px-4 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-md">
+                                            Premium Level
+                                        </span>
+                                    </div>
+                                )}
+
+                                <div className="p-6 md:p-8 flex-1 flex flex-col">
+                                    <h3 className={`text-xl font-bold ${isElite ? "text-purple-700 dark:text-purple-400" : "text-neutral-900 dark:text-white"}`}>
+                                        {plan.displayName}
+                                    </h3>
+                                    <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400 min-h-[40px]">
+                                        {plan.description}
+                                    </p>
+                                    
+                                    <div className="my-6">
+                                        <div className="flex items-baseline text-4xl font-extrabold text-neutral-900 dark:text-white">
+                                            <span className="text-lg font-bold text-neutral-500 mr-1">Rs</span>
+                                            {plan.priceRs}
+                                        </div>
+                                        <p className="text-sm font-medium text-neutral-500 mt-1">
+                                            per {plan.billingPeriodMonths === 1 ? 'month' : `${plan.billingPeriodMonths} months`}
+                                        </p>
+                                    </div>
+
+                                    <div className="flex-1">
+                                        <ul className="space-y-3 mt-4">
+                                            {features.map((feature: string, idx: number) => (
+                                                <li key={idx} className="flex items-start gap-3">
+                                                    <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${isElite ? "bg-purple-100 text-purple-600 dark:bg-purple-900/30" : "bg-primary-100 text-primary-600 dark:bg-primary-900/30"}`}>
+                                                        ✓
+                                                    </span>
+                                                    <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                                                        {feature}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    <button
+                                        onClick={() => setSelectedPlan(plan.planId)}
+                                        className={`mt-8 w-full rounded-xl py-3 px-4 text-sm font-bold transition-all ${isSelected
+                                            ? "bg-primary-600 text-white shadow-md hover:bg-primary-700"
+                                            : isElite 
+                                                ? "bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50"
+                                                : "bg-neutral-100 text-neutral-900 hover:bg-neutral-200 dark:bg-neutral-700 dark:text-white dark:hover:bg-neutral-600"
+                                        }`}
+                                    >
+                                        {isSelected ? "Selected" : "Choose " + plan.displayName}
+                                    </button>
+                                </div>
+                            </div>
                         );
                     })}
                 </div>
@@ -501,36 +558,6 @@ function SubscriptionContent() {
                 </button>
             </div>
 
-            {/* Plan Features */}
-            <section className="mt-10">
-                <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50 mb-4">
-                    What&apos;s Included
-                </h2>
-                <div className="rounded-2xl border border-neutral-200/60 bg-white p-6 dark:bg-neutral-800 dark:border-neutral-700">
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                        {[
-                            "Kitchen listing on platform",
-                            "Full menu management",
-                            "Order notifications & tracking",
-                            "Customer reviews & replies",
-                            "Basic analytics dashboard",
-                            "WhatsApp integration",
-                            "Mobile-optimized dashboard",
-                            "Priority customer support",
-                        ].map((feature) => (
-                            <li
-                                key={feature}
-                                className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300"
-                            >
-                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent-100 text-accent-600 text-xs dark:bg-accent-900/30 dark:text-accent-400">
-                                    ✓
-                                </span>
-                                {feature}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </section>
 
             {/* Cancel Modal */}
             {showCancelModal && (

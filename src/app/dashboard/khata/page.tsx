@@ -1,15 +1,31 @@
-"use client";
-
 import { useState, useEffect } from "react";
-import { Plus, ArrowDownRight, ArrowUpRight, FileText } from "lucide-react";
+import { Plus, ArrowDownRight, ArrowUpRight, FileText, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { BackButton } from "@/components/ui/BackButton";
+import { useAuth } from "@/lib/firebase/auth-context";
 
 export default function KhataDashboardPage() {
+    const { getIdToken } = useAuth();
     const [entries, setEntries] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Modal state
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [formError, setFormError] = useState<string | null>(null);
+
+    // Form state
+    const [formData, setFormData] = useState({
+        entryType: "INCOME",
+        category: "Sales",
+        description: "",
+        amountRs: "",
+        isCredit: true,
+        entryDate: new Date().toISOString().split("T")[0],
+    });
 
     useEffect(() => {
         fetchEntries();
@@ -17,7 +33,11 @@ export default function KhataDashboardPage() {
 
     const fetchEntries = async () => {
         try {
-            const res = await fetch("/api/seller/khata");
+            const token = await getIdToken();
+            if (!token) return;
+            const res = await fetch("/api/seller/khata", {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             const data = await res.json();
             
             if (res.status === 403) {
@@ -33,6 +53,52 @@ export default function KhataDashboardPage() {
             setError("Failed to load khata entries");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleAddEntry = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmitting(true);
+        setFormError(null);
+        
+        try {
+            const token = await getIdToken();
+            const res = await fetch("/api/seller/khata", {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}` 
+                },
+                body: JSON.stringify({
+                    entryType: formData.entryType,
+                    category: formData.category,
+                    description: formData.description,
+                    amountRs: Number(formData.amountRs),
+                    isCredit: formData.isCredit,
+                    entryDate: formData.entryDate,
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (res.ok && data.success) {
+                setIsModalOpen(false);
+                setFormData({
+                    entryType: "INCOME",
+                    category: "Sales",
+                    description: "",
+                    amountRs: "",
+                    isCredit: true,
+                    entryDate: new Date().toISOString().split("T")[0],
+                });
+                fetchEntries();
+            } else {
+                setFormError(data.error || "Failed to add entry.");
+            }
+        } catch (err) {
+            setFormError("Network error. Please try again.");
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -58,12 +124,13 @@ export default function KhataDashboardPage() {
 
     return (
         <div className="container py-8 max-w-5xl mx-auto space-y-6">
-            <div className="flex justify-between items-center">
+            <BackButton label="Dashboard" />
+            <div className="flex justify-between items-center mt-2">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Digital Khata</h1>
                     <p className="text-muted-foreground mt-1">Manage your expenses, commissions, and revenue automatically.</p>
                 </div>
-                <Button>
+                <Button onClick={() => setIsModalOpen(true)}>
                     <Plus className="w-4 h-4 mr-2" /> Add Entry
                 </Button>
             </div>
@@ -125,12 +192,12 @@ export default function KhataDashboardPage() {
                                         <tr key={entry.id} className="border-b transition-colors hover:bg-muted/50">
                                             <td className="p-4 align-middle">{entry.entryDate}</td>
                                             <td className="p-4 align-middle">
-                                                <span className={`px-2 py-1 rounded-full text-xs ${entry.isCredit ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                <span className={`px-2 py-1 rounded-full text-xs ${entry.isCredit ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
                                                     {entry.entryType}
                                                 </span>
                                             </td>
                                             <td className="p-4 align-middle">{entry.description}</td>
-                                            <td className={`p-4 align-middle text-right font-semibold ${entry.isCredit ? 'text-green-600' : 'text-red-600'}`}>
+                                            <td className={`p-4 align-middle text-right font-semibold ${entry.isCredit ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                                 {entry.isCredit ? '+' : '-'} Rs {entry.amountRs}
                                             </td>
                                         </tr>
@@ -145,6 +212,84 @@ export default function KhataDashboardPage() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Add Entry Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+                        <div className="flex items-center justify-between p-6 border-b border-neutral-100 dark:border-neutral-800">
+                            <h2 className="text-xl font-bold">Add Ledger Entry</h2>
+                            <button onClick={() => setIsModalOpen(false)} className="text-neutral-500 hover:bg-neutral-100 p-2 rounded-full dark:hover:bg-neutral-800">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 max-h-[70vh] overflow-y-auto">
+                            {formError && (
+                                <div className="mb-4 p-3 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm dark:bg-red-900/20 dark:border-red-900/50 dark:text-red-400">
+                                    {formError}
+                                </div>
+                            )}
+                            <form id="khataForm" onSubmit={handleAddEntry} className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Entry Type *</label>
+                                        <select 
+                                            required 
+                                            value={formData.entryType} 
+                                            onChange={e => {
+                                                const type = e.target.value;
+                                                const isCredit = type === 'INCOME' || type === 'REFUND' || type === 'ADJUSTMENT';
+                                                setFormData({...formData, entryType: type, isCredit});
+                                            }} 
+                                            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:bg-neutral-800 dark:border-neutral-700 outline-none focus:ring-2 focus:ring-primary-500/50"
+                                        >
+                                            <option value="INCOME">Income</option>
+                                            <option value="EXPENSE">Expense</option>
+                                            <option value="WITHDRAWAL">Withdrawal</option>
+                                            <option value="COMMISSION">Commission</option>
+                                            <option value="REFUND">Refund</option>
+                                            <option value="ADJUSTMENT">Adjustment</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Date *</label>
+                                        <input required type="date" value={formData.entryDate} onChange={e => setFormData({...formData, entryDate: e.target.value})} className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:bg-neutral-800 dark:border-neutral-700 outline-none focus:ring-2 focus:ring-primary-500/50" />
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Category *</label>
+                                    <input required type="text" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} placeholder="e.g., Groceries, Delivery Fee..." className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:bg-neutral-800 dark:border-neutral-700 outline-none focus:ring-2 focus:ring-primary-500/50" />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Description *</label>
+                                    <input required type="text" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Brief details about the entry" className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:bg-neutral-800 dark:border-neutral-700 outline-none focus:ring-2 focus:ring-primary-500/50" />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="col-span-2">
+                                        <label className="block text-sm font-medium mb-1">Amount (Rs) *</label>
+                                        <input required type="number" min="1" value={formData.amountRs} onChange={e => setFormData({...formData, amountRs: e.target.value})} placeholder="e.g., 500" className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm dark:bg-neutral-800 dark:border-neutral-700 outline-none focus:ring-2 focus:ring-primary-500/50" />
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-2 pt-2">
+                                    <input type="checkbox" id="isCredit" checked={formData.isCredit} onChange={e => setFormData({...formData, isCredit: e.target.checked})} className="rounded text-primary-600 w-4 h-4" />
+                                    <label htmlFor="isCredit" className="text-sm font-medium">This is a Credit (Income)</label>
+                                </div>
+                            </form>
+                        </div>
+                        <div className="p-4 border-t border-neutral-100 bg-neutral-50 flex justify-end gap-3 dark:bg-neutral-800 dark:border-neutral-800">
+                            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                            <Button form="khataForm" type="submit" disabled={submitting}>
+                                {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                                Save Entry
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
