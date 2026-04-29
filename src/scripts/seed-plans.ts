@@ -8,9 +8,8 @@ import "dotenv/config";
 import { Pool, neonConfig } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import * as schema from "../lib/db/schema";
-import { premiumPlans } from "../lib/db/schema";
+import { planConfigs } from "../lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { SUBSCRIPTION_PLANS } from "../lib/validations/subscription";
 
 neonConfig.poolQueryViaFetch = true;
 
@@ -23,77 +22,131 @@ async function seedPlans() {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const db = drizzle(pool, { schema });
 
-    console.log("🌱 Seeding premium plans...\n");
+    console.log("🌱 Seeding premium plans (planConfigs)...\n");
 
-    // Check if plans already exist
-    const existing = await db.query.premiumPlans.findMany({
-        where: and(eq(premiumPlans.region, "PK"), eq(premiumPlans.isActive, true)),
-    });
+    const plansToSeed = [
+        {
+            planId: "starter" as const,
+            displayName: "Starter",
+            priceRs: 599,
+            billingPeriodMonths: 1,
+            menuItemLimit: 7,
+            monthlyOrderLimit: 50,
+            commissionRate: "0.050",
+            featuredBoostLevel: "none",
+            prioritySupport: false,
+            brandingTools: false,
+            promotionsLevel: "none",
+            advancedAnalytics: false,
+            aiPricing: false,
+            autoWhatsApp: false,
+            dedicatedManager: false,
+            chefAssistant: false,
+            digitalKhata: false,
+            potluckUsesPerPeriod: 1,
+            isActive: true,
+            sortOrder: 1,
+        },
+        {
+            planId: "growth" as const,
+            displayName: "Growth",
+            priceRs: 2999,
+            billingPeriodMonths: 6,
+            menuItemLimit: 14,
+            monthlyOrderLimit: 200,
+            commissionRate: "0.030",
+            featuredBoostLevel: "limited",
+            prioritySupport: true,
+            brandingTools: false,
+            promotionsLevel: "none",
+            advancedAnalytics: true,
+            aiPricing: false,
+            autoWhatsApp: false,
+            dedicatedManager: false,
+            chefAssistant: false,
+            digitalKhata: false,
+            potluckUsesPerPeriod: 3,
+            isActive: true,
+            sortOrder: 2,
+        },
+        {
+            planId: "pro" as const,
+            displayName: "Pro",
+            priceRs: 5499,
+            billingPeriodMonths: 12,
+            menuItemLimit: null,
+            monthlyOrderLimit: null,
+            commissionRate: "0.000",
+            featuredBoostLevel: "high",
+            prioritySupport: true,
+            brandingTools: true,
+            promotionsLevel: "limited",
+            advancedAnalytics: true,
+            aiPricing: false,
+            autoWhatsApp: false,
+            dedicatedManager: false,
+            chefAssistant: false,
+            digitalKhata: false,
+            potluckUsesPerPeriod: 10,
+            isActive: true,
+            sortOrder: 3,
+        },
+        {
+            planId: "elite" as const,
+            displayName: "Elite",
+            priceRs: 11999,
+            billingPeriodMonths: 12,
+            menuItemLimit: null,
+            monthlyOrderLimit: null,
+            commissionRate: "0.000",
+            featuredBoostLevel: "top",
+            prioritySupport: true,
+            brandingTools: true,
+            promotionsLevel: "full",
+            advancedAnalytics: true,
+            aiPricing: true,
+            autoWhatsApp: true,
+            dedicatedManager: true,
+            chefAssistant: true,
+            digitalKhata: true,
+            potluckUsesPerPeriod: -1,
+            isActive: true,
+            sortOrder: 4,
+        }
+    ];
 
-    if (existing.length > 0) {
-        console.log(`✅ ${existing.length} plan(s) already exist. Updating...\n`);
-
-        // Update existing plan with latest pricing
-        await db
-            .update(premiumPlans)
-            .set({
-                name: "Smart Tiffin Pro",
-                description:
-                    "Full access to the Smart Tiffin platform for home cooks",
-                priceMonthly: SUBSCRIPTION_PLANS.BASE_MONTHLY.price,
-                priceQuarterly: SUBSCRIPTION_PLANS.BASE_2MONTH.price,
-                priceYearly: SUBSCRIPTION_PLANS.BASE_4MONTH.price,
-                currency: "PKR",
-                features: [
-                    "Kitchen listing on platform",
-                    "Unlimited menu items",
-                    "Order management dashboard",
-                    "Customer reviews & analytics",
-                    "Priority in search results",
-                ],
-                includesVerifiedBadge: false,
-                includesBoost: false,
-                boostDurationDays: null,
-                updatedAt: new Date(),
-            })
-            .where(eq(premiumPlans.id, existing[0].id));
-
-        console.log(`  Updated plan: ${existing[0].id}`);
-    } else {
-        // Insert new plan
-        const [plan] = await db
-            .insert(premiumPlans)
-            .values({
-                name: "Smart Tiffin Pro",
-                description:
-                    "Full access to the Smart Tiffin platform for home cooks",
-                priceMonthly: SUBSCRIPTION_PLANS.BASE_MONTHLY.price,
-                priceQuarterly: SUBSCRIPTION_PLANS.BASE_2MONTH.price,
-                priceYearly: SUBSCRIPTION_PLANS.BASE_4MONTH.price,
-                currency: "PKR",
-                region: "PK",
-                features: [
-                    "Kitchen listing on platform",
-                    "Unlimited menu items",
-                    "Order management dashboard",
-                    "Customer reviews & analytics",
-                    "Priority in search results",
-                ],
-                includesVerifiedBadge: false,
-                includesBoost: false,
-                boostDurationDays: null,
-                isActive: true,
-            })
-            .returning();
-
-        console.log(`  Created plan: ${plan.id}`);
+    for (const plan of plansToSeed) {
+        await db.insert(planConfigs)
+            .values(plan)
+            .onConflictDoUpdate({
+                target: planConfigs.planId,
+                set: {
+                    displayName: plan.displayName,
+                    priceRs: plan.priceRs,
+                    billingPeriodMonths: plan.billingPeriodMonths,
+                    menuItemLimit: plan.menuItemLimit,
+                    monthlyOrderLimit: plan.monthlyOrderLimit,
+                    commissionRate: plan.commissionRate,
+                    featuredBoostLevel: plan.featuredBoostLevel,
+                    prioritySupport: plan.prioritySupport,
+                    brandingTools: plan.brandingTools,
+                    promotionsLevel: plan.promotionsLevel,
+                    advancedAnalytics: plan.advancedAnalytics,
+                    aiPricing: plan.aiPricing,
+                    autoWhatsApp: plan.autoWhatsApp,
+                    dedicatedManager: plan.dedicatedManager,
+                    chefAssistant: plan.chefAssistant,
+                    digitalKhata: plan.digitalKhata,
+                    potluckUsesPerPeriod: plan.potluckUsesPerPeriod,
+                    isActive: plan.isActive,
+                    sortOrder: plan.sortOrder,
+                    updatedAt: new Date()
+                }
+            });
+        console.log(`✅ Upserted plan: ${plan.displayName}`);
     }
 
-    console.log("\n✅ Premium plans seeded successfully!");
-    console.log("\nPlan Pricing:");
-    console.log(`  1 Month:  ${SUBSCRIPTION_PLANS.BASE_MONTHLY.displayPrice}`);
-    console.log(`  2 Months: ${SUBSCRIPTION_PLANS.BASE_2MONTH.displayPrice}`);
-    console.log(`  4 Months: ${SUBSCRIPTION_PLANS.BASE_4MONTH.displayPrice}`);
+    console.log("\n✅ All premium plans seeded successfully!");
 
     await pool.end();
     process.exit(0);

@@ -43,6 +43,13 @@
       "when": 1775025230335,
       "tag": "0005_first_proteus",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777449765424,
+      "tag": "0006_plain_famine",
+      "breakpoints": true
     }
   ]
 }

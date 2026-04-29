@@ -11,6 +11,7 @@ import {
     index,
     uniqueIndex,
     jsonb,
+    date,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -89,6 +90,30 @@ export const reportTargetEnum = pgEnum("report_target", [
     "KITCHEN",
     "REVIEW",
     "USER",
+]);
+
+export const planConfigEnum = pgEnum("plan_config_enum", [
+    "starter",
+    "growth",
+    "pro",
+    "elite",
+]);
+
+export const potluckStatusEnum = pgEnum("potluck_status_enum", [
+    "PENDING",
+    "ACTIVE",
+    "FILLED",
+    "CANCELLED",
+    "EXPIRED",
+]);
+
+export const khataEntryTypeEnum = pgEnum("khata_entry_type_enum", [
+    "INCOME",
+    "EXPENSE",
+    "WITHDRAWAL",
+    "COMMISSION",
+    "REFUND",
+    "ADJUSTMENT",
 ]);
 
 // ─── Users ──────────────────────────────────────────────────────────────────
@@ -421,9 +446,7 @@ export const subscriptions = pgTable(
         kitchenId: uuid("kitchen_id")
             .notNull()
             .references(() => kitchens.id, { onDelete: "cascade" }),
-        planId: uuid("plan_id")
-            .notNull()
-            .references(() => premiumPlans.id),
+        planId: planConfigEnum("plan_id").notNull(),
         planType: subscriptionPlanTypeEnum("plan_type"),
         stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
         stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
@@ -433,19 +456,23 @@ export const subscriptions = pgTable(
         status: subscriptionStatusEnum("status").default("ACTIVE").notNull(),
         currentPeriodStart: timestamp("current_period_start", {
             withTimezone: true,
-        }),
-        currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+        }).notNull(),
+        currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }).notNull(),
         gracePeriodEndsAt: timestamp("grace_period_ends_at", {
             withTimezone: true,
         }),
         autoRenew: boolean("auto_renew").default(true).notNull(),
-
+        cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+        trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+        ordersUsedThisMonth: integer("orders_used_this_month").default(0),
+        ordersResetAt: timestamp("orders_reset_at", { withTimezone: true }),
+        potluckUsesRemaining: integer("potluck_uses_remaining").notNull().default(0),
+        potluckUsesResetAt: timestamp("potluck_uses_reset_at", { withTimezone: true }),
+        metadata: jsonb("metadata"),
         createdAt: timestamp("created_at", { withTimezone: true })
-            .defaultNow()
-            .notNull(),
+            .defaultNow(),
         updatedAt: timestamp("updated_at", { withTimezone: true })
-            .defaultNow()
-            .notNull(),
+            .defaultNow(),
         cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
         cancelReason: text("cancel_reason"),
     },
@@ -648,9 +675,9 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
         fields: [subscriptions.kitchenId],
         references: [kitchens.id],
     }),
-    plan: one(premiumPlans, {
+    planConfig: one(planConfigs, {
         fields: [subscriptions.planId],
-        references: [premiumPlans.id],
+        references: [planConfigs.planId],
     }),
 }));
 
@@ -761,3 +788,138 @@ export const notifications = pgTable(
 export const notificationsRelations = relations(notifications, ({ one }) => ({
     user: one(users, { fields: [notifications.userId], references: [users.id] }),
 }));
+
+// ─── Plan Configs ───────────────────────────────────────────────────────────
+
+export const planConfigs = pgTable("plan_configs", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    planId: planConfigEnum("plan_id").notNull().unique(),
+    displayName: varchar("display_name", { length: 50 }).notNull(),
+    priceRs: integer("price_rs").notNull(),
+    billingPeriodMonths: integer("billing_period_months").notNull(),
+    menuItemLimit: integer("menu_item_limit"),
+    monthlyOrderLimit: integer("monthly_order_limit"),
+    commissionRate: decimal("commission_rate", { precision: 4, scale: 3 }).notNull(),
+    featuredBoostLevel: varchar("featured_boost_level", { length: 20 }),
+    prioritySupport: boolean("priority_support").default(false),
+    brandingTools: boolean("branding_tools").default(false),
+    promotionsLevel: varchar("promotions_level", { length: 20 }),
+    advancedAnalytics: boolean("advanced_analytics").default(false),
+    aiPricing: boolean("ai_pricing").default(false),
+    autoWhatsApp: boolean("auto_whatsapp").default(false),
+    dedicatedManager: boolean("dedicated_manager").default(false),
+    chefAssistant: boolean("chef_assistant").default(false),
+    digitalKhata: boolean("digital_khata").default(false),
+    potluckUsesPerPeriod: integer("potluck_uses_per_period").notNull(),
+    stripePriceId: varchar("stripe_price_id", { length: 100 }),
+    isActive: boolean("is_active").default(true),
+    sortOrder: integer("sort_order").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+// ─── Commission Ledger ──────────────────────────────────────────────────────
+
+export const commissionLedger = pgTable("commission_ledger", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orderId: uuid("order_id").notNull().references(() => orders.id),
+    kitchenId: uuid("kitchen_id").notNull(),
+    cookId: uuid("cook_id").notNull(),
+    planId: planConfigEnum("plan_id").notNull(),
+    orderAmountRs: decimal("order_amount_rs", { precision: 10, scale: 2 }).notNull(),
+    commissionRate: decimal("commission_rate", { precision: 4, scale: 3 }).notNull(),
+    commissionAmountRs: decimal("commission_amount_rs", { precision: 10, scale: 2 }).notNull(),
+    netAmountRs: decimal("net_amount_rs", { precision: 10, scale: 2 }).notNull(),
+    status: varchar("status", { length: 20 }).default('PENDING'),
+    collectedAt: timestamp("collected_at", { withTimezone: true }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+// ─── Potluck Deals ──────────────────────────────────────────────────────────
+
+export const potluckDeals = pgTable("potluck_deals", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    kitchenId: uuid("kitchen_id").notNull().references(() => kitchens.id),
+    cookId: uuid("cook_id").notNull().references(() => users.id),
+    subscriptionId: uuid("subscription_id").notNull().references(() => subscriptions.id),
+    title: varchar("title", { length: 200 }).notNull(),
+    description: text("description"),
+    mealId: uuid("meal_id").references(() => meals.id),
+    totalPlatesAvailable: integer("total_plates_available").notNull(),
+    targetOrderCount: integer("target_order_count").notNull(),
+    pricePerPlateRs: decimal("price_per_plate_rs", { precision: 10, scale: 2 }).notNull(),
+    regularPriceRs: decimal("regular_price_rs", { precision: 10, scale: 2 }).notNull(),
+    currentOrderCount: integer("current_order_count").default(0),
+    status: potluckStatusEnum("status").notNull(),
+    activatesAt: timestamp("activates_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    activatedAt: timestamp("activated_at", { withTimezone: true }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelReason: varchar("cancel_reason", { length: 100 }),
+    imageUrl: varchar("image_url", { length: 500 }),
+    city: varchar("city", { length: 100 }),
+    citySlug: varchar("city_slug", { length: 100 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+    index("idx_potluck_kitchen_status").on(table.kitchenId, table.status),
+    index("idx_potluck_active_city").on(table.citySlug, table.status, table.expiresAt),
+]);
+
+export const potluckOrders = pgTable("potluck_orders", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    potluckDealId: uuid("potluck_deal_id").notNull().references(() => potluckDeals.id),
+    customerId: uuid("customer_id").notNull().references(() => users.id),
+    orderId: uuid("order_id").references(() => orders.id),
+    quantity: integer("quantity").notNull().default(1),
+    totalAmountRs: decimal("total_amount_rs", { precision: 10, scale: 2 }).notNull(),
+    status: varchar("status", { length: 20 }).default('RESERVED'),
+    reservedAt: timestamp("reserved_at", { withTimezone: true }).defaultNow(),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+    uniqueIndex("uniq_potluck_customer").on(table.potluckDealId, table.customerId),
+]);
+
+// ─── Digital Khata ──────────────────────────────────────────────────────────
+
+export const khataEntries = pgTable("khata_entries", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    kitchenId: uuid("kitchen_id").notNull().references(() => kitchens.id),
+    cookId: uuid("cook_id").notNull().references(() => users.id),
+    entryType: khataEntryTypeEnum("entry_type").notNull(),
+    category: varchar("category", { length: 100 }).notNull(),
+    description: text("description").notNull(),
+    amountRs: decimal("amount_rs", { precision: 10, scale: 2 }).notNull(),
+    isCredit: boolean("is_credit").notNull(),
+    referenceId: uuid("reference_id"),
+    referenceType: varchar("reference_type", { length: 50 }),
+    entryDate: date("entry_date").notNull(),
+    isAutoGenerated: boolean("is_auto_generated").default(false),
+    isCancelled: boolean("is_cancelled").default(false),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    cancelReason: varchar("cancel_reason", { length: 200 }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+    index("idx_khata_kitchen_date").on(table.kitchenId, table.entryDate),
+    index("idx_khata_kitchen_type").on(table.kitchenId, table.entryType),
+]);
+
+// ─── Plan Usage Tracking ────────────────────────────────────────────────────
+
+export const planUsageLog = pgTable("plan_usage_log", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    kitchenId: uuid("kitchen_id").notNull(),
+    subscriptionId: uuid("subscription_id").notNull(),
+    actionType: varchar("action_type", { length: 50 }).notNull(),
+    currentUsage: integer("current_usage").notNull(),
+    limitValue: integer("limit_value"),
+    wasAllowed: boolean("was_allowed").notNull(),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+    index("idx_usage_log_kitchen_action").on(table.kitchenId, table.actionType, table.createdAt),
+]);

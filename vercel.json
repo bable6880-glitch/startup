@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/notification-cleanup",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/reset-order-counts",
+      "schedule": "0 19 1 * *"
+    },
+    {
+      "path": "/api/cron/expire-subscriptions",
+      "schedule": "30 0 * * *"
     }
   ]
 }

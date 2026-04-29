@@ -4,6 +4,7 @@ import {
     subscriptions,
     boosts,
     kitchens,
+    planConfigs,
 } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { cached, invalidateCache, CacheKeys, CacheTTL } from "@/lib/redis";
@@ -37,7 +38,7 @@ export type SubscriptionStatusResult = {
     | "EXPIRED"
     | "CANCELLED"
     | "NONE";
-    subscription: (typeof subscriptions.$inferSelect & { plan?: typeof premiumPlans.$inferSelect | null }) | null;
+    subscription: (typeof subscriptions.$inferSelect & { planConfig?: typeof planConfigs.$inferSelect | null }) | null;
     trialEndsAt: Date | null;
     isTrialUsed: boolean;
     daysRemaining: number;
@@ -112,7 +113,7 @@ export async function startFreeTrial(kitchenId: string, userId: string) {
         .values({
             userId,
             kitchenId,
-            planId: defaultPlan.id,
+            planId: "starter",
             planType: "BASE_MONTHLY",
             paymentMethod: "FREE_TRIAL",
             status: "TRIALING",
@@ -162,7 +163,7 @@ export async function getSubscriptionStatus(
             const subscription = await db.query.subscriptions.findFirst({
                 where: eq(subscriptions.kitchenId, kitchenId),
                 orderBy: [desc(subscriptions.createdAt)],
-                with: { plan: true },
+                with: { planConfig: true },
             });
 
             if (!subscription) {
@@ -444,7 +445,7 @@ export async function handleStripeEvent(event: Stripe.Event) {
             await db.insert(subscriptions).values({
                 userId,
                 kitchenId,
-                planId,
+                planId: planId as "starter" | "growth" | "pro" | "elite",
                 planType: (planType as SubscriptionPlanType) || "BASE_MONTHLY",
                 stripeSubscriptionId: (session.subscription as string) || null,
                 stripeCustomerId: (session.customer as string) || null,

@@ -333,7 +333,7 @@ function DashboardContent() {
                     </div>
 
                     {/* Quick Actions */}
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 mb-8">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8 mb-8">
                         <Link href="/dashboard/menu" className="rounded-2xl border border-neutral-200/60 bg-white p-4 shadow-sm hover:shadow-md transition-all group text-center dark:bg-neutral-800 dark:border-neutral-700">
                             <span className="text-2xl block">🍱</span>
                             <h3 className="mt-1 text-sm font-semibold text-neutral-900 group-hover:text-primary-600 dark:text-neutral-100">Menu</h3>
@@ -347,6 +347,14 @@ function DashboardContent() {
                                     {orders.filter(o => o.status === "PENDING").length}
                                 </span>
                             )}
+                        </Link>
+                        <Link href="/dashboard/potluck" className="rounded-2xl border border-blue-200/60 bg-gradient-to-br from-blue-50 to-white p-4 shadow-sm hover:shadow-md transition-all group text-center dark:from-blue-900/20 dark:to-neutral-800 dark:border-blue-800">
+                            <span className="text-2xl block">🍲</span>
+                            <h3 className="mt-1 text-sm font-semibold text-blue-700 dark:text-blue-300">Potluck</h3>
+                        </Link>
+                        <Link href="/dashboard/khata" className="rounded-2xl border border-green-200/60 bg-gradient-to-br from-green-50 to-white p-4 shadow-sm hover:shadow-md transition-all group text-center dark:from-green-900/20 dark:to-neutral-800 dark:border-green-800">
+                            <span className="text-2xl block">📒</span>
+                            <h3 className="mt-1 text-sm font-semibold text-green-700 dark:text-green-300">Khata</h3>
                         </Link>
                         <Link href="/dashboard/reviews" className="rounded-2xl border border-neutral-200/60 bg-white p-4 shadow-sm hover:shadow-md transition-all group text-center dark:bg-neutral-800 dark:border-neutral-700">
                             <span className="text-2xl block">⭐</span>
@@ -362,7 +370,7 @@ function DashboardContent() {
                         </Link>
                         <Link href="/explore" className="rounded-2xl border border-primary-200/60 bg-gradient-to-br from-primary-50 to-white p-4 shadow-sm hover:shadow-md transition-all group text-center dark:from-primary-900/20 dark:to-neutral-800 dark:border-primary-800">
                             <span className="text-2xl block">🔍</span>
-                            <h3 className="mt-1 text-sm font-semibold text-primary-700 dark:text-primary-300">Browse Kitchens</h3>
+                            <h3 className="mt-1 text-sm font-semibold text-primary-700 dark:text-primary-300">Browse</h3>
                         </Link>
                     </div>
 

@@ -24,16 +24,27 @@ export default function PlatformReviewWidget() {
     const { user, getIdToken } = useAuth();
     const isLoggedIn = !!user;
     const [stats, setStats] = useState<PlatformStats | null>(null);
+    const [kitchenCount, setKitchenCount] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const router = useRouter();
 
     const fetchStats = async () => {
         try {
-            const res = await fetch('/api/reviews/platform');
-            if (res.ok) {
-                const data = await res.json();
+            // Fetch review stats and platform stats in parallel
+            const [reviewRes, platformRes] = await Promise.all([
+                fetch('/api/reviews/platform'),
+                fetch('/api/stats'),
+            ]);
+            if (reviewRes.ok) {
+                const data = await reviewRes.json();
                 setStats(data.data);
+            }
+            if (platformRes.ok) {
+                const platformData = await platformRes.json();
+                if (platformData?.data?.kitchens != null) {
+                    setKitchenCount(platformData.data.kitchens);
+                }
             }
         } catch (error) {
             console.error('Failed to fetch platform stats', error);
@@ -64,6 +75,13 @@ export default function PlatformReviewWidget() {
 
     if (!stats) return null;
 
+    const formatKitchenCount = (n: number): string => {
+        if (n >= 1000) return `${Math.floor(n / 1000)}K+`;
+        if (n >= 100) return `${Math.floor(n / 100) * 100}+`;
+        if (n >= 10) return `${Math.floor(n / 10) * 10}+`;
+        return String(n);
+    };
+
     const mappedTestimonials = stats.recentReviews.map(r => ({
         id: r.id,
         name: r.user.name || "Anonymous",
@@ -76,7 +94,7 @@ export default function PlatformReviewWidget() {
     const derivedStats = [
         { value: stats.totalReviews >= 100 ? "100+" : stats.totalReviews, label: "Happy Customers" },
         { value: stats.averageRating.toFixed(1), label: "Average Rating" },
-        { value: "50+", label: "Verified Kitchens" } // Placeholder representing platform scale
+        { value: kitchenCount != null ? formatKitchenCount(kitchenCount) : "—", label: "Active Kitchens" },
     ];
     return (
         <div id="platform-reviews" className="relative w-full overflow-hidden">

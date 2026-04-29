@@ -4,9 +4,11 @@ import Link from "next/link";
 import SearchBar from "@/components/ui/SearchBar";
 import PlatformReviewWidget from "@/components/reviews/PlatformReviewWidget";
 import { FeaturedKitchens } from "@/components/home/FeaturedKitchens";
+import HomepageDynamicStats from "@/components/home/HomepageDynamicStats";
+import CityCards from "@/components/home/CityCards";
 import SeoImageSection from "@/components/home/SeoImageSection";
 import Image from "next/image";
-import { HeroBackground, SectionBackground } from "@/components/home/LandingBackground";
+import { HeroBackground } from "@/components/home/LandingBackground";
 
 export const metadata: Metadata = {
   title: 'Smart Tiffin – Daily Tiffin Service in Lahore, Karachi & Islamabad | From PKR 200',
@@ -64,38 +66,6 @@ export const metadata: Metadata = {
   },
 }
 
-const baseCities = [
-  { name: "Lahore", emoji: "🏙️" },
-  { name: "Karachi", emoji: "🌊" },
-  { name: "Islamabad", emoji: "🏔️" },
-  { name: "Rawalpindi", emoji: "🏢" },
-  { name: "Faisalabad", emoji: "🏭" },
-  { name: "Multan", emoji: "☀️" },
-];
-
-const features = [
-  {
-    icon: "🏠",
-    title: "Home-Cooked Quality",
-    desc: "Authentic meals prepared by local home cooks with love and care.",
-  },
-  {
-    icon: "💰",
-    title: "Affordable Prices",
-    desc: "No middleman fees. Direct prices from cook to customer.",
-  },
-  {
-    icon: "⭐",
-    title: "Verified & Rated",
-    desc: "Real reviews from real customers. Verified badge for trusted cooks.",
-  },
-  {
-    icon: "📱",
-    title: "Direct Contact",
-    desc: "Connect directly with cooks via WhatsApp. No app dependency.",
-  },
-];
-
 const howItWorks = [
   { step: "1", title: "Browse", desc: "Explore kitchens in your city. No login required." },
   { step: "2", title: "Choose", desc: "Pick your favorite meals from the menu." },
@@ -103,12 +73,7 @@ const howItWorks = [
   { step: "4", title: "Enjoy", desc: "Fresh home-cooked meal delivered to your door." },
 ];
 
-const cities = baseCities.map((city) => ({
-  ...city,
-  count: "10+", // Placeholder or static value, or we could just remove the count entirely.
-}));
-
-export const revalidate = 3600; // Cache homepage for 1 hour now that live stats are gone
+export const revalidate = 3600;
 
 export default async function HomePage() {
 
@@ -257,25 +222,19 @@ export default async function HomePage() {
               </Suspense>
             </div>
 
-            {/* Quick Stats — Features (No DB Fetch) */}
-            <div className="mt-10 flex flex-wrap justify-center gap-8 text-center animate-fade-in" style={{ animationDelay: "0.3s" }}>
-              <div>
-                <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">PKR 200+</p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">Starting Price</p>
+            {/* Quick Stats — Live from DB */}
+            <Suspense fallback={
+              <div className="mt-10 flex flex-wrap justify-center gap-8 text-center">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="min-w-[80px]">
+                    <div className="mx-auto h-7 w-16 rounded-lg bg-primary-200/50 animate-pulse dark:bg-primary-800/30 mb-1" />
+                    <div className="mx-auto h-4 w-20 rounded bg-neutral-200 animate-pulse dark:bg-neutral-700" />
+                  </div>
+                ))}
               </div>
-              <div>
-                <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">5km</p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">Delivery Range</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">0%</p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">Commission</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-primary-600 dark:text-primary-400">100%</p>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">Home Cooked</p>
-              </div>
-            </div>
+            }>
+              <HomepageDynamicStats />
+            </Suspense>
           </div>
         </div>
       </section>
@@ -295,31 +254,10 @@ export default async function HomePage() {
         priority
       />
 
-      {/* ── Browse by City ──────────────────────────────────────── */}
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="text-center mb-10">
-          <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl dark:text-neutral-50">
-            Browse by City
-          </h2>
-          <p className="mt-2 text-neutral-500 dark:text-neutral-400">
-            Find home kitchens near you
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          {cities.map((city) => (
-            <Link
-              key={city.name}
-              href={`/city/${city.name.toLowerCase()}`}
-              className="group flex flex-col items-center rounded-2xl bg-white border border-neutral-200/60 p-6 shadow-sm hover:shadow-lg hover:border-primary-300 transition-all duration-300 hover:-translate-y-1 dark:bg-neutral-800 dark:border-neutral-700 dark:hover:border-primary-600"
-            >
-              <span className="text-3xl mb-2 group-hover:scale-110 transition-transform">{city.emoji}</span>
-              <span className="font-semibold text-neutral-900 dark:text-neutral-100">{city.name}</span>
-              <span className="text-xs text-neutral-400 mt-1">{city.count} kitchens</span>
-            </Link>
-          ))}
-        </div>
-      </section>
+      {/* ── Browse by City (Live counts) ──────────────────────────── */}
+      <Suspense fallback={<div className="h-64 w-full max-w-7xl mx-auto animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded-2xl my-16" />}>
+        <CityCards />
+      </Suspense>
 
       {/* ── How It Works ────────────────────────────────────────── */}
       <section className="relative bg-neutral-50 dark:bg-neutral-900">

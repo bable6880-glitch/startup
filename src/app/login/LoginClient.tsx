@@ -2,14 +2,37 @@
 
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
+
+type PlatformStats = {
+    kitchens: number;
+    customers: number;
+    cities: number;
+};
+
+function formatStat(n: number): string {
+    if (n >= 1000) return `${Math.floor(n / 1000)}K+`;
+    if (n >= 100) return `${Math.floor(n / 100) * 100}+`;
+    if (n >= 10) return `${Math.floor(n / 10) * 10}+`;
+    return String(n);
+}
 
 function LoginContent() {
     const { user, userProfile, loading, error, signInWithGoogle } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
     const redirect = searchParams.get("redirect") || "/explore";
+    const [stats, setStats] = useState<PlatformStats | null>(null);
+
+    useEffect(() => {
+        fetch("/api/stats")
+            .then((res) => (res.ok ? res.json() : null))
+            .then((json) => {
+                if (json?.data) setStats(json.data);
+            })
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         if (loading) return; // wait, do not redirect
@@ -48,6 +71,14 @@ function LoginContent() {
         );
     }
 
+    const heroStats = stats
+        ? [
+              { value: formatStat(stats.kitchens), label: "Home Kitchens" },
+              { value: formatStat(stats.customers), label: "Happy Customers" },
+              { value: String(stats.cities), label: "Cities" },
+          ]
+        : null;
+
     return (
         <div className="min-h-[calc(100vh-80px)] flex">
             {/* ── Left: Hero Panel ── */}
@@ -72,18 +103,21 @@ function LoginContent() {
                     </p>
 
                     <div className="mt-10 flex gap-8">
-                        <div>
-                            <p className="text-3xl font-bold">500+</p>
-                            <p className="text-sm text-primary-200">Home Kitchens</p>
-                        </div>
-                        <div>
-                            <p className="text-3xl font-bold">10K+</p>
-                            <p className="text-sm text-primary-200">Happy Customers</p>
-                        </div>
-                        <div>
-                            <p className="text-3xl font-bold">6</p>
-                            <p className="text-sm text-primary-200">Cities</p>
-                        </div>
+                        {heroStats ? (
+                            heroStats.map((s) => (
+                                <div key={s.label}>
+                                    <p className="text-3xl font-bold">{s.value}</p>
+                                    <p className="text-sm text-primary-200">{s.label}</p>
+                                </div>
+                            ))
+                        ) : (
+                            [1, 2, 3].map((i) => (
+                                <div key={i}>
+                                    <div className="h-8 w-14 rounded-lg bg-white/20 animate-pulse mb-1" />
+                                    <div className="h-3 w-20 rounded bg-white/10 animate-pulse" />
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             </div>

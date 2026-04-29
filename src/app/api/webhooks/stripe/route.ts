@@ -1,8 +1,95 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handleStripeEvent } from "@/services/premium.service";
+import { db } from "@/lib/db";
+import { subscriptions, kitchens, planConfigs } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 import { stripe } from "@/lib/stripe";
 import type Stripe from "stripe";
-import { redis } from "@/lib/redis/index";
+import { Redis } from "@upstash/redis";
+
+const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    })
+    : null;
+
+async function handleWebhookEventInline(event: Stripe.Event) {
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const metadata = session.metadata;
+        if (!metadata || !metadata.kitchenId || !metadata.planId) return;
+
+        const planConfig = await db.query.planConfigs.findFirst({
+            where: eq(planConfigs.planId, metadata.planId as any),
+        });
+        if (!planConfig) return;
+
+        const now = new Date();
+        const periodEnd = new Date(now);
+        periodEnd.setMonth(periodEnd.getMonth() + planConfig.billingPeriodMonths);
+
+        // Check if existing sub
+        const existing = await db.query.subscriptions.findFirst({
+            where: and(eq(subscriptions.kitchenId, metadata.kitchenId), eq(subscriptions.status, 'ACTIVE'))
+        });
+
+        if (!existing) {
+            await db.insert(subscriptions).values({
+                userId: metadata.cookId,
+                kitchenId: metadata.kitchenId,
+                planId: metadata.planId as any,
+                planType: "BASE_MONTHLY", // legacy field
+                status: 'ACTIVE',
+                paymentMethod: 'STRIPE',
+                stripeSubscriptionId: typeof session.subscription === 'string' ? session.subscription : null,
+                stripeCustomerId: typeof session.customer === 'string' ? session.customer : null,
+                currentPeriodStart: now,
+                currentPeriodEnd: periodEnd,
+                autoRenew: !!session.subscription,
+                potluckUsesRemaining: planConfig.potluckUsesPerPeriod === -1 ? 9999 : planConfig.potluckUsesPerPeriod,
+            });
+
+            // Set kitchen active
+            await db.update(kitchens).set({ status: 'ACTIVE' }).where(eq(kitchens.id, metadata.kitchenId));
+            
+            if (planConfig.featuredBoostLevel !== 'none' && planConfig.featuredBoostLevel !== null) {
+                // Set boost
+                await db.update(kitchens).set({ boostPriority: planConfig.sortOrder, boostExpiresAt: periodEnd }).where(eq(kitchens.id, metadata.kitchenId));
+            }
+        }
+    } else if (event.type === 'customer.subscription.updated') {
+        const subscription = event.data.object as Stripe.Subscription;
+        
+        const statusMap: Record<string, string> = {
+            active: "ACTIVE",
+            past_due: "PAST_DUE",
+            trialing: "TRIALING",
+            canceled: "CANCELLED",
+            unpaid: "SUSPENDED",
+        };
+
+        const mappedStatus = statusMap[subscription.status] || "PAST_DUE";
+        
+        await db.update(subscriptions)
+            .set({
+                status: mappedStatus as any,
+                currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
+                updatedAt: new Date()
+            })
+            .where(eq(subscriptions.stripeSubscriptionId, subscription.id));
+            
+    } else if (event.type === 'customer.subscription.deleted') {
+        const subscription = event.data.object as Stripe.Subscription;
+        
+        await db.update(subscriptions)
+            .set({
+                status: 'CANCELLED',
+                cancelledAt: new Date(),
+                updatedAt: new Date()
+            })
+            .where(eq(subscriptions.stripeSubscriptionId, subscription.id));
+    }
+}
 
 /**
  * POST /api/webhooks/stripe
@@ -61,7 +148,7 @@ export async function POST(request: NextRequest) {
         await redis.set(idempotencyKey, "processing", { ex: 86400 });
 
         try {
-            await handleStripeEvent(event);
+            await handleWebhookEventInline(event);
             // Mark as fully processed
             await redis.set(idempotencyKey, "done", { ex: 86400 });
         } catch (error) {

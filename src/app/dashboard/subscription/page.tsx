@@ -53,11 +53,10 @@ function SubscriptionContent() {
 
     const statusParam = searchParams.get("status");
 
-    const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(
-        null
-    );
+    const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
+    const [plans, setPlans] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedPlan, setSelectedPlan] = useState<PlanKey>("BASE_MONTHLY");
+    const [selectedPlan, setSelectedPlan] = useState<string>("starter");
     const [selectedPayment, setSelectedPayment] = useState("STRIPE");
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [trialLoading, setTrialLoading] = useState(false);
@@ -79,21 +78,28 @@ function SubscriptionContent() {
     }, [statusParam]);
 
     // Load subscription status
-    const loadStatus = useCallback(async () => {
+    const loadData = useCallback(async () => {
         try {
             const token = await getIdToken();
             if (!token) return;
 
-            const res = await fetch("/api/seller/subscription/status", {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const [statusRes, plansRes] = await Promise.all([
+                fetch("/api/seller/subscription/status", {
+                    headers: { Authorization: `Bearer ${token}` },
+                }),
+                fetch("/api/plans")
+            ]);
 
-            if (res.ok) {
-                const data = await res.json();
+            if (statusRes.ok) {
+                const data = await statusRes.json();
                 setSubStatus(data.data);
             }
+            if (plansRes.ok) {
+                const data = await plansRes.json();
+                setPlans(data.plans || []);
+            }
         } catch (err) {
-            console.error("Failed to load subscription status:", err);
+            console.error("Failed to load subscription data:", err);
         } finally {
             setLoading(false);
         }
@@ -104,8 +110,8 @@ function SubscriptionContent() {
             router.push("/login?redirect=/dashboard/subscription");
             return;
         }
-        if (user) loadStatus();
-    }, [user, authLoading, router, loadStatus]);
+        if (user) loadData();
+    }, [user, authLoading, router, loadData]);
 
     // ── Start Free Trial ──
     const handleStartTrial = async () => {
@@ -127,7 +133,7 @@ function SubscriptionContent() {
                 setSuccessMessage(
                     "🎉 Your 30-day free trial has started!"
                 );
-                await loadStatus();
+                await loadData();
             } else {
                 const data = await res.json();
                 setError(data.error?.message || "Failed to start trial");
@@ -154,7 +160,7 @@ function SubscriptionContent() {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    planType: selectedPlan,
+                    planId: selectedPlan,
                     paymentMethod: selectedPayment,
                 }),
             });
@@ -204,7 +210,7 @@ function SubscriptionContent() {
                 );
                 setShowCancelModal(false);
                 setCancelReason("");
-                await loadStatus();
+                await loadData();
             } else {
                 const data = await res.json();
                 setError(data.error?.message || "Failed to cancel");
@@ -377,20 +383,15 @@ function SubscriptionContent() {
                         ? "Switch Plan"
                         : "Choose Your Plan"}
                 </h2>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    {(
-                        Object.entries(SUBSCRIPTION_PLANS) as [
-                            PlanKey,
-                            (typeof SUBSCRIPTION_PLANS)[PlanKey],
-                        ][]
-                    ).map(([key, plan]) => {
-                        const isSelected = selectedPlan === key;
-                        const isRecommended = key === "BASE_2MONTH";
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {plans.map((plan) => {
+                        const isSelected = selectedPlan === plan.planId;
+                        const isRecommended = plan.planId === "pro";
 
                         return (
                             <button
-                                key={key}
-                                onClick={() => setSelectedPlan(key)}
+                                key={plan.id}
+                                onClick={() => setSelectedPlan(plan.planId)}
                                 className={`relative rounded-2xl border-2 p-5 text-left transition-all ${isSelected
                                     ? "border-primary-500 bg-primary-50/50 shadow-md dark:bg-primary-900/20"
                                     : "border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm dark:bg-neutral-800 dark:border-neutral-700 dark:hover:border-neutral-600"
@@ -403,7 +404,7 @@ function SubscriptionContent() {
                                 )}
                                 <div className="mb-3">
                                     <h3 className="font-bold text-neutral-900 dark:text-neutral-50">
-                                        {plan.label}
+                                        {plan.displayName}
                                     </h3>
                                     <p className="text-xs text-neutral-500 dark:text-neutral-400">
                                         {plan.description}
@@ -411,11 +412,11 @@ function SubscriptionContent() {
                                 </div>
                                 <div className="mb-2">
                                     <span className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
-                                        {plan.displayPrice}
+                                        Rs {plan.priceRs}
                                     </span>
                                 </div>
                                 <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                                    {plan.perMonthDisplay}
+                                    /{plan.billingPeriodMonths === 1 ? 'month' : `${plan.billingPeriodMonths} months`}
                                 </p>
                                 {isSelected && (
                                     <div className="absolute top-4 right-4 flex h-6 w-6 items-center justify-center rounded-full bg-primary-500 text-white text-xs">
@@ -487,9 +488,9 @@ function SubscriptionContent() {
                             <Spinner /> Processing…
                         </span>
                     ) : hasActiveSub ? (
-                        `Switch to ${SUBSCRIPTION_PLANS[selectedPlan].label} Plan`
+                        `Switch to ${plans.find(p => p.planId === selectedPlan)?.displayName || 'Selected'} Plan`
                     ) : (
-                        `Subscribe — ${SUBSCRIPTION_PLANS[selectedPlan].displayPrice}`
+                        `Subscribe — Rs ${plans.find(p => p.planId === selectedPlan)?.priceRs || 0}`
                     )}
                 </button>
                 <button
