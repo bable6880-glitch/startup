@@ -116,13 +116,15 @@ function buildPlanAccess(
 
 // Fallback logic for FREE tier (or missing subscription)
 async function buildFreeAccess(kitchenId: string): Promise<PlanAccess> {
-    let freeConfig = await db.query.planConfigs.findFirst({
+    const fetchedConfig = await db.query.planConfigs.findFirst({
         where: eq(planConfigs.planId, 'starter')
     });
 
-    if (!freeConfig) {
+    let configToUse = fetchedConfig;
+
+    if (!configToUse) {
         logger.warn("Starter plan config not found in DB. Using fallback.");
-        freeConfig = {
+        configToUse = {
             id: 'fallback-starter',
             planId: 'starter',
             displayName: 'Starter',
@@ -148,14 +150,16 @@ async function buildFreeAccess(kitchenId: string): Promise<PlanAccess> {
         } as any;
     }
 
+    const finalConfig = configToUse!;
+
     return {
         planId: 'starter',
-        planConfig: freeConfig as any,
+        planConfig: finalConfig as any,
         subscription: null,
 
         canAddMenuItem: (currentCount) => {
-            if (freeConfig.menuItemLimit === null) return true;
-            return currentCount < freeConfig.menuItemLimit;
+            if (finalConfig.menuItemLimit === null) return true;
+            return currentCount < finalConfig.menuItemLimit;
         },
         
         // Free tier without active sub cannot place orders
@@ -169,7 +173,7 @@ async function buildFreeAccess(kitchenId: string): Promise<PlanAccess> {
         
         getRemainingPotlucks: () => 0,
         
-        getCommissionRate: () => Number(freeConfig.commissionRate),
+        getCommissionRate: () => Number(finalConfig.commissionRate),
         
         getBoostLevel: () => 'none',
         

@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (!planConfig) {
-            return NextResponse.json({ error: "Plan configuration not found" }, { status: 404 });
+            return NextResponse.json({ error: "Plan configuration not found. Please ensure your database is seeded with Stripe price IDs." }, { status: 404 });
         }
 
         if (!planConfig.stripePriceId) {
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         if (redis) {
             const existingUrl = await redis.get<string>(idempotencyKey);
             if (existingUrl) {
-                return NextResponse.json({ url: existingUrl });
+                return NextResponse.json({ success: true, data: { url: existingUrl } });
             }
         }
 
@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
         const session = await stripe.checkout.sessions.create({
             mode: isRecurring ? 'subscription' : 'payment',
             line_items: [{ price: planConfig.stripePriceId, quantity: 1 }],
-            success_url: `${baseUrl}/dashboard/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${baseUrl}/dashboard/subscription`,
+            success_url: `${baseUrl}/dashboard/subscription?status=success`,
+            cancel_url: `${baseUrl}/dashboard/subscription?status=cancelled`,
             metadata: {
                 kitchenId: kitchen.id,
                 cookId: user.id,
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
             await redis.set(idempotencyKey, session.url, { ex: 30 * 60 }); // 30 mins TTL
         }
 
-        return NextResponse.json({ url: session.url });
+        return NextResponse.json({ success: true, data: { url: session.url } });
     } catch (error) {
         logger.error("Checkout session creation failed", { error });
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
