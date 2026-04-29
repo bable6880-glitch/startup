@@ -116,17 +116,41 @@ function buildPlanAccess(
 
 // Fallback logic for FREE tier (or missing subscription)
 async function buildFreeAccess(kitchenId: string): Promise<PlanAccess> {
-    const freeConfig = await db.query.planConfigs.findFirst({
+    let freeConfig = await db.query.planConfigs.findFirst({
         where: eq(planConfigs.planId, 'starter')
     });
 
     if (!freeConfig) {
-        throw new Error("Starter plan config not found in DB. Did you seed the plans?");
+        logger.warn("Starter plan config not found in DB. Using fallback.");
+        freeConfig = {
+            id: 'fallback-starter',
+            planId: 'starter',
+            displayName: 'Starter',
+            description: 'Basic features for new kitchens',
+            priceRs: 0,
+            billingPeriodMonths: 1,
+            commissionRate: "10.00",
+            menuItemLimit: 10,
+            monthlyOrderLimit: 30,
+            featuredBoostLevel: 'none',
+            prioritySupport: false,
+            brandingTools: false,
+            promotionsLevel: 'none',
+            advancedAnalytics: false,
+            aiPricing: false,
+            autoWhatsApp: false,
+            dedicatedManager: false,
+            chefAssistant: false,
+            digitalKhata: false,
+            potluckUsesPerPeriod: 0,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        } as any;
     }
 
     return {
         planId: 'starter',
-        planConfig: freeConfig,
+        planConfig: freeConfig as any,
         subscription: null,
 
         canAddMenuItem: (currentCount) => {

@@ -15,7 +15,7 @@ export const createMealSchema = z.object({
         .positive("Price must be positive"),
     currency: z.string().length(3).default("PKR"),
     imageUrl: z.string().url().optional(),
-    images: z.array(z.string().url()).max(5).optional(),
+    images: z.array(z.string().url()).min(1, "At least 1 image is required").max(3, "Maximum 3 images allowed"),
 
     // Category
     category: z

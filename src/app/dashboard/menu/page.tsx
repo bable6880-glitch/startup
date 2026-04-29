@@ -17,6 +17,7 @@ type Meal = {
     category: "breakfast" | "lunch" | "dinner" | "snack" | "dessert" | "beverage" | "thali" | "other" | undefined;
     isAvailable: boolean;
     imageUrl: string | null;
+    images: string[] | null;
     dietaryTags: string[] | null;
 };
 
@@ -39,7 +40,7 @@ export default function MenuManagementPage() {
     const [pageError, setPageError] = useState<string | null>(null);
     
     // Image Upload
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -95,11 +96,13 @@ export default function MenuManagementPage() {
             setValue("category", meal.category);
             setValue("isAvailable", meal.isAvailable);
             setValue("imageUrl", meal.imageUrl || undefined);
-            setImagePreview(meal.imageUrl);
+            const imgs = meal.images || (meal.imageUrl ? [meal.imageUrl] : []);
+            setValue("images", imgs);
+            setImagePreviews(imgs);
         } else {
             setEditingMeal(null);
-            reset({ isAvailable: true });
-            setImagePreview(null);
+            reset({ isAvailable: true, images: [] });
+            setImagePreviews([]);
         }
         setFormError(null);
         setIsModalOpen(true);
@@ -108,8 +111,8 @@ export default function MenuManagementPage() {
     const closeModal = () => {
         setIsModalOpen(false);
         setEditingMeal(null);
-        reset();
-        setImagePreview(null);
+        reset({ isAvailable: true, images: [] });
+        setImagePreviews([]);
         setFormError(null);
     };
 
@@ -117,6 +120,11 @@ export default function MenuManagementPage() {
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        if (imagePreviews.length >= 3) {
+            setFormError("Maximum 3 images allowed.");
+            return;
+        }
 
         if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
             setFormError("Invalid format. Only JPG, PNG, WebP allowed.");
@@ -126,10 +134,6 @@ export default function MenuManagementPage() {
             setFormError("Image max size is 5MB.");
             return;
         }
-
-        const reader = new FileReader();
-        reader.onload = (ev) => setImagePreview(ev.target?.result as string);
-        reader.readAsDataURL(file);
 
         setUploading(true);
         setFormError(null);
@@ -143,16 +147,31 @@ export default function MenuManagementPage() {
             });
             if (res.ok) {
                 const { data } = await res.json();
-                setValue("imageUrl", data.url);
+                const newImages = [...imagePreviews, data.url];
+                setImagePreviews(newImages);
+                setValue("images", newImages);
+                if (newImages.length === 1) {
+                    setValue("imageUrl", data.url);
+                }
             } else {
-                setImagePreview(null);
                 setFormError("Image upload failed.");
             }
         } catch {
-            setImagePreview(null);
             setFormError("Upload network error.");
         } finally {
             setUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    const removeImage = (index: number) => {
+        const newImages = imagePreviews.filter((_, i) => i !== index);
+        setImagePreviews(newImages);
+        setValue("images", newImages);
+        if (newImages.length > 0) {
+            setValue("imageUrl", newImages[0]);
+        } else {
+            setValue("imageUrl", undefined);
         }
     };
 
@@ -294,8 +313,9 @@ export default function MenuManagementPage() {
             category: "other",
             isAvailable: true,
             dietaryTags: [],
+            images: [],
         });
-        setImagePreview(null);
+        setImagePreviews([]);
         setFormError(null);
         setIsModalOpen(true);
     };
@@ -538,40 +558,50 @@ export default function MenuManagementPage() {
                             
                             <form id="mealForm" onSubmit={handleSubmit(onSubmit as never)} className="space-y-6">
                                 {/* Image Uploader */}
-                                <div className="flex flex-col items-center sm:items-start gap-4 sm:flex-row">
-                                    <button
-                                        type="button"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="relative w-32 h-32 shrink-0 rounded-2xl border-2 border-dashed border-neutral-300 hover:border-primary-400 hover:bg-primary-50/50 transition-colors overflow-hidden bg-neutral-50 dark:bg-neutral-800 dark:border-neutral-700 group"
-                                    >
-                                        {imagePreview ? (
-                                            <>
-                                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                    <span className="text-white text-xs font-bold uppercase shrink-0">Change</span>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center h-full text-neutral-400 group-hover:text-primary-500">
-                                                <ImageIcon className="w-8 h-8 mb-2" />
-                                                <span className="text-xs font-medium">Upload Photo</span>
-                                            </div>
-                                        )}
-                                        {uploading && (
-                                            <div className="absolute inset-0 bg-neutral-900/60 backdrop-blur-sm flex items-center justify-center text-white">
-                                                <Loader2 className="w-6 h-6 animate-spin" />
-                                            </div>
-                                        )}
-                                    </button>
-                                    <div className="flex-1 space-y-1 text-center sm:text-left">
-                                        <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Item Photo</p>
-                                        <p className="text-xs text-neutral-500 leading-relaxed dark:text-neutral-400">High quality images generate 30% more orders. Use a clear, well-lit, and appetizing photo.</p>
-                                        <p className="text-xs font-medium text-neutral-400 pt-1">JPG, PNG up to 5MB.</p>
-                                        <input
-                                            ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
-                                            onChange={handleImageUpload} className="hidden"
-                                        />
+                                <div>
+                                    <div className="flex justify-between items-end mb-2">
+                                        <div>
+                                            <label className="block text-sm font-bold text-neutral-700 dark:text-neutral-300">Item Photos (Required) *</label>
+                                            <p className="text-xs text-neutral-500 mt-1 dark:text-neutral-400">Add up to 3 photos. First photo is the main display. JPG, PNG up to 5MB.</p>
+                                        </div>
+                                        <span className="text-xs font-bold text-neutral-400">{imagePreviews.length}/3</span>
                                     </div>
+                                    
+                                    <div className="flex flex-wrap gap-4 mt-3">
+                                        {imagePreviews.map((preview, idx) => (
+                                            <div key={idx} className="relative w-28 h-28 shrink-0 rounded-2xl border border-neutral-200 overflow-hidden shadow-sm dark:border-neutral-700 group">
+                                                <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <button type="button" onClick={() => removeImage(idx)} className="p-2 bg-red-500 hover:bg-red-600 rounded-full text-white transition-colors">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                                {idx === 0 && (
+                                                    <div className="absolute top-1 left-1 bg-primary-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow">Main</div>
+                                                )}
+                                            </div>
+                                        ))}
+
+                                        {imagePreviews.length < 3 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                disabled={uploading}
+                                                className="relative w-28 h-28 shrink-0 rounded-2xl border-2 border-dashed border-neutral-300 hover:border-primary-400 hover:bg-primary-50/50 transition-colors bg-neutral-50 flex flex-col items-center justify-center text-neutral-400 hover:text-primary-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-neutral-800 dark:border-neutral-700 group"
+                                            >
+                                                {uploading ? (
+                                                    <Loader2 className="w-6 h-6 animate-spin text-primary-500" />
+                                                ) : (
+                                                    <>
+                                                        <Plus className="w-6 h-6 mb-1" />
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider">Add Photo</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                    <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageUpload} className="hidden" />
+                                    {errors.images && <p className="mt-2 text-xs font-medium text-red-500">{errors.images.message}</p>}
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
