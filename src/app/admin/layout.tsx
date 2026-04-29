@@ -1,5 +1,4 @@
 import { Metadata } from 'next'
-import AccountClientLayout from './AccountClientLayout'
 
 export const metadata: Metadata = {
   robots: {
@@ -13,6 +12,6 @@ export const metadata: Metadata = {
   },
 }
 
-export default function AccountLayout({ children }: { children: React.ReactNode }) {
-  return <AccountClientLayout>{children}</AccountClientLayout>
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return <>{children}</>
 }

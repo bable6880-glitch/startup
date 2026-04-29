@@ -14,8 +14,7 @@ export const metadata: Metadata = {
   description: 'Pakistan\'s home food marketplace. Fresh daily tiffin from trusted home cooks.',
   manifest: '/manifest.json',
   verification: {
-    // Add Google Search Console verification later
-    // google: 'your-verification-code',
+    google: 'REPLACE_WITH_YOUR_CODE',
   },
 };
 

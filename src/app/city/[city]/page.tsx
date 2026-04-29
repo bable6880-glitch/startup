@@ -5,24 +5,27 @@ import type { Metadata } from "next";
 
 type Props = { params: Promise<{ city: string }> };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-    const { city } = await params;
-    const name = city.charAt(0).toUpperCase() + city.slice(1);
-    const title = `Tiffin Service in ${name} – Order Fresh Home Cooked Food | Smart Tiffin`;
-    const description = `Looking for affordable tiffin service in ${name}? Order daily fresh home-cooked meals (ghar ka khana) from trusted local home kitchens starting from PKR 200.`;
+export async function generateMetadata({
+    params
+  }: { params: { city: string } }):
+    Promise<Metadata> {
+    
+    const cityName = params.city
+      .charAt(0).toUpperCase() +
+      params.city.slice(1)
+    
     return {
-        title,
-        description,
-        alternates: {
-            canonical: `https://smarttiffinfood.vercel.app/city/${city}`,
-        },
-        openGraph: {
-            title,
-            description,
-            type: "website",
-            url: `https://smarttiffinfood.vercel.app/city/${city}`,
-        }
-    };
+      title: `Home Cooked Tiffin Service in ${cityName} – Fresh Daily Meals | Smart Tiffin`,
+      description: `Find affordable daily tiffin service in ${cityName}. Fresh ghar ka khana from trusted home cooks. Starting from PKR 200.`,
+      alternates: {
+        canonical: `https://smarttiffinfood.vercel.app/city/${params.city}`,
+      },
+      openGraph: {
+        title: `Tiffin Service in ${cityName} | Smart Tiffin`,
+        description: `Home cooked meals in ${cityName} from PKR 200`,
+        url: `https://smarttiffinfood.vercel.app/city/${params.city}`,
+      },
+    }
 }
 
 // ISR – regenerate every 5 min for SEO

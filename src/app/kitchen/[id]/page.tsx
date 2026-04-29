@@ -217,7 +217,7 @@ async function KitchenContent({ id }: { id: string }) {
                         areaServed: kitchen.city || "Pakistan",
                         ...(kitchen.addressLine ? { address: { "@type": "PostalAddress", streetAddress: kitchen.addressLine, addressLocality: kitchen.city || "" } } : {}),
                         ...(kitchen.coverImageUrl ? { image: kitchen.coverImageUrl } : {}),
-                        ...(Number(kitchen.reviewCount) > 0
+                        ...(Number(kitchen.reviewCount) > 0 && Number(kitchen.avgRating) > 0
                             ? {
                                 aggregateRating: {
                                     "@type": "AggregateRating",
