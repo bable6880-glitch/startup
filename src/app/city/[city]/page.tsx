@@ -7,23 +7,24 @@ type Props = { params: Promise<{ city: string }> };
 
 export async function generateMetadata({
     params
-  }: { params: { city: string } }):
+  }: { params: Promise<{ city: string }> }):
     Promise<Metadata> {
     
-    const cityName = params.city
+    const { city } = await params;
+    const cityName = city
       .charAt(0).toUpperCase() +
-      params.city.slice(1)
+      city.slice(1)
     
     return {
       title: `Home Cooked Tiffin Service in ${cityName} – Fresh Daily Meals | Smart Tiffin`,
       description: `Find affordable daily tiffin service in ${cityName}. Fresh ghar ka khana from trusted home cooks. Starting from PKR 200.`,
       alternates: {
-        canonical: `https://smarttiffinfood.vercel.app/city/${params.city}`,
+        canonical: `https://smarttiffinfood.vercel.app/city/${city}`,
       },
       openGraph: {
         title: `Tiffin Service in ${cityName} | Smart Tiffin`,
         description: `Home cooked meals in ${cityName} from PKR 200`,
-        url: `https://smarttiffinfood.vercel.app/city/${params.city}`,
+        url: `https://smarttiffinfood.vercel.app/city/${city}`,
       },
     }
 }

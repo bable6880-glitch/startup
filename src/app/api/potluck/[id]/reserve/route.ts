@@ -9,7 +9,7 @@ import { getAuthUser } from "@/lib/auth/get-auth-user";
 
 export async function POST(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const user = await getAuthUser(req);
@@ -17,7 +17,8 @@ export async function POST(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const dealId = params.id;
+        const { id } = await params;
+        const dealId = id;
         const body = await req.json();
         const parsed = reservePotluckSchema.safeParse(body);
 

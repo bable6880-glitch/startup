@@ -8,14 +8,15 @@ import { redis } from "@/lib/redis/index";
 
 export async function PATCH(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const guard = await requireSeller(req);
         if (!guard.ok) return guard.response;
         const { kitchen } = guard;
 
-        const dealId = params.id;
+        const { id } = await params;
+        const dealId = id;
         const body = await req.json();
         
         // Allowed updates
