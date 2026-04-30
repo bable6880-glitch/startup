@@ -818,6 +818,10 @@ export const planConfigs = pgTable("plan_configs", {
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
+export const planConfigsRelations = relations(planConfigs, ({ many }) => ({
+    subscriptions: many(subscriptions),
+}));
+
 // ─── Commission Ledger ──────────────────────────────────────────────────────
 
 export const commissionLedger = pgTable("commission_ledger", {
