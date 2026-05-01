@@ -8,6 +8,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { createMealSchema, type CreateMealInput } from "@/lib/validations/menu";
 import { Loader2, Plus, Edit2, Trash2, X, Image as ImageIcon, Search } from "lucide-react";
 import { BackButton } from "@/components/ui/BackButton";
+import { usePlanAccess } from "@/hooks/use-plan-access";
+import { FeatureGate } from "@/components/plans/FeatureGate";
 
 type Meal = {
     id: string;
@@ -29,6 +31,7 @@ export default function MenuManagementPage() {
     const [meals, setMeals] = useState<Meal[]>([]);
     const [kitchenId, setKitchenId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const { data: planData } = usePlanAccess();
     const [searchQuery, setSearchQuery] = useState("");
     const [activeCategory, setActiveCategory] = useState("all");
     
@@ -330,18 +333,29 @@ export default function MenuManagementPage() {
                     <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Add, edit, or remove your delicious offerings.</p>
                 </div>
                 <div className="flex gap-3">
-                    <button
-                        onClick={() => {
-                            setAiCuisine("");
-                            setAiSuggestions([]);
-                            setAiTips(null);
-                            setAiError(null);
-                            setIsAiModalOpen(true);
-                        }}
-                        className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm shadow-purple-500/30 hover:shadow-md transition-all active:scale-95"
+                    <FeatureGate
+                        feature="cook_helper_ai"
+                        currentPlanId={planData?.planId ?? null}
+                        requiredPlan="growth"
+                        fallback={
+                            <button disabled className="flex items-center gap-2 rounded-xl bg-gray-100 px-5 py-2.5 text-sm font-bold text-gray-400 shadow-sm transition-all cursor-not-allowed">
+                                🔒 AI Chef (Growth+)
+                            </button>
+                        }
                     >
-                        <span className="text-lg">✨</span> AI Chef Assistant
-                    </button>
+                        <button
+                            onClick={() => {
+                                setAiCuisine("");
+                                setAiSuggestions([]);
+                                setAiTips(null);
+                                setAiError(null);
+                                setIsAiModalOpen(true);
+                            }}
+                            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm shadow-purple-500/30 hover:shadow-md transition-all active:scale-95"
+                        >
+                            <span className="text-lg">✨</span> AI Chef Assistant
+                        </button>
+                    </FeatureGate>
                     <button
                         onClick={() => openModal()}
                         className="flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm shadow-primary-500/30 hover:bg-primary-700 transition-all active:scale-95"

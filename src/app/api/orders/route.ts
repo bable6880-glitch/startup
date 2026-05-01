@@ -123,13 +123,15 @@ export async function POST(request: NextRequest) {
             return apiBadRequest("Kitchen not found or unavailable");
         }
 
-        // CHANGED [H2]: Check subscription status — kitchen must have active subscription
-        const { getSubscriptionStatus } = await import("@/services/premium.service");
-        const subStatus = await getSubscriptionStatus(kitchenId);
-        if (!subStatus.canAcceptOrders) {
-            return apiBadRequest(
-                "This kitchen's subscription is not active. The cook needs to renew to accept orders."
-            );
+        // Plan enforcement: check cook's monthly order limit
+        const { guardOrderLimit } = await import("@/lib/plans/plan-guards");
+        try {
+            await guardOrderLimit(kitchenId);
+        } catch (limitErr: any) {
+            if (limitErr.name === 'PlanLimitError') {
+                return apiBadRequest(limitErr.message);
+            }
+            throw limitErr;
         }
 
         // Auto-resolve delivery mode from kitchen's configured options

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { potluckDeals } from "@/lib/db/schema";
+import { potluckDeals, potluckOrders } from "@/lib/db/schema";
 import { lt, eq, and } from "drizzle-orm";
 import { logger } from "@/lib/utils/logger";
 import { Redis } from "@upstash/redis";
@@ -58,7 +58,37 @@ export async function GET(req: Request) {
                 })
                 .where(eq(potluckDeals.id, deal.id));
             expireCount++;
-            
+            // Cancel associated RESERVED orders and notify customers
+            const reservedOrders = await db.query.potluckOrders.findMany({
+                where: and(
+                    eq(potluckOrders.potluckDealId, deal.id),
+                    eq(potluckOrders.status, 'RESERVED')
+                )
+            });
+
+            if (reservedOrders.length > 0) {
+                await db.update(potluckOrders)
+                    .set({ status: 'CANCELLED' })
+                    .where(
+                        and(
+                            eq(potluckOrders.potluckDealId, deal.id),
+                            eq(potluckOrders.status, 'RESERVED')
+                        )
+                    );
+
+                const { notifySystemMessage } = await import("@/services/notification.service");
+                for (const order of reservedOrders) {
+                    try {
+                        await notifySystemMessage(
+                            order.customerId,
+                            `Your reservation for "${deal.title}" was cancelled because the deal expired before reaching its target.`
+                        );
+                    } catch (e) {
+                        logger.error("Failed to notify customer of potluck expiry", { orderId: order.id });
+                    }
+                }
+            }
+
             if (redis) {
                 await redis.publish('potluck_updates', JSON.stringify({
                     type: 'DEAL_EXPIRED',

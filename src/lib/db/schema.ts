@@ -43,6 +43,7 @@ export const subscriptionStatusEnum = pgEnum("subscription_status", [
     "EXPIRED",
     "PAST_DUE",
     "SUSPENDED",
+    "SUPERSEDED",
 ]);
 
 export const paymentMethodEnum = pgEnum("payment_method", [
@@ -100,6 +101,7 @@ export const planConfigEnum = pgEnum("plan_config_enum", [
 ]);
 
 export const potluckStatusEnum = pgEnum("potluck_status_enum", [
+    "DRAFT",
     "PENDING",
     "ACTIVE",
     "FILLED",
@@ -810,6 +812,18 @@ export const planConfigs = pgTable("plan_configs", {
     dedicatedManager: boolean("dedicated_manager").default(false),
     chefAssistant: boolean("chef_assistant").default(false),
     digitalKhata: boolean("digital_khata").default(false),
+    // ── Granular plan feature levels (monetization engine) ──
+    menuItemLimitType: varchar("menu_item_limit_type", { length: 10 }).default("total"),
+    analytics: varchar("analytics", { length: 20 }).default("basic"),
+    supportLevel: varchar("support_level", { length: 20 }).default("standard"),
+    brandingLevel: varchar("branding_level", { length: 30 }).default("none"),
+    aiSuggestions: varchar("ai_suggestions", { length: 20 }).default("none"),
+    cookHelperAi: boolean("cook_helper_ai").default(false),
+    reviewsHighlighted: boolean("reviews_highlighted").default(false),
+    orderTrackingLevel: varchar("order_tracking_level", { length: 20 }).default("standard"),
+    realtimeOrderNotifs: boolean("realtime_order_notifs").default(false),
+    mobileUiLevel: varchar("mobile_ui_level", { length: 20 }).default("standard"),
+    kitchenListingPriority: varchar("kitchen_listing_priority", { length: 30 }),
     potluckUsesPerPeriod: integer("potluck_uses_per_period").notNull(),
     stripePriceId: varchar("stripe_price_id", { length: 100 }),
     isActive: boolean("is_active").default(true),
@@ -834,11 +848,14 @@ export const commissionLedger = pgTable("commission_ledger", {
     commissionRate: decimal("commission_rate", { precision: 4, scale: 3 }).notNull(),
     commissionAmountRs: decimal("commission_amount_rs", { precision: 10, scale: 2 }).notNull(),
     netAmountRs: decimal("net_amount_rs", { precision: 10, scale: 2 }).notNull(),
-    status: varchar("status", { length: 20 }).default('PENDING'),
+    status: varchar("status", { length: 20 }).default('RECORDED'),
     collectedAt: timestamp("collected_at", { withTimezone: true }),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
-});
+}, (table) => [
+    index("idx_commission_kitchen").on(table.kitchenId),
+    index("idx_commission_order").on(table.orderId),
+]);
 
 // ─── Potluck Deals ──────────────────────────────────────────────────────────
 

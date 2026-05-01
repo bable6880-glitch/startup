@@ -52,6 +52,18 @@ export async function POST(request: NextRequest, { params }: Params) {
         if (!guard.ok) return guard.response;
         
         const { user } = guard;
+
+        // Plan enforcement: check menu item limit before allowing add
+        const { guardMenuItemLimit } = await import("@/lib/plans/plan-guards");
+        try {
+            await guardMenuItemLimit(id);
+        } catch (limitErr: any) {
+            if (limitErr.name === 'PlanLimitError') {
+                return apiBadRequest(limitErr.message);
+            }
+            throw limitErr;
+        }
+
         const body = await request.json();
         const parsed = createMealSchema.safeParse(body);
 

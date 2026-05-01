@@ -1,189 +1,399 @@
 import { db } from "@/lib/db";
-import { subscriptions, planConfigs } from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
+import { subscriptions, planConfigs, meals, kitchens } from "@/lib/db/schema";
+import { and, eq, isNull, count, sql } from "drizzle-orm";
+import { cached, invalidateCache, redis } from "@/lib/redis";
 import { logger } from "@/lib/utils/logger";
+
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 export type PlanId = 'starter' | 'growth' | 'pro' | 'elite';
 
 export type PlanFeature =
     | 'featured_boost'
-    | 'priority_support'
+    | 'verified_badge'
     | 'branding_tools'
     | 'promotions'
     | 'advanced_analytics'
+    | 'ai_insights_analytics'
     | 'ai_pricing'
+    | 'ai_suggestions'
+    | 'cook_helper_ai'
     | 'auto_whatsapp'
     | 'dedicated_manager'
-    | 'chef_assistant'
     | 'digital_khata'
-    | 'potluck';
+    | 'potluck'
+    | 'highlighted_reviews'
+    | 'advanced_order_tracking'
+    | 'premium_mobile_ui';
+
+type SubscriptionRow = typeof subscriptions.$inferSelect;
+type PlanConfigRow = typeof planConfigs.$inferSelect;
+
+// ─── Free Tier Constants ────────────────────────────────────────────────────
+
+const FREE_TIER_MENU_LIMIT = 3;
+const FREE_TIER_ORDER_LIMIT = 10;
+const PLAN_ACCESS_CACHE_TTL = 60; // seconds
+
+// ─── PlanAccess Interface ───────────────────────────────────────────────────
 
 export interface PlanAccess {
-    planId: PlanId;
-    planConfig: typeof planConfigs.$inferSelect;
-    subscription: typeof subscriptions.$inferSelect | null;
-    canAddMenuItem: (currentCount: number) => boolean;
-    canPlaceOrder: (monthlyCount: number) => boolean;
-    canCreatePotluck: () => boolean;
-    hasFeature: (feature: PlanFeature) => boolean;
-    getRemainingOrders: () => number | null;
-    getRemainingPotlucks: () => number | null;
-    getCommissionRate: () => number;
-    getBoostLevel: () => string;
-    isActive: () => boolean;
+    planId: PlanId | null;
+    isActive: boolean;
+    isFree: boolean;
+    subscription: SubscriptionRow | null;
+    planConfig: PlanConfigRow | null;
+
+    // Usage checks
+    canAddMenuItem(currentCount: number): boolean;
+    canPlaceOrder(): boolean;
+    canCreatePotluck(): boolean;
+    hasFeature(feature: PlanFeature): boolean;
+
+    // Getters
+    getMenuLimit(): number | null;
+    getOrderLimit(): number | null;
+    getOrdersUsed(): number;
+    getOrdersRemaining(): number | null;
+    getPotluckRemaining(): number | null;
+    getCommissionRate(): number;
+    getBoostLevel(): string;
+    getAnalyticsLevel(): string;
+    getAiSuggestionsLevel(): string;
+    getBrandingLevel(): string;
+
+    // Usage percentages for UI
+    getOrderUsagePercent(): number | null;
+    getMenuUsagePercent(currentCount: number): number | null;
 }
+
+// ─── Cache Keys ─────────────────────────────────────────────────────────────
+
+function planAccessCacheKey(kitchenId: string): string {
+    return `plan:access:${kitchenId}`;
+}
+
+export async function invalidatePlanAccessCache(kitchenId: string): Promise<void> {
+    await invalidateCache(planAccessCacheKey(kitchenId));
+    await invalidateCache(`subscription:status:${kitchenId}`);
+}
+
+// ─── Main Entry Point ───────────────────────────────────────────────────────
 
 export async function getKitchenPlanAccess(kitchenId: string): Promise<PlanAccess> {
-    const sub = await db.query.subscriptions.findFirst({
-        where: and(
-            eq(subscriptions.kitchenId, kitchenId),
-            eq(subscriptions.status, 'ACTIVE')
-        ),
-        with: { planConfig: true }
-    });
+    return cached<PlanAccess>(
+        planAccessCacheKey(kitchenId),
+        PLAN_ACCESS_CACHE_TTL,
+        async () => {
+            const sub = await db.query.subscriptions.findFirst({
+                where: and(
+                    eq(subscriptions.kitchenId, kitchenId),
+                    eq(subscriptions.status, 'ACTIVE')
+                ),
+                with: { planConfig: true },
+            });
 
-    if (!sub || !sub.planConfig) {
-        return buildFreeAccess(kitchenId);
-    }
+            if (!sub || !sub.planConfig) {
+                return buildFreeAccess();
+            }
 
-    if (new Date() > sub.currentPeriodEnd) {
-        // Auto-expire if missed webhook (fallback)
-        await expireSubscription(sub.id);
-        return buildFreeAccess(kitchenId);
-    }
+            // Auto-expire if period ended (missed webhook fallback)
+            if (new Date() > sub.currentPeriodEnd) {
+                await expireSubscription(sub.id, kitchenId);
+                return buildFreeAccess();
+            }
 
-    return buildPlanAccess(sub, sub.planConfig);
+            return buildPlanAccess(sub, sub.planConfig);
+        }
+    );
 }
 
-function buildPlanAccess(
-    sub: typeof subscriptions.$inferSelect,
-    config: typeof planConfigs.$inferSelect
-): PlanAccess {
+// ─── Build Plan Access (active subscription) ────────────────────────────────
+
+function buildPlanAccess(sub: SubscriptionRow, config: PlanConfigRow): PlanAccess {
+    const ordersUsed = sub.ordersUsedThisMonth ?? 0;
+
     return {
         planId: sub.planId as PlanId,
-        planConfig: config,
+        isActive: true,
+        isFree: false,
         subscription: sub,
+        planConfig: config,
 
-        canAddMenuItem: (currentCount: number) => {
+        canAddMenuItem(currentCount: number): boolean {
             if (config.menuItemLimit === null) return true;
             return currentCount < config.menuItemLimit;
         },
 
-        canPlaceOrder: (monthlyCount: number) => {
+        canPlaceOrder(): boolean {
             if (config.monthlyOrderLimit === null) return true;
-            return monthlyCount < config.monthlyOrderLimit;
+            return ordersUsed < config.monthlyOrderLimit;
         },
 
-        canCreatePotluck: () => {
+        canCreatePotluck(): boolean {
             if (config.potluckUsesPerPeriod === -1) return true;
-            return sub.potluckUsesRemaining > 0;
+            return (sub.potluckUsesRemaining ?? 0) > 0;
         },
 
-        hasFeature: (feature: PlanFeature) => {
-            const featureMap: Record<PlanFeature, boolean> = {
-                featured_boost: config.featuredBoostLevel !== 'none' && config.featuredBoostLevel !== null,
-                priority_support: config.prioritySupport ?? false,
-                branding_tools: config.brandingTools ?? false,
-                promotions: config.promotionsLevel !== 'none' && config.promotionsLevel !== null,
-                advanced_analytics: config.advancedAnalytics ?? false,
-                ai_pricing: config.aiPricing ?? false,
-                auto_whatsapp: config.autoWhatsApp ?? false,
-                dedicated_manager: config.dedicatedManager ?? false,
-                chef_assistant: config.chefAssistant ?? false,
-                digital_khata: config.digitalKhata ?? false,
-                potluck: config.potluckUsesPerPeriod !== 0,
-            };
-            return featureMap[feature] ?? false;
+        hasFeature(feature: PlanFeature): boolean {
+            return resolveFeature(config, feature);
         },
 
-        getRemainingOrders: () => {
+        getMenuLimit(): number | null {
+            return config.menuItemLimit;
+        },
+
+        getOrderLimit(): number | null {
+            return config.monthlyOrderLimit;
+        },
+
+        getOrdersUsed(): number {
+            return ordersUsed;
+        },
+
+        getOrdersRemaining(): number | null {
             if (config.monthlyOrderLimit === null) return null;
-            return Math.max(0, config.monthlyOrderLimit - (sub.ordersUsedThisMonth ?? 0));
+            return Math.max(0, config.monthlyOrderLimit - ordersUsed);
         },
 
-        getRemainingPotlucks: () => {
+        getPotluckRemaining(): number | null {
             if (config.potluckUsesPerPeriod === -1) return null;
-            return sub.potluckUsesRemaining;
+            return sub.potluckUsesRemaining ?? 0;
         },
 
-        getCommissionRate: () => Number(config.commissionRate),
+        getCommissionRate(): number {
+            return Number(config.commissionRate);
+        },
 
-        getBoostLevel: () => config.featuredBoostLevel ?? 'none',
+        getBoostLevel(): string {
+            return config.featuredBoostLevel ?? 'none';
+        },
 
-        isActive: () => sub.status === 'ACTIVE',
+        getAnalyticsLevel(): string {
+            return config.analytics ?? 'basic';
+        },
+
+        getAiSuggestionsLevel(): string {
+            return config.aiSuggestions ?? 'none';
+        },
+
+        getBrandingLevel(): string {
+            return config.brandingLevel ?? 'none';
+        },
+
+        getOrderUsagePercent(): number | null {
+            if (config.monthlyOrderLimit === null) return null;
+            return Math.round((ordersUsed / config.monthlyOrderLimit) * 100);
+        },
+
+        getMenuUsagePercent(currentCount: number): number | null {
+            if (config.menuItemLimit === null) return null;
+            return Math.round((currentCount / config.menuItemLimit) * 100);
+        },
     };
 }
 
-// Fallback logic for FREE tier (or missing subscription)
-async function buildFreeAccess(kitchenId: string): Promise<PlanAccess> {
-    const fetchedConfig = await db.query.planConfigs.findFirst({
-        where: eq(planConfigs.planId, 'starter')
-    });
+// ─── Build Free Access (no subscription) ────────────────────────────────────
 
-    let configToUse = fetchedConfig;
-
-    if (!configToUse) {
-        logger.warn("Starter plan config not found in DB. Using fallback.");
-        configToUse = {
-            id: 'fallback-starter',
-            planId: 'starter',
-            displayName: 'Starter',
-            description: 'Basic features for new kitchens',
-            priceRs: 0,
-            billingPeriodMonths: 1,
-            commissionRate: "10.00",
-            menuItemLimit: 10,
-            monthlyOrderLimit: 30,
-            featuredBoostLevel: 'none',
-            prioritySupport: false,
-            brandingTools: false,
-            promotionsLevel: 'none',
-            advancedAnalytics: false,
-            aiPricing: false,
-            autoWhatsApp: false,
-            dedicatedManager: false,
-            chefAssistant: false,
-            digitalKhata: false,
-            potluckUsesPerPeriod: 0,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-        } as any;
-    }
-
-    const finalConfig = configToUse!;
-
+export function buildFreeAccess(): PlanAccess {
     return {
-        planId: 'starter',
-        planConfig: finalConfig as any,
+        planId: null,
+        isActive: false,
+        isFree: true,
         subscription: null,
+        planConfig: null,
 
-        canAddMenuItem: (currentCount) => {
-            if (finalConfig.menuItemLimit === null) return true;
-            return currentCount < finalConfig.menuItemLimit;
+        canAddMenuItem(currentCount: number): boolean {
+            return currentCount < FREE_TIER_MENU_LIMIT;
         },
-        
-        // Free tier without active sub cannot place orders
-        canPlaceOrder: () => false,
-        
-        canCreatePotluck: () => false,
-        
-        hasFeature: () => false,
-        
-        getRemainingOrders: () => 0,
-        
-        getRemainingPotlucks: () => 0,
-        
-        getCommissionRate: () => Number(finalConfig.commissionRate),
-        
-        getBoostLevel: () => 'none',
-        
-        isActive: () => false,
+
+        canPlaceOrder(): boolean {
+            // Free tier kitchens can still receive orders (limited)
+            return true;
+        },
+
+        canCreatePotluck(): boolean {
+            return false;
+        },
+
+        hasFeature(): boolean {
+            return false;
+        },
+
+        getMenuLimit(): number {
+            return FREE_TIER_MENU_LIMIT;
+        },
+
+        getOrderLimit(): number {
+            return FREE_TIER_ORDER_LIMIT;
+        },
+
+        getOrdersUsed(): number {
+            return 0;
+        },
+
+        getOrdersRemaining(): number {
+            return FREE_TIER_ORDER_LIMIT;
+        },
+
+        getPotluckRemaining(): number {
+            return 0;
+        },
+
+        getCommissionRate(): number {
+            return 0;
+        },
+
+        getBoostLevel(): string {
+            return 'none';
+        },
+
+        getAnalyticsLevel(): string {
+            return 'basic';
+        },
+
+        getAiSuggestionsLevel(): string {
+            return 'none';
+        },
+
+        getBrandingLevel(): string {
+            return 'none';
+        },
+
+        getOrderUsagePercent(): null {
+            return null;
+        },
+
+        getMenuUsagePercent(currentCount: number): number {
+            return Math.round((currentCount / FREE_TIER_MENU_LIMIT) * 100);
+        },
     };
 }
 
-async function expireSubscription(subscriptionId: string) {
-    logger.info("Auto-expiring subscription (fallback)", { subscriptionId });
+// ─── Feature Resolution ─────────────────────────────────────────────────────
+
+function resolveFeature(config: PlanConfigRow, feature: PlanFeature): boolean {
+    switch (feature) {
+        case 'featured_boost':
+            return !!config.featuredBoostLevel && config.featuredBoostLevel !== 'none';
+        case 'verified_badge':
+            return !!config.brandingLevel && config.brandingLevel !== 'none';
+        case 'branding_tools':
+            return config.brandingTools ?? false;
+        case 'promotions':
+            return !!config.promotionsLevel && config.promotionsLevel !== 'none';
+        case 'advanced_analytics':
+            return config.advancedAnalytics ?? false;
+        case 'ai_insights_analytics':
+            return config.analytics === 'ai_insights';
+        case 'ai_pricing':
+            return config.aiPricing ?? false;
+        case 'ai_suggestions':
+            return !!config.aiSuggestions && config.aiSuggestions !== 'none';
+        case 'cook_helper_ai':
+            return config.cookHelperAi ?? false;
+        case 'auto_whatsapp':
+            return config.autoWhatsApp ?? false;
+        case 'dedicated_manager':
+            return config.dedicatedManager ?? false;
+        case 'digital_khata':
+            return config.digitalKhata ?? false;
+        case 'potluck':
+            return config.potluckUsesPerPeriod !== 0;
+        case 'highlighted_reviews':
+            return config.reviewsHighlighted ?? false;
+        case 'advanced_order_tracking':
+            return config.orderTrackingLevel === 'advanced';
+        case 'premium_mobile_ui':
+            return config.mobileUiLevel === 'premium_ui';
+        default:
+            return false;
+    }
+}
+
+// ─── Subscription Expiry ────────────────────────────────────────────────────
+
+async function expireSubscription(subscriptionId: string, kitchenId: string) {
+    logger.info("Auto-expiring subscription (fallback)", { subscriptionId, kitchenId });
+
+    // 1. Mark subscription expired
     await db.update(subscriptions)
         .set({ status: 'EXPIRED', updatedAt: new Date() })
         .where(eq(subscriptions.id, subscriptionId));
+
+    // 2. Handle menu item overflow — hide excess meals beyond free tier limit
+    const mealCountResult = await db
+        .select({ count: count() })
+        .from(meals)
+        .where(
+            and(
+                eq(meals.kitchenId, kitchenId),
+                eq(meals.isAvailable, true),
+                isNull(meals.deletedAt)
+            )
+        );
+
+    const currentCount = mealCountResult[0]?.count ?? 0;
+    if (currentCount > FREE_TIER_MENU_LIMIT) {
+        const excess = currentCount - FREE_TIER_MENU_LIMIT;
+        // Hide most recently created excess meals
+        await db.execute(sql`
+            UPDATE meals
+            SET is_available = false,
+                availability_status = 'NOT_TODAY',
+                updated_at = NOW()
+            WHERE id IN (
+                SELECT id FROM meals
+                WHERE kitchen_id = ${kitchenId}
+                  AND is_available = true
+                  AND deleted_at IS NULL
+                ORDER BY created_at DESC
+                LIMIT ${excess}
+            )
+        `);
+        logger.info("Hidden excess meals on subscription expiry", {
+            kitchenId, excess, previousCount: currentCount
+        });
+    }
+
+    // 3. Invalidate caches
+    await invalidatePlanAccessCache(kitchenId);
+
+    // 4. Notify cook
+    try {
+        const subRecord = await db.query.subscriptions.findFirst({
+            where: eq(subscriptions.id, subscriptionId),
+            columns: { userId: true }
+        });
+        if (subRecord?.userId) {
+            const { notifySystemMessage } = await import("@/services/notification.service");
+            await notifySystemMessage(subRecord.userId, "Your premium subscription has expired. Excess menu items have been hidden.");
+        }
+    } catch (e) {
+        logger.error("Failed to notify cook of subscription expiry", { error: e });
+    }
+}
+
+// ─── Minimum Plan for Feature (used in error messages) ──────────────────────
+
+export function getMinimumPlanForFeature(feature: PlanFeature): PlanId {
+    const featurePlanMap: Record<PlanFeature, PlanId> = {
+        'featured_boost': 'starter',
+        'verified_badge': 'growth',
+        'branding_tools': 'growth',
+        'promotions': 'growth',
+        'advanced_analytics': 'pro',
+        'ai_insights_analytics': 'elite',
+        'ai_pricing': 'elite',
+        'ai_suggestions': 'starter',
+        'cook_helper_ai': 'growth',
+        'auto_whatsapp': 'elite',
+        'dedicated_manager': 'elite',
+        'digital_khata': 'pro',
+        'potluck': 'starter',
+        'highlighted_reviews': 'elite',
+        'advanced_order_tracking': 'elite',
+        'premium_mobile_ui': 'elite',
+    };
+    return featurePlanMap[feature] ?? 'elite';
 }

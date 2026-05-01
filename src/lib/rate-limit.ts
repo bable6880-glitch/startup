@@ -27,9 +27,16 @@ export const rateLimiters = {
     admin: createLimiter(30, "1 m"),
     premium: createLimiter(20, "1 m"),
     search: createLimiter(60, "1 m"), // general search
-    suggestions: createLimiter(30, "1 m"), // precise rate limit for location & search suggestions
+    suggestions: createLimiter(30, "1 m"),
     kitchens: createLimiter(60, "1 m"),
     upload: createLimiter(10, "1 m"),
+    // ── Monetization engine rate limits ──
+    sellerPotluck: createLimiter(10, "60 m"),       // 10/hour/user
+    potluckReserve: createLimiter(5, "1 m"),         // 5/min/user
+    aiPricing: createLimiter(20, "60 m"),             // 20/hour/user
+    chefAssistant: createLimiter(20, "1440 m"),       // 20/day/user
+    subscriptionCheckout: createLimiter(3, "60 m"),   // 3/hour/user
+    khata: createLimiter(60, "1 m"),                  // 60/min/user
     default: createLimiter(60, "1 m"),
 };
 
@@ -41,8 +48,15 @@ export function getLimiterKey(pathname: string): RateLimiterKey {
     if (pathname.startsWith("/api/orders")) return "orders";
     if (pathname.startsWith("/api/reviews")) return "reviews";
     if (pathname.startsWith("/api/admin")) return "admin";
-    if (pathname.startsWith("/api/premium")) return "premium";
+    // ── Monetization engine routes (more specific first) ──
+    if (pathname.startsWith("/api/seller/subscription/checkout")) return "subscriptionCheckout";
     if (pathname.startsWith("/api/seller/subscription")) return "premium";
+    if (pathname.startsWith("/api/seller/ai/pricing")) return "aiPricing";
+    if (pathname.startsWith("/api/seller/ai/chef-assistant")) return "chefAssistant";
+    if (pathname.startsWith("/api/seller/potluck")) return "sellerPotluck";
+    if (pathname.startsWith("/api/seller/khata")) return "khata";
+    if (pathname.startsWith("/api/potluck") && pathname.includes("/reserve")) return "potluckReserve";
+    if (pathname.startsWith("/api/premium")) return "premium";
     if (pathname.startsWith("/api/search/suggestions")) return "suggestions";
     if (pathname.startsWith("/api/search")) return "search";
     if (pathname.startsWith("/api/kitchens")) return "kitchens";

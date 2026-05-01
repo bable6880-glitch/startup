@@ -17,45 +17,73 @@ async function handleWebhookEventInline(event: Stripe.Event) {
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object as Stripe.Checkout.Session;
         const metadata = session.metadata;
-        if (!metadata || !metadata.kitchenId || !metadata.planId) return;
+        if (!metadata || metadata.type !== 'SUBSCRIPTION' || !metadata.kitchenId || !metadata.planId) return;
 
         const planConfig = await db.query.planConfigs.findFirst({
             where: eq(planConfigs.planId, metadata.planId as any),
         });
-        if (!planConfig) return;
+        if (!planConfig) {
+            console.error(`[Stripe Webhook] Plan config not found for ${metadata.planId}`);
+            return;
+        }
+
+        // Amount verification — critical security check
+        // Note: Amount might be 0 for trial/free checkout, check if it matches plan
+        const amountPaidRs = session.amount_total ? session.amount_total / 100 : 0;
+        if (amountPaidRs < planConfig.priceRs) {
+            console.error(`[Stripe Webhook] Amount paid (${amountPaidRs}) is less than plan price (${planConfig.priceRs})`);
+            return; // Reject underpayment
+        }
 
         const now = new Date();
         const periodEnd = new Date(now);
         periodEnd.setMonth(periodEnd.getMonth() + planConfig.billingPeriodMonths);
 
-        // Check if existing sub
+        // Check if existing sub exists
         const existing = await db.query.subscriptions.findFirst({
             where: and(eq(subscriptions.kitchenId, metadata.kitchenId), eq(subscriptions.status, 'ACTIVE'))
         });
 
-        if (!existing) {
-            await db.insert(subscriptions).values({
-                userId: metadata.cookId,
-                kitchenId: metadata.kitchenId,
-                planId: metadata.planId as any,
-                planType: "BASE_MONTHLY", // legacy field
-                status: 'ACTIVE',
-                paymentMethod: 'STRIPE',
-                stripeSubscriptionId: typeof session.subscription === 'string' ? session.subscription : null,
-                stripeCustomerId: typeof session.customer === 'string' ? session.customer : null,
-                currentPeriodStart: now,
-                currentPeriodEnd: periodEnd,
-                autoRenew: !!session.subscription,
-                potluckUsesRemaining: planConfig.potluckUsesPerPeriod === -1 ? 9999 : planConfig.potluckUsesPerPeriod,
-            });
+        if (existing) {
+            // Mark existing as SUPERSEDED (e.g. they upgraded before expiry)
+            await db.update(subscriptions)
+                .set({ status: 'SUPERSEDED', updatedAt: now })
+                .where(eq(subscriptions.id, existing.id));
+        }
 
-            // Set kitchen active
-            await db.update(kitchens).set({ status: 'ACTIVE' }).where(eq(kitchens.id, metadata.kitchenId));
-            
-            if (planConfig.featuredBoostLevel !== 'none' && planConfig.featuredBoostLevel !== null) {
-                // Set boost
-                await db.update(kitchens).set({ boostPriority: planConfig.sortOrder, boostExpiresAt: periodEnd }).where(eq(kitchens.id, metadata.kitchenId));
-            }
+        await db.insert(subscriptions).values({
+            userId: metadata.cookId,
+            kitchenId: metadata.kitchenId,
+            planId: metadata.planId as any,
+            planType: "BASE_MONTHLY", // legacy field
+            status: 'ACTIVE',
+            paymentMethod: 'STRIPE',
+            stripeSubscriptionId: typeof session.subscription === 'string' ? session.subscription : null,
+            stripeCustomerId: typeof session.customer === 'string' ? session.customer : null,
+            currentPeriodStart: now,
+            currentPeriodEnd: periodEnd,
+            autoRenew: !!session.subscription,
+            potluckUsesRemaining: planConfig.potluckUsesPerPeriod === -1 ? 9999 : planConfig.potluckUsesPerPeriod,
+        });
+
+        // Set kitchen active
+        await db.update(kitchens).set({ status: 'ACTIVE' }).where(eq(kitchens.id, metadata.kitchenId));
+        
+        if (planConfig.featuredBoostLevel !== 'none' && planConfig.featuredBoostLevel !== null) {
+            // Set boost
+            await db.update(kitchens).set({ boostPriority: planConfig.sortOrder, boostExpiresAt: periodEnd }).where(eq(kitchens.id, metadata.kitchenId));
+        }
+
+        // Invalidate access cache
+        const { invalidatePlanAccessCache } = await import("@/lib/plans/plan-access");
+        await invalidatePlanAccessCache(metadata.kitchenId);
+
+        // Notify cook
+        try {
+            const { notifySystemMessage } = await import("@/services/notification.service");
+            await notifySystemMessage(metadata.cookId, `Your ${planConfig.displayName} subscription is now active!`);
+        } catch (e) {
+            console.error("[Stripe Webhook] Notification failed", e);
         }
     } else if (event.type === 'customer.subscription.updated') {
         const subscription = event.data.object as Stripe.Subscription;

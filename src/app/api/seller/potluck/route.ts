@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSeller } from "@/lib/auth/seller-guard";
 import { db } from "@/lib/db";
-import { potluckDeals, subscriptions } from "@/lib/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { potluckDeals } from "@/lib/db/schema";
+import { eq, desc } from "drizzle-orm";
 import { createPotluckSchema } from "@/lib/validations/potluck";
 import { guardFeatureAccess, PlanFeatureError } from "@/lib/plans/plan-guards";
 import { getKitchenPlanAccess } from "@/lib/plans/plan-access";
@@ -61,13 +61,10 @@ export async function POST(req: NextRequest) {
             citySlug: kitchen.citySlug || 'unknown',
         }).returning();
 
-        // Decrement potluck uses
-        if (access.planConfig.potluckUsesPerPeriod !== -1) {
-            await db.update(subscriptions)
-                .set({
-                    potluckUsesRemaining: sql`${subscriptions.potluckUsesRemaining} - 1`
-                })
-                .where(eq(subscriptions.id, access.subscription.id));
+        // Decrement potluck uses (atomic — prevents going below 0)
+        if (access.planConfig && access.planConfig.potluckUsesPerPeriod !== -1) {
+            const { decrementPotluckUses } = await import("@/services/plan-usage.service");
+            await decrementPotluckUses(access.subscription!.id);
         }
 
         logger.info("Potluck deal created", { dealId: deal.id, kitchenId: kitchen.id });

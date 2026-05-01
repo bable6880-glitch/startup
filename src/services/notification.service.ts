@@ -232,3 +232,12 @@ export function notifySellerReply(customerId: string, kitchenName: string) {
         data: { url: `/orders` },
     });
 }
+
+export function notifySystemMessage(userId: string, message: string) {
+    return sendNotification({
+        type: "SYSTEM" as any,
+        recipientId: userId,
+        title: "System Update",
+        body: message,
+    });
+}

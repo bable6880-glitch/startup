@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { potluckDeals, potluckOrders } from "@/lib/db/schema";
 import { eq, sql, and } from "drizzle-orm";
-import { reservePotluckSchema } from "@/lib/validations/potluck";
 import { logger } from "@/lib/utils/logger";
-import { redis } from "@/lib/redis/index";
 import { getAuthUser } from "@/lib/auth/get-auth-user";
 
 export async function POST(
@@ -17,102 +15,112 @@ export async function POST(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { id } = await params;
-        const dealId = id;
+        const { id: dealId } = await params;
         const body = await req.json();
-        const parsed = reservePotluckSchema.safeParse(body);
+        const quantity = Math.max(1, Math.min(10, Number(body.quantity) || 1));
 
-        if (!parsed.success) {
-            return NextResponse.json({ error: "Invalid quantity" }, { status: 400 });
-        }
-
-        const { quantity } = parsed.data;
-
-        // DB Transaction for safe inventory checking
-        const result = await db.transaction(async (tx) => {
-            const [deal] = await tx
-                .select()
-                .from(potluckDeals)
-                .where(eq(potluckDeals.id, dealId))
-                .for('update'); // Lock row for update
-
-            if (!deal) {
-                throw new Error("Deal not found");
-            }
-
-            if (deal.status !== 'ACTIVE') {
-                throw new Error("Deal is not active");
-            }
-
-            const remaining = deal.totalPlatesAvailable - (deal.currentOrderCount || 0);
-            if (quantity > remaining) {
-                throw new Error(`Only ${remaining} plates remaining`);
-            }
-
-            // Check if user already ordered
-            const existingOrder = await tx.query.potluckOrders.findFirst({
-                where: and(
-                    eq(potluckOrders.potluckDealId, dealId),
-                    eq(potluckOrders.customerId, user.id)
-                )
-            });
-
-            if (existingOrder) {
-                throw new Error("You have already reserved plates for this deal");
-            }
-
-            const totalAmountRs = Number(deal.pricePerPlateRs) * quantity;
-
-            // Create order
-            const [order] = await tx.insert(potluckOrders).values({
-                potluckDealId: dealId,
-                customerId: user.id,
-                quantity,
-                totalAmountRs: totalAmountRs.toString(),
-                status: 'RESERVED',
-            }).returning();
-
-            // Increment deal count
-            const newCount = (deal.currentOrderCount || 0) + quantity;
-            let newStatus: any = deal.status;
-            
-            if (newCount >= deal.totalPlatesAvailable) {
-                newStatus = 'FILLED';
-            }
-
-            const [updatedDeal] = await tx.update(potluckDeals)
-                .set({
-                    currentOrderCount: newCount,
-                    status: newStatus as any,
-                    updatedAt: new Date()
-                })
-                .where(eq(potluckDeals.id, dealId))
-                .returning();
-
-            return { order, updatedDeal };
+        // Check if user already reserved
+        const existingOrder = await db.query.potluckOrders.findFirst({
+            where: and(
+                eq(potluckOrders.potluckDealId, dealId),
+                eq(potluckOrders.customerId, user.id)
+            ),
         });
 
-        // Publish SSE update for realtime UI sync
-        if (redis) {
-            await redis.publish('potluck_updates', JSON.stringify({
-                type: 'ORDER_PLACED',
-                dealId: result.updatedDeal.id,
-                currentOrderCount: result.updatedDeal.currentOrderCount,
-                targetOrderCount: result.updatedDeal.targetOrderCount,
-                status: result.updatedDeal.status
-            }));
+        if (existingOrder) {
+            return NextResponse.json(
+                { error: "You have already reserved plates for this deal" },
+                { status: 409 }
+            );
         }
 
-        return NextResponse.json({ success: true, order: result.order });
+        // ATOMIC OPERATION: Single UPDATE with WHERE guard — prevents overselling
+        // neon-http does NOT support db.transaction(), so this MUST be a single SQL
+        const result = await db.update(potluckDeals)
+            .set({
+                currentOrderCount: sql`${potluckDeals.currentOrderCount} + ${quantity}`,
+                status: sql`CASE
+                    WHEN ${potluckDeals.currentOrderCount} + ${quantity} >= ${potluckDeals.targetOrderCount}
+                    THEN 'FILLED'::potluck_status_enum
+                    ELSE ${potluckDeals.status}
+                END`,
+                activatedAt: sql`CASE
+                    WHEN ${potluckDeals.currentOrderCount} + ${quantity} >= ${potluckDeals.targetOrderCount}
+                    THEN NOW()
+                    ELSE ${potluckDeals.activatedAt}
+                END`,
+                updatedAt: new Date(),
+            })
+            .where(
+                sql`${potluckDeals.id} = ${dealId}
+                    AND ${potluckDeals.currentOrderCount} + ${quantity} <= ${potluckDeals.totalPlatesAvailable}
+                    AND ${potluckDeals.status} = 'ACTIVE'
+                    AND ${potluckDeals.expiresAt} > NOW()`
+            )
+            .returning({
+                id: potluckDeals.id,
+                currentOrderCount: potluckDeals.currentOrderCount,
+                targetOrderCount: potluckDeals.targetOrderCount,
+                status: potluckDeals.status,
+                pricePerPlateRs: potluckDeals.pricePerPlateRs,
+            });
+
+        if (result.length === 0) {
+            return NextResponse.json(
+                { error: "Deal is full, expired, or no longer active" },
+                { status: 409 }
+            );
+        }
+
+        const updatedDeal = result[0];
+        const totalAmountRs = Number(updatedDeal.pricePerPlateRs) * quantity;
+
+        // Insert reservation (compensation: if this fails, the count was already incremented
+        // but the user has no order — acceptable edge case for neon-http without transactions)
+        const [order] = await db.insert(potluckOrders).values({
+            potluckDealId: dealId,
+            customerId: user.id,
+            quantity,
+            totalAmountRs: totalAmountRs.toString(),
+            status: 'RESERVED',
+        }).returning();
+
+        logger.info("Potluck reservation created", {
+            dealId,
+            customerId: user.id,
+            quantity,
+            newCount: updatedDeal.currentOrderCount,
+            status: updatedDeal.status,
+        });
+
+        // If deal just became FILLED, log it (order creation for all reservations
+        // would need a separate background job in production)
+        if (updatedDeal.status === 'FILLED') {
+            logger.info("Potluck deal FILLED", {
+                dealId,
+                finalCount: updatedDeal.currentOrderCount,
+                target: updatedDeal.targetOrderCount,
+            });
+        }
+
+        return NextResponse.json({
+            success: true,
+            order,
+            deal: {
+                currentOrderCount: updatedDeal.currentOrderCount,
+                targetOrderCount: updatedDeal.targetOrderCount,
+                status: updatedDeal.status,
+            },
+        });
     } catch (error: any) {
-        logger.error("Failed to reserve potluck", { error: error.message });
-        const message = error.message === "Deal not found" ? "Deal not found" :
-                        error.message === "Deal is not active" ? "Deal is not active" :
-                        error.message.startsWith("Only") ? error.message :
-                        error.message.startsWith("You have already") ? error.message :
-                        "Internal Server Error";
-                        
-        const status = message === "Internal Server Error" ? 500 : 400;
-        return NextResponse.json({ error: message }, { status });
+        // Handle unique constraint violation (duplicate reservation)
+        if (error?.code === '23505') {
+            return NextResponse.json(
+                { error: "You have already reserved plates for this deal" },
+                { status: 409 }
+            );
+        }
+        logger.error("Failed to reserve potluck", { error: error?.message });
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

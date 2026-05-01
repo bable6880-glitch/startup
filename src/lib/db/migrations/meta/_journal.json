@@ -50,6 +50,13 @@
       "when": 1777449765424,
       "tag": "0006_plain_famine",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777615304809,
+      "tag": "0007_yellow_landau",
+      "breakpoints": true
     }
   ]
 }

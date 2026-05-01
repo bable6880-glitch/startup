@@ -7,11 +7,19 @@ import { Plus, Info, X, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BackButton } from "@/components/ui/BackButton";
 import { useAuth } from "@/lib/firebase/auth-context";
+import { usePlanAccess } from "@/hooks/use-plan-access";
+import { cn } from "@/lib/utils";
 
 export default function PotluckDashboardPage() {
     const { getIdToken } = useAuth();
+    const { data: planData } = usePlanAccess();
     const [deals, setDeals] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const potluckRemaining = planData?.usage.potluckRemaining ?? null;
+    const potluckLimit = planData?.usage.potluckLimit ?? 0;
+    const isOutOfUses = potluckRemaining !== null && potluckLimit > 0 && potluckRemaining === 0;
+    const isUnlimited = potluckLimit === -1;
     
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -109,23 +117,59 @@ export default function PotluckDashboardPage() {
     return (
         <div className="container py-8 max-w-6xl mx-auto space-y-6">
             <BackButton label="Dashboard" />
-            <div className="flex justify-between items-center mt-2">
+            <div className="flex justify-between items-start mt-2">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Community Potluck</h1>
                     <p className="text-muted-foreground mt-1">Manage your bulk deals and group orders.</p>
                 </div>
-                <Button onClick={() => setIsModalOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" /> Create Deal
-                </Button>
+                <div className="flex flex-col items-end gap-1.5">
+                    <Button
+                        onClick={() => setIsModalOpen(true)}
+                        disabled={isOutOfUses}
+                        className={cn(isOutOfUses && 'opacity-60 cursor-not-allowed')}
+                    >
+                        <Plus className="w-4 h-4 mr-2" /> Create Deal
+                    </Button>
+                    {/* Usage pill */}
+                    {potluckLimit > 0 && potluckRemaining !== null && (
+                        <span className={cn(
+                            'text-xs px-2.5 py-1 rounded-full font-medium',
+                            isOutOfUses
+                                ? 'bg-red-100 text-red-700'
+                                : potluckRemaining <= 2
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-green-100 text-green-700'
+                        )}>
+                            {isOutOfUses ? '0 deals remaining' : `${potluckRemaining} deal${potluckRemaining !== 1 ? 's' : ''} remaining`}
+                        </span>
+                    )}
+                    {isUnlimited && (
+                        <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-purple-100 text-purple-700">
+                            ∞ Unlimited deals
+                        </span>
+                    )}
+                </div>
             </div>
 
-            <Alert className="bg-blue-50 border-blue-200">
-                <Info className="h-4 w-4 text-blue-600" />
-                <AlertTitle className="text-blue-800">Premium Feature</AlertTitle>
-                <AlertDescription className="text-blue-700">
-                    Community Potlucks allow you to sell in bulk to multiple customers. Depending on your plan, you have a limited number of Potluck deals you can create each month.
-                </AlertDescription>
-            </Alert>
+            {isOutOfUses && (
+                <Alert className="bg-amber-50 border-amber-200">
+                    <Info className="h-4 w-4 text-amber-600" />
+                    <AlertTitle className="text-amber-800">No Potluck Uses Remaining</AlertTitle>
+                    <AlertDescription className="text-amber-700">
+                        You have used all your Group Deal slots for this period. Upgrade your plan to create more deals or wait for the next billing cycle.
+                        <a href="/dashboard/subscription" className="ml-2 underline font-medium text-amber-800 hover:text-amber-900">Upgrade →</a>
+                    </AlertDescription>
+                </Alert>
+            )}
+            {!isOutOfUses && (
+                <Alert className="bg-blue-50 border-blue-200">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <AlertTitle className="text-blue-800">Community Potluck</AlertTitle>
+                    <AlertDescription className="text-blue-700">
+                        Sell in bulk to multiple customers. Set a target order count — when reached, the deal activates automatically for everyone.
+                    </AlertDescription>
+                </Alert>
+            )}
 
             {loading ? (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">

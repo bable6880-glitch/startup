@@ -4,12 +4,14 @@ import { useState, useEffect } from "react";
 import { Plus, ArrowDownRight, ArrowUpRight, FileText, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BackButton } from "@/components/ui/BackButton";
 import { useAuth } from "@/lib/firebase/auth-context";
+import { usePlanAccess } from "@/hooks/use-plan-access";
+import { FeatureGate } from "@/components/plans/FeatureGate";
 
 export default function KhataDashboardPage() {
     const { getIdToken } = useAuth();
+    const { data: planData, loading: planLoading } = usePlanAccess();
     const [entries, setEntries] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -107,11 +109,8 @@ export default function KhataDashboardPage() {
     if (error) {
         return (
             <div className="container py-8 max-w-4xl mx-auto space-y-6">
-                <Alert className="border-red-500 bg-red-50 text-red-900">
-                    <AlertTitle className="text-red-800">Access Denied</AlertTitle>
-                    <AlertDescription className="text-red-700">{error}</AlertDescription>
-                </Alert>
-                <div className="text-center py-10">
+                <div className="rounded-xl bg-red-50 border border-red-200 p-6 text-center">
+                    <p className="text-red-700 font-medium mb-4">{error}</p>
                     <Button onClick={() => window.location.href = '/dashboard/subscription'}>
                         Upgrade Plan
                     </Button>
@@ -124,9 +123,28 @@ export default function KhataDashboardPage() {
     const totalExpense = entries.filter(e => !e.isCredit).reduce((sum, e) => sum + Number(e.amountRs), 0);
     const netBalance = totalIncome - totalExpense;
 
+    if (planLoading) {
+        return (
+            <div className="container py-8 max-w-5xl mx-auto">
+                <div className="animate-pulse space-y-4">
+                    <div className="h-8 w-48 bg-gray-100 rounded" />
+                    <div className="grid sm:grid-cols-3 gap-6">
+                        {[1,2,3].map(i => <div key={i} className="h-28 bg-gray-100 rounded-2xl" />)}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="container py-8 max-w-5xl mx-auto space-y-6">
             <BackButton label="Dashboard" />
+
+            <FeatureGate
+                feature="digital_khata"
+                currentPlanId={planData?.planId ?? null}
+                requiredPlan="pro"
+            >
             <div className="flex justify-between items-center mt-2">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Digital Khata</h1>
@@ -292,6 +310,8 @@ export default function KhataDashboardPage() {
                     </div>
                 </div>
             )}
+
+            </FeatureGate>
         </div>
     );
 }

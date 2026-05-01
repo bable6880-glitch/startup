@@ -1,29 +1,56 @@
-import { getKitchenPlanAccess, PlanFeature } from "./plan-access";
+import { getKitchenPlanAccess, getMinimumPlanForFeature, PlanFeature } from "./plan-access";
 import { db } from "@/lib/db";
 import { meals, planUsageLog } from "@/lib/db/schema";
 import { and, eq, isNull, count } from "drizzle-orm";
+import { AppError } from "@/lib/utils/errors";
 
-export class PlanLimitError extends Error {
+// ─── Plan Error Classes (extend AppError) ───────────────────────────────────
+
+export class PlanLimitError extends AppError {
+    public readonly planDetails: {
+        currentPlan: string | null;
+        limit: number | null;
+        upgradeUrl: string;
+    };
+
     constructor(
         message: string,
-        public readonly limitType: 'MENU_ITEM_LIMIT' | 'ORDER_LIMIT' | 'POTLUCK_LIMIT',
-        public readonly currentPlanId: string
+        code: string,
+        planDetails: {
+            currentPlan: string | null;
+            limit: number | null;
+            upgradeUrl: string;
+        }
     ) {
-        super(message);
+        super(message, code, 429);
+        this.planDetails = planDetails;
         this.name = 'PlanLimitError';
     }
 }
 
-export class PlanFeatureError extends Error {
+export class PlanFeatureError extends AppError {
+    public readonly planDetails: {
+        feature: string;
+        requiredPlan: string;
+        upgradeUrl: string;
+    };
+
     constructor(
         message: string,
-        public readonly feature: PlanFeature,
-        public readonly currentPlanId: string
+        code: string,
+        planDetails: {
+            feature: string;
+            requiredPlan: string;
+            upgradeUrl: string;
+        }
     ) {
-        super(message);
+        super(message, code, 403);
+        this.planDetails = planDetails;
         this.name = 'PlanFeatureError';
     }
 }
+
+// ─── Guard: Menu Item Limit ─────────────────────────────────────────────────
 
 export async function guardMenuItemLimit(kitchenId: string): Promise<void> {
     const access = await getKitchenPlanAccess(kitchenId);
@@ -41,46 +68,83 @@ export async function guardMenuItemLimit(kitchenId: string): Promise<void> {
     const c = currentCountResult[0]?.count ?? 0;
 
     if (!access.canAddMenuItem(c)) {
+        // Log the denied attempt for analytics
         if (access.subscription) {
-            // Log attempt for analytics
             await db.insert(planUsageLog).values({
                 kitchenId,
                 subscriptionId: access.subscription.id,
-                actionType: 'MENU_ITEM_ADDED',
+                actionType: 'MENU_ITEM_ADD_DENIED',
                 currentUsage: c,
-                limitValue: access.planConfig.menuItemLimit,
+                limitValue: access.getMenuLimit(),
                 wasAllowed: false,
             });
         }
 
+        const limit = access.getMenuLimit();
         throw new PlanLimitError(
-            `Your ${access.planConfig.displayName} plan allows up to ${access.planConfig.menuItemLimit} menu items. Upgrade to add more.`,
-            'MENU_ITEM_LIMIT',
-            access.planId
+            `Your ${access.planId ? access.planId.charAt(0).toUpperCase() + access.planId.slice(1) : 'free'} plan allows up to ${limit} menu items. Upgrade to add more.`,
+            'MENU_LIMIT_EXCEEDED',
+            {
+                currentPlan: access.planId,
+                limit,
+                upgradeUrl: '/dashboard/subscription',
+            }
         );
     }
 }
+
+// ─── Guard: Order Limit ─────────────────────────────────────────────────────
 
 export async function guardOrderLimit(kitchenId: string): Promise<void> {
     const access = await getKitchenPlanAccess(kitchenId);
 
-    if (!access.canPlaceOrder(access.subscription?.ordersUsedThisMonth ?? 0)) {
+    if (!access.canPlaceOrder()) {
+        const limit = access.getOrderLimit();
         throw new PlanLimitError(
-            `Kitchen has reached its monthly order limit. Cook needs to upgrade their plan.`,
-            'ORDER_LIMIT',
-            access.planId
+            `Kitchen has reached its monthly order limit of ${limit} orders.`,
+            'ORDER_LIMIT_EXCEEDED',
+            {
+                currentPlan: access.planId,
+                limit,
+                upgradeUrl: '/dashboard/subscription',
+            }
         );
     }
 }
+
+// ─── Guard: Potluck Creation ────────────────────────────────────────────────
+
+export async function guardPotluckCreation(kitchenId: string): Promise<void> {
+    const access = await getKitchenPlanAccess(kitchenId);
+
+    if (!access.canCreatePotluck()) {
+        throw new PlanLimitError(
+            'You have used all your Group Deal uses for this billing period. Upgrade your plan for more.',
+            'POTLUCK_LIMIT_EXCEEDED',
+            {
+                currentPlan: access.planId,
+                limit: access.getPotluckRemaining(),
+                upgradeUrl: '/dashboard/subscription',
+            }
+        );
+    }
+}
+
+// ─── Guard: Feature Access ──────────────────────────────────────────────────
 
 export async function guardFeatureAccess(kitchenId: string, feature: PlanFeature): Promise<void> {
     const access = await getKitchenPlanAccess(kitchenId);
 
     if (!access.hasFeature(feature)) {
+        const requiredPlan = getMinimumPlanForFeature(feature);
         throw new PlanFeatureError(
-            `This feature requires a higher plan.`,
-            feature,
-            access.planId
+            `This feature requires the ${requiredPlan.charAt(0).toUpperCase() + requiredPlan.slice(1)} plan or higher.`,
+            'PLAN_FEATURE_REQUIRED',
+            {
+                feature,
+                requiredPlan,
+                upgradeUrl: '/dashboard/subscription',
+            }
         );
     }
 }

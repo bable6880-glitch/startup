@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
             success_url: `${baseUrl}/dashboard/subscription?status=success`,
             cancel_url: `${baseUrl}/dashboard/subscription?status=cancelled`,
             metadata: {
+                type: 'SUBSCRIPTION',
                 kitchenId: kitchen.id,
                 cookId: user.id,
                 planId: planId,

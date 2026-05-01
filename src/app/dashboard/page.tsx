@@ -4,7 +4,8 @@ import { useAuth } from "@/lib/firebase/auth-context";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
-import { useKitchenSSE } from "@/hooks/use-kitchen-sse"; // ← PHASE 4 ADDED
+import { useKitchenSSE } from "@/hooks/use-kitchen-sse";
+import { PlanWidget } from "@/components/plans/PlanWidget";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -324,6 +325,11 @@ function DashboardContent() {
 
             {kitchen && (
                 <>
+                    {/* Plan Widget */}
+                    <div className="mb-8">
+                        <PlanWidget />
+                    </div>
+
                     {/* Stats */}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
                         <StatCard icon="⭐" label="Rating" value={Number(kitchen.avgRating) > 0 ? Number(kitchen.avgRating).toFixed(1) : "New"} />
