@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "leaflet/dist/leaflet.css";
 import { AuthProvider } from "@/lib/firebase/auth-context";
 import { CartProvider } from "@/lib/cart-context";
 import Navbar from "@/components/layout/Navbar";
