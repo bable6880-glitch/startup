@@ -144,6 +144,15 @@ export async function GET(request: NextRequest) {
             }
         }
 
+        // ── 5. Notification Cleanup (Delete > 30 days old) ───────────────────
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        await db.execute(sql`DELETE FROM notifications WHERE created_at < ${thirtyDaysAgo}`);
+
+        // ── 6. Monthly Order Limit Reset (Only on 1st of the month) ─────────
+        if (now.getDate() === 1) {
+            await db.execute(sql`UPDATE subscriptions SET orders_used_this_month = 0, updated_at = NOW()`);
+        }
+
         return apiSuccess({
             message: "Cleanup complete",
             expiredSubscriptions,

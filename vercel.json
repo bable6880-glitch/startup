@@ -9,20 +9,8 @@
       "schedule": "0 2 * * *"
     },
     {
-      "path": "/api/cron/notification-cleanup",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/reset-order-counts",
-      "schedule": "0 19 1 * *"
-    },
-    {
-      "path": "/api/cron/expire-subscriptions",
-      "schedule": "30 0 * * *"
-    },
-    {
       "path": "/api/cron/potluck-expiry",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 4 * * *"
     }
   ]
 }
