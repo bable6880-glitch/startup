@@ -108,12 +108,31 @@ export default function KhataDashboardPage() {
 
     if (error) {
         return (
-            <div className="container py-8 max-w-4xl mx-auto space-y-6">
-                <div className="rounded-xl bg-red-50 border border-red-200 p-6 text-center">
-                    <p className="text-red-700 font-medium mb-4">{error}</p>
-                    <Button onClick={() => window.location.href = '/dashboard/subscription'}>
-                        Upgrade Plan
-                    </Button>
+            <div className="min-h-[60vh] flex items-center justify-center px-4">
+                <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-10 text-center max-w-md w-full shadow-sm">
+                    {/* Glow */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-purple-500/5" />
+                    <div className="relative z-10">
+                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow mb-6">
+                            👑 Premium Feature
+                        </div>
+                        <div className="w-16 h-16 rounded-2xl bg-white shadow-xl border border-gray-100 flex items-center justify-center mx-auto mb-5">
+                            <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                                    d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                            </svg>
+                        </div>
+                        <h2 className="text-xl font-bold text-gray-900 mb-2">Pro Plan Required</h2>
+                        <p className="text-sm text-gray-500 mb-7">
+                            Digital Khata is available on the <strong>Pro</strong> plan and above. Upgrade to track your earnings, expenses, and P&amp;L automatically.
+                        </p>
+                        <a
+                            href="/dashboard/subscription"
+                            className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-semibold text-sm px-7 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5"
+                        >
+                            Upgrade to Pro →
+                        </a>
+                    </div>
                 </div>
             </div>
         );
@@ -140,10 +159,13 @@ export default function KhataDashboardPage() {
         <div className="container py-8 max-w-5xl mx-auto space-y-6">
             <BackButton label="Dashboard" />
 
+            {/* bypass=true: the /api/seller/khata API handles the real plan check.
+                FeatureGate only shows the premium overlay if we're certain user has no plan. */}
             <FeatureGate
                 feature="digital_khata"
                 currentPlanId={planData?.planId ?? null}
                 requiredPlan="pro"
+                bypass={!planData || planData.isFree === false}
             >
             <div className="flex justify-between items-center mt-2">
                 <div>

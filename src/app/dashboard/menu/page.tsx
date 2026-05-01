@@ -47,6 +47,14 @@ export default function MenuManagementPage() {
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // AI Chef Assistant modal state (must be declared before any conditional returns)
+    const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+    const [aiCuisine, setAiCuisine] = useState("");
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
+    const [aiTips, setAiTips] = useState<string | null>(null);
+    const [aiError, setAiError] = useState<string | null>(null);
+
     const {
         register, handleSubmit, reset, setValue, formState: { errors }, watch
     } = useForm<CreateMealInput>({
@@ -274,12 +282,7 @@ export default function MenuManagementPage() {
         );
     }
 
-    const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-    const [aiCuisine, setAiCuisine] = useState("");
-    const [aiLoading, setAiLoading] = useState(false);
-    const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
-    const [aiTips, setAiTips] = useState<string | null>(null);
-    const [aiError, setAiError] = useState<string | null>(null);
+
 
     const generateAiIdeas = async () => {
         if (!aiCuisine.trim()) return;

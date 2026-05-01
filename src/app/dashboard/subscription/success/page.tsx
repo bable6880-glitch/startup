@@ -49,7 +49,7 @@ export default async function SubscriptionSuccess({
         const planName = subscription?.planConfig?.displayName ?? planId;
 
         // Render success UI with real plan name
-        return <SuccessUI planName={planName} redirectUrl="/dashboard" />;
+        return <SuccessUI planName={planName} planId={subscription?.planConfig?.planId ?? planId ?? undefined} redirectUrl="/dashboard" />;
         
     } catch (err) {
         // Stripe session not found or API error
