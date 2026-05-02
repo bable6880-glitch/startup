@@ -4,13 +4,14 @@ import { db } from "@/lib/db";
 import { kitchens, adminAuditLog } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const auth = await guardAdminPortal(req);
     if (!auth.ok) return auth.response;
+    const { id } = await params;
 
     try {
         const kitchen = await db.query.kitchens.findFirst({
-            where: eq(kitchens.id, params.id),
+            where: eq(kitchens.id, id),
             with: {
                 owner: true,
             }
@@ -27,9 +28,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const auth = await guardAdminPortal(req);
     if (!auth.ok) return auth.response;
+    const { id } = await params;
 
     try {
         const body = await req.json();
@@ -56,7 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
         const result = await db.update(kitchens)
             .set(updateData)
-            .where(eq(kitchens.id, params.id))
+            .where(eq(kitchens.id, id))
             .returning();
 
         if (result.length === 0) {
@@ -65,10 +67,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
         // Log to audit table
         await db.insert(adminAuditLog).values({
-            adminId: auth.adminId!,
+            adminId: auth.admin.id,
             action: actionDesc.trim(),
             targetType: "kitchen",
-            targetId: params.id,
+            targetId: id,
             ipAddress: req.headers.get("x-forwarded-for") || "unknown"
         });
 

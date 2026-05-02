@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest) {
         }
 
         await db.insert(adminAuditLog).values({
-            adminId: auth.adminId!,
+            adminId: auth.admin.id,
             action: `Updated plan configuration for ${result[0].displayName}.`,
             targetType: "plan_config",
             targetId: id,

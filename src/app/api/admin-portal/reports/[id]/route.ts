@@ -4,9 +4,10 @@ import { db } from "@/lib/db";
 import { reports, adminAuditLog } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const auth = await guardAdminPortal(req);
     if (!auth.ok) return auth.response;
+    const { id } = await params;
 
     try {
         const body = await req.json();
@@ -24,13 +25,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         }
 
         if (status === "RESOLVED" || status === "DISMISSED" || status === "REVIEWED") {
-            updateData.reviewedBy = auth.adminId;
+            updateData.reviewedBy = auth.admin.id;
             updateData.reviewedAt = new Date();
         }
 
         const result = await db.update(reports)
             .set(updateData)
-            .where(eq(reports.id, params.id))
+            .where(eq(reports.id, id))
             .returning();
 
         if (result.length === 0) {
@@ -38,10 +39,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         }
 
         await db.insert(adminAuditLog).values({
-            adminId: auth.adminId!,
+            adminId: auth.admin.id,
             action: actionDesc.trim(),
             targetType: "report",
-            targetId: params.id,
+            targetId: id,
             ipAddress: req.headers.get("x-forwarded-for") || "unknown"
         });
 
