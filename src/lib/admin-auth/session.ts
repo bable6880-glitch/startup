@@ -2,7 +2,13 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 
-const SECRET  = new TextEncoder().encode(process.env.ADMIN_JWT_SECRET!);
+let _secret: Uint8Array | null = null;
+function getSecret(): Uint8Array {
+    if (!_secret) {
+        _secret = new TextEncoder().encode(process.env.ADMIN_JWT_SECRET!);
+    }
+    return _secret;
+}
 const COOKIE  = "st_admin_session";
 const TTL_SEC = 8 * 60 * 60; // 8 hours
 
@@ -28,7 +34,7 @@ export async function createAdminSession(
         .setExpirationTime(`${TTL_SEC}s`)
         .setIssuer("smart-tiffin-admin")
         .setAudience("admin-portal")
-        .sign(SECRET);
+        .sign(getSecret());
 
     const cookieStore = await cookies();
     cookieStore.set(COOKIE, token, {
@@ -44,7 +50,7 @@ export async function createAdminSession(
 
 export async function verifyAdminSession(token: string): Promise<AdminSession | null> {
     try {
-        const { payload } = await jwtVerify(token, SECRET, {
+        const { payload } = await jwtVerify(token, getSecret(), {
             issuer:   "smart-tiffin-admin",
             audience: "admin-portal",
         });

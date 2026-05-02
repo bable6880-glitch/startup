@@ -2,9 +2,19 @@ import { Resend } from 'resend';
 
 /**
  * OTP Email Sender using Resend
+ *
+ * The client is lazily initialised so the module can be imported during
+ * Next.js build / page-data collection without crashing when
+ * RESEND_API_KEY is not yet available.
  */
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+function getResend(): Resend {
+    if (!_resend) {
+        _resend = new Resend(process.env.RESEND_API_KEY);
+    }
+    return _resend;
+}
 
 export async function sendOTPEmail(params: {
     to:               string;
@@ -87,7 +97,7 @@ export async function sendOTPEmail(params: {
 
     try {
         // We use onboarding@resend.dev because custom domains require DNS verification on the free tier.
-        const { data, error } = await resend.emails.send({
+        const { data, error } = await getResend().emails.send({
             from: 'Smart Tiffin Admin <onboarding@resend.dev>',
             to: [to],
             subject: subject,
