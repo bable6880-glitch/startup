@@ -74,13 +74,10 @@ export async function getAdminSession(): Promise<AdminSession | null> {
 
 export async function clearAdminSession(): Promise<void> {
     const cookieStore = await cookies();
-    cookieStore.set(COOKIE, "", {
-        httpOnly:  true,
-        secure:    process.env.NODE_ENV === "production",
-        sameSite:  "strict",
-        maxAge:    0,
-        path:      "/",
-    });
+    // Delete the new root path cookie
+    cookieStore.delete({ name: COOKIE, path: "/" });
+    // Force delete the old scoped cookie in case it's stuck in the user's browser
+    cookieStore.delete({ name: COOKIE, path: "/admin-portal" });
 }
 
 export function hashJti(jti: string): string {
