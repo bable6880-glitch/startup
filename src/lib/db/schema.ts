@@ -574,31 +574,6 @@ export const reports = pgTable(
     ]
 );
 
-// ─── Admin Audit Log ────────────────────────────────────────────────────────
-
-export const adminAuditLog = pgTable(
-    "admin_audit_log",
-    {
-        id: uuid("id").defaultRandom().primaryKey(),
-        adminId: uuid("admin_id")
-            .notNull()
-            .references(() => users.id),
-        action: varchar("action", { length: 255 }).notNull(),
-        targetType: varchar("target_type", { length: 50 }).notNull(),
-        targetId: uuid("target_id").notNull(),
-        details: text("details"),
-        ipAddress: varchar("ip_address", { length: 45 }),
-        createdAt: timestamp("created_at", { withTimezone: true })
-            .defaultNow()
-            .notNull(),
-    },
-    (table) => [
-        index("audit_admin_idx").on(table.adminId),
-        index("audit_action_idx").on(table.action),
-        index("audit_created_idx").on(table.createdAt),
-    ]
-);
-
 // ─── Relations ──────────────────────────────────────────────────────────────
 
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -703,11 +678,6 @@ export const reportsRelations = relations(reports, ({ one }) => ({
         fields: [reports.reviewedBy],
         references: [users.id],
     }),
-}));
-
-// ─── ADMIN AUDIT LOG ──────────────────────────────────────────────
-export const adminAuditLogRelations = relations(adminAuditLog, ({ one }) => ({
-    admin: one(users, { fields: [adminAuditLog.adminId], references: [users.id] }),
 }));
 
 // ─── USER FAVORITES ───────────────────────────────────────────────
@@ -1002,4 +972,32 @@ export const adminOtpCodesRelations = relations(adminOtpCodes, ({ one }) => ({
         fields: [adminOtpCodes.adminUserId],
         references: [adminUsers.id],
     }),
+}));
+
+// ─── ADMIN AUDIT LOG ──────────────────────────────────────────────
+export const adminAuditLog = pgTable(
+    "admin_audit_log",
+    {
+        id: uuid("id").defaultRandom().primaryKey(),
+        adminId: uuid("admin_id")
+            .notNull()
+            .references(() => adminUsers.id),
+        action: varchar("action", { length: 255 }).notNull(),
+        targetType: varchar("target_type", { length: 50 }).notNull(),
+        targetId: uuid("target_id").notNull(),
+        details: text("details"),
+        ipAddress: varchar("ip_address", { length: 45 }),
+        createdAt: timestamp("created_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+    },
+    (table) => [
+        index("audit_admin_idx").on(table.adminId),
+        index("audit_action_idx").on(table.action),
+        index("audit_created_idx").on(table.createdAt),
+    ]
+);
+
+export const adminAuditLogRelations = relations(adminAuditLog, ({ one }) => ({
+    admin: one(adminUsers, { fields: [adminAuditLog.adminId], references: [adminUsers.id] }),
 }));
