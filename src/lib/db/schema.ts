@@ -944,3 +944,62 @@ export const planUsageLog = pgTable("plan_usage_log", {
 }, (table) => [
     index("idx_usage_log_kitchen_action").on(table.kitchenId, table.actionType, table.createdAt),
 ]);
+
+// ─── ADMIN PORTAL AUTH TABLES (isolated from Firebase) ───────────────────────
+
+export const adminUsers = pgTable("admin_users", {
+    id:            uuid("id").primaryKey().defaultRandom(),
+    email:         text("email").notNull().unique(),
+    username:      text("username").notNull().unique(),
+    passwordHash:  text("password_hash").notNull(),
+    displayName:   text("display_name").notNull(),
+    role:          text("role").notNull().default("admin"), // "admin" | "super_admin"
+    isActive:      boolean("is_active").notNull().default(true),
+    lastLoginAt:   timestamp("last_login_at"),
+    loginAttempts: integer("login_attempts").notNull().default(0),
+    lockedUntil:   timestamp("locked_until"),
+    createdAt:     timestamp("created_at").defaultNow().notNull(),
+    updatedAt:     timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const adminSessions = pgTable("admin_sessions", {
+    id:             uuid("id").primaryKey().defaultRandom(),
+    adminUserId:    uuid("admin_user_id").notNull().references(() => adminUsers.id, { onDelete: "cascade" }),
+    jtiHash:        text("jti_hash").notNull(),
+    ipAddress:      text("ip_address"),
+    userAgent:      text("user_agent"),
+    createdAt:      timestamp("created_at").defaultNow().notNull(),
+    expiresAt:      timestamp("expires_at").notNull(),
+    lastActivityAt: timestamp("last_activity_at").defaultNow().notNull(),
+    revokedAt:      timestamp("revoked_at"),
+});
+
+export const adminOtpCodes = pgTable("admin_otp_codes", {
+    id:           uuid("id").primaryKey().defaultRandom(),
+    adminUserId:  uuid("admin_user_id").notNull().references(() => adminUsers.id, { onDelete: "cascade" }),
+    codeHash:     text("code_hash").notNull(),
+    expiresAt:    timestamp("expires_at").notNull(),
+    usedAt:       timestamp("used_at"),
+    attempts:     integer("attempts").notNull().default(0),
+    ipAddress:    text("ip_address"),
+    createdAt:    timestamp("created_at").defaultNow().notNull(),
+});
+
+export const adminUsersRelations = relations(adminUsers, ({ many }) => ({
+    sessions: many(adminSessions),
+    otpCodes: many(adminOtpCodes),
+}));
+
+export const adminSessionsRelations = relations(adminSessions, ({ one }) => ({
+    admin: one(adminUsers, {
+        fields: [adminSessions.adminUserId],
+        references: [adminUsers.id],
+    }),
+}));
+
+export const adminOtpCodesRelations = relations(adminOtpCodes, ({ one }) => ({
+    admin: one(adminUsers, {
+        fields: [adminOtpCodes.adminUserId],
+        references: [adminUsers.id],
+    }),
+}));

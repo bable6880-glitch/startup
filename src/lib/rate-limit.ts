@@ -37,6 +37,9 @@ export const rateLimiters = {
     chefAssistant: createLimiter(20, "1440 m"),       // 20/day/user
     subscriptionCheckout: createLimiter(3, "60 m"),   // 3/hour/user
     khata: createLimiter(60, "1 m"),                  // 60/min/user
+    // ── Admin Portal ──
+    adminPortalAuth: createLimiter(5, "15 m"),        // 5/15min/IP
+    adminPortalApi: createLimiter(100, "1 m"),        // 100/min/IP
     default: createLimiter(60, "1 m"),
 };
 
@@ -44,6 +47,8 @@ export type RateLimiterKey = keyof typeof rateLimiters;
 
 // Returns the correct limiter key for a given pathname
 export function getLimiterKey(pathname: string): RateLimiterKey {
+    if (pathname.startsWith("/api/admin-portal/auth")) return "adminPortalAuth";
+    if (pathname.startsWith("/api/admin-portal")) return "adminPortalApi";
     if (pathname.startsWith("/api/auth")) return "auth";
     if (pathname.startsWith("/api/orders")) return "orders";
     if (pathname.startsWith("/api/reviews")) return "reviews";
@@ -72,3 +77,9 @@ export function getClientIp(request: Request): string {
     if (realIp) return realIp.trim();
     return "unknown";
 }
+
+// ─── Admin Portal Rate Limiters (standalone exports) ────────────────────────
+
+export const adminPortalAuth = createLimiter(5, "15 m");    // 5 attempts per 15 min
+export const adminOtpVerify  = createLimiter(3, "10 m");    // 3 attempts per 10 min
+

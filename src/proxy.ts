@@ -69,7 +69,61 @@ export async function proxy(request: NextRequest) {
     const route = `${request.method} ${pathname}`;
 
     try {
-        // Only apply to API routes
+        // ============================================================
+        // ADMIN PORTAL GUARD — completely isolated from Firebase auth
+        // ============================================================
+        if (pathname.startsWith("/admin-portal")) {
+            const publicPaths = ["/admin-portal/login", "/admin-portal/verify"];
+
+            if (publicPaths.includes(pathname)) {
+                // If already logged in, redirect away from login/verify page
+                const token = request.cookies.get("st_admin_session")?.value;
+                if (token) {
+                    try {
+                        const { jwtVerify } = await import("jose");
+                        const secret = new TextEncoder().encode(process.env.ADMIN_JWT_SECRET!);
+                        await jwtVerify(token, secret, {
+                            issuer: "smart-tiffin-admin",
+                            audience: "admin-portal",
+                        });
+                        return NextResponse.redirect(new URL("/admin-portal/dashboard", request.url));
+                    } catch {
+                        // Token invalid — let them see login page
+                    }
+                }
+                return NextResponse.next();
+            }
+
+            // All other /admin-portal/* routes require a valid session
+            const token = request.cookies.get("st_admin_session")?.value;
+
+            if (!token) {
+                return NextResponse.redirect(new URL("/admin-portal/login", request.url));
+            }
+
+            try {
+                const { jwtVerify } = await import("jose");
+                const secret = new TextEncoder().encode(process.env.ADMIN_JWT_SECRET!);
+                const { payload } = await jwtVerify(token, secret, {
+                    issuer: "smart-tiffin-admin",
+                    audience: "admin-portal",
+                });
+
+                // Inject admin identity into request headers for server components
+                const headers = new Headers(request.headers);
+                headers.set("x-admin-id", payload.sub as string);
+                headers.set("x-admin-username", payload.username as string);
+                headers.set("x-admin-role", payload.role as string);
+
+                return NextResponse.next({ request: { headers } });
+            } catch {
+                const res = NextResponse.redirect(new URL("/admin-portal/login", request.url));
+                res.cookies.delete("st_admin_session");
+                return res;
+            }
+        }
+
+        // Only apply rate limiting / CORS to API routes
         if (!pathname.startsWith("/api/")) {
             return NextResponse.next();
         }
@@ -209,5 +263,5 @@ export async function proxy(request: NextRequest) {
 // ─── Matcher ────────────────────────────────────────────────────────────────
 
 export const config = {
-    matcher: ["/api/:path*"],
+    matcher: ["/api/:path*", "/admin-portal/:path*"],
 };

@@ -31,6 +31,8 @@ export default function robots(): MetadataRoute.Robots {
           // Admin
           '/admin',
           '/admin/',
+          '/admin-portal',
+          '/admin-portal/',
           // Seller routes
           '/seller',
           '/seller/',
