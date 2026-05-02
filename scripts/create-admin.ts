@@ -23,7 +23,7 @@ import bcrypt from "bcryptjs";
 neonConfig.poolQueryViaFetch = true;
 
 // ─── EDIT THESE BEFORE RUNNING ──────────────────────────────────────────────
-const ADMIN_EMAIL    = "faizusardar900@gmail.com";       // The email OTPs will be sent to
+const ADMIN_EMAIL    = "bable6880@gmail.com";       // The email OTPs will be sent to
 const ADMIN_USERNAME = "bravo91";
 const ADMIN_PASSWORD = "Faiz786$$$786";     // DELETE THIS AFTER RUNNING
 const ADMIN_NAME     = "Faiz";
@@ -41,6 +41,9 @@ async function createAdmin() {
 
     console.log("🔐 Hashing password...");
     const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+
+    console.log("🗑️ Deleting all previous admin users...");
+    await db.delete(adminUsers);
 
     console.log(`📝 Creating admin: ${ADMIN_EMAIL}`);
     const result = await db
