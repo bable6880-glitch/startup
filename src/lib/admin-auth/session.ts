@@ -5,7 +5,12 @@ import crypto from "crypto";
 let _secret: Uint8Array | null = null;
 function getSecret(): Uint8Array {
     if (!_secret) {
-        _secret = new TextEncoder().encode(process.env.ADMIN_JWT_SECRET!);
+        const secretVal = process.env.ADMIN_JWT_SECRET;
+        if (!secretVal || secretVal.trim() === "") {
+            console.error("CRITICAL ERROR: ADMIN_JWT_SECRET is missing from environment variables.");
+            throw new Error("ADMIN_JWT_SECRET environment variable is not configured.");
+        }
+        _secret = new TextEncoder().encode(secretVal);
     }
     return _secret;
 }
