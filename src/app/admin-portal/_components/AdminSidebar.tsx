@@ -133,7 +133,7 @@ export function AdminSidebar() {
                         onClick={async (e) => {
                             e.preventDefault();
                             await fetch("/api/admin-portal/auth/logout", { method: "POST" });
-                            window.location.href = "/admin-portal/login";
+                            window.location.href = "/";
                         }}
                     >
                         <LogOut size={18} />

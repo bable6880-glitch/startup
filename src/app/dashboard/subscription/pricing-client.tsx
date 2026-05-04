@@ -121,7 +121,8 @@ export function PricingClient({ plans }: { plans: any[] }) {
             if (url) {
                 window.location.href = url;
             } else {
-                setCheckoutError(body.error || 'Could not start checkout. Please try again.');
+                const errorMsg = typeof body.error === 'string' ? body.error : body.error?.message || 'Could not start checkout. Please try again.';
+                setCheckoutError(errorMsg);
                 setCheckoutLoading(null);
             }
         } catch {

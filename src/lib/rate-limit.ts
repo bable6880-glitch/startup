@@ -35,7 +35,7 @@ export const rateLimiters = {
     potluckReserve: createLimiter(5, "1 m"),         // 5/min/user
     aiPricing: createLimiter(20, "60 m"),             // 20/hour/user
     chefAssistant: createLimiter(20, "1440 m"),       // 20/day/user
-    subscriptionCheckout: createLimiter(3, "60 m"),   // 3/hour/user
+    subscriptionCheckout: createLimiter(30, "60 m"),  // 30/hour/user
     khata: createLimiter(60, "1 m"),                  // 60/min/user
     // ── Admin Portal ──
     adminPortalAuth: createLimiter(5, "15 m"),        // 5/15min/IP
