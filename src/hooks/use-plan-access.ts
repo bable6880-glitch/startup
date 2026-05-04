@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/firebase/auth-context';
 
 // You might want to import PlanId from your types, but we'll define locally for completeness.
 export type PlanId = 'starter' | 'growth' | 'pro' | 'elite';
@@ -42,16 +43,28 @@ export interface SubscriptionData {
 }
 
 export function usePlanAccess() {
+    const { user, getIdToken } = useAuth();
     const [data, setData] = useState<SubscriptionData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        fetch('/api/seller/subscription')
-            .then(r => r.json())
-            .then(d => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+
+        const fetchPlan = async () => {
+            try {
+                const token = await getIdToken();
+                const res = await fetch('/api/seller/subscription', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const d = await res.json();
+                
                 if (d.success) {
-                    // Extract planId locally for easy checking
                     const enrichedData = {
                         ...d,
                         planId: (d.subscription?.planId ?? null) as PlanId | null
@@ -60,10 +73,15 @@ export function usePlanAccess() {
                 } else {
                     setError(d.error?.message ?? d.error ?? 'Failed to load plan access');
                 }
-            })
-            .catch(() => setError('Network error'))
-            .finally(() => setLoading(false));
-    }, []);
+            } catch (err) {
+                setError('Network error');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchPlan();
+    }, [user, getIdToken]);
 
     return { data, loading, error };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, notFound } from "next/navigation";
 import { KPICard } from "../_components/KPICard";
 import { RevenueChart } from "../_components/charts/RevenueChart";
 import { OrdersChart } from "../_components/charts/OrdersChart";
@@ -20,7 +20,7 @@ export default function AdminDashboardPage() {
         fetch("/api/admin-portal/analytics")
             .then(res => {
                 if (res.status === 401) {
-                    router.push("/");
+                    notFound();
                     return null;
                 }
                 if (!res.ok) throw new Error("Failed to load analytics");

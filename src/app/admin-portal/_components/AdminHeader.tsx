@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, notFound } from "next/navigation";
 import { usePrivacy } from "./PrivacyMode";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -16,7 +16,7 @@ export function AdminHeader() {
         fetch("/api/admin-portal/auth/me")
             .then(res => {
                 if (res.status === 401) {
-                    router.push("/");
+                    notFound();
                     return null;
                 }
                 return res.json();

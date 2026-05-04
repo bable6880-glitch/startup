@@ -131,6 +131,7 @@ function buildPlanAccess(sub: SubscriptionRow, config: PlanConfigRow): PlanAcces
         },
 
         canCreatePotluck(): boolean {
+            if (sub.planId === 'elite') return true;
             if (config.potluckUsesPerPeriod === -1) return true;
             return (sub.potluckUsesRemaining ?? 0) > 0;
         },
@@ -273,6 +274,9 @@ export function buildFreeAccess(): PlanAccess {
 // ─── Feature Resolution ─────────────────────────────────────────────────────
 
 function resolveFeature(config: PlanConfigRow, feature: PlanFeature): boolean {
+    // Top-tier 'elite' plan always has access to everything
+    if (config.planId === 'elite') return true;
+
     switch (feature) {
         case 'featured_boost':
             return !!config.featuredBoostLevel && config.featuredBoostLevel !== 'none';
