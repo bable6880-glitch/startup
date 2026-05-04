@@ -100,6 +100,21 @@ export function PricingClient({ plans }: { plans: any[] }) {
 
     const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
+    /**
+     * Safely extract a displayable error string from any API response shape.
+     * Handles: string, { message }, { code, message }, null/undefined, and any other object.
+     */
+    const extractErrorMessage = (err: unknown, fallback: string): string => {
+        if (!err) return fallback;
+        if (typeof err === 'string') return err;
+        if (typeof err === 'object' && err !== null) {
+            const obj = err as Record<string, unknown>;
+            if (typeof obj.message === 'string') return obj.message;
+            if (typeof obj.code === 'string') return obj.code;
+        }
+        return fallback;
+    };
+
     const handleCheckout = async (plan: typeof sorted[0]) => {
         // GUARD: Validate stripePriceId exists before calling API
         if (!plan.stripePriceId) {
@@ -116,13 +131,30 @@ export function PricingClient({ plans }: { plans: any[] }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ planId: plan.planId })
             });
-            const body = await res.json();
+
+            let body: any;
+            try {
+                body = await res.json();
+            } catch {
+                setCheckoutError('Server returned an invalid response. Please try again.');
+                setCheckoutLoading(null);
+                return;
+            }
+
+            // Handle non-OK responses explicitly (429, 500, etc.)
+            if (!res.ok) {
+                const msg = extractErrorMessage(body?.error, `Request failed (${res.status}). Please try again.`);
+                setCheckoutError(msg);
+                setCheckoutLoading(null);
+                return;
+            }
+
             const url = body.checkoutUrl || body.data?.url;
             if (url) {
                 window.location.href = url;
             } else {
-                const errorMsg = typeof body.error === 'string' ? body.error : body.error?.message || 'Could not start checkout. Please try again.';
-                setCheckoutError(errorMsg);
+                const msg = extractErrorMessage(body?.error, 'Could not start checkout. Please try again.');
+                setCheckoutError(msg);
                 setCheckoutLoading(null);
             }
         } catch {
