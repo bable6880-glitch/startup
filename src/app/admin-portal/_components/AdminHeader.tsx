@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { usePrivacy } from "./PrivacyMode";
 import { Eye, EyeOff } from "lucide-react";
 
 export function AdminHeader() {
+    const router = useRouter();
     const { isPrivacyMode, togglePrivacyMode } = usePrivacy();
     const [adminName, setAdminName] = useState("");
     const [adminRole, setAdminRole] = useState("");
@@ -12,9 +14,15 @@ export function AdminHeader() {
     useEffect(() => {
         // Fetch current admin info
         fetch("/api/admin-portal/auth/me")
-            .then(res => res.json())
+            .then(res => {
+                if (res.status === 401) {
+                    router.push("/");
+                    return null;
+                }
+                return res.json();
+            })
             .then(data => {
-                if (data.admin) {
+                if (data && data.admin) {
                     setAdminName(data.admin.displayName);
                     setAdminRole(data.admin.role);
                 }

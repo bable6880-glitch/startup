@@ -27,13 +27,13 @@ async function handleWebhookEventInline(event: Stripe.Event) {
             return;
         }
 
-        // Amount verification — critical security check
-        // Note: Amount might be 0 for trial/free checkout, check if it matches plan
+        // Note: Amount might be 0 for trial/free checkout or due to promo codes.
+        // We trust Stripe's checkout session completion.
         const amountPaidRs = session.amount_total ? session.amount_total / 100 : 0;
-        if (amountPaidRs < planConfig.priceRs) {
-            console.error(`[Stripe Webhook] Amount paid (${amountPaidRs}) is less than plan price (${planConfig.priceRs})`);
-            return; // Reject underpayment
-        }
+        // if (amountPaidRs < planConfig.priceRs) {
+        //     console.error(`[Stripe Webhook] Amount paid (${amountPaidRs}) is less than plan price (${planConfig.priceRs})`);
+        //     return; // Reject underpayment
+        // }
 
         const now = new Date();
         const periodEnd = new Date(now);

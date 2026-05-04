@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
     LayoutDashboard, 
     Users, 
@@ -16,6 +16,7 @@ import {
 
 export function AdminSidebar() {
     const pathname = usePathname();
+    const router = useRouter();
 
     const navGroups = [
         {
@@ -132,8 +133,14 @@ export function AdminSidebar() {
                         onMouseOut={(e) => e.currentTarget.style.background = "transparent"}
                         onClick={async (e) => {
                             e.preventDefault();
-                            await fetch("/api/admin-portal/auth/logout", { method: "POST" });
-                            window.location.href = "/";
+                            try {
+                                await fetch("/api/admin-portal/auth/logout", { method: "POST" });
+                            } catch (err) {
+                                console.error("Logout failed", err);
+                            }
+                            // Redirect to home page
+                            router.push("/");
+                            router.refresh();
                         }}
                     >
                         <LogOut size={18} />

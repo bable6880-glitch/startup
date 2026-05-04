@@ -86,11 +86,6 @@ export function KitchenHeader({ kitchen }: KitchenHeaderProps) {
                     <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-50">
                         Tiffin Service & Home Cooked Food by {kitchen.name}
                     </h1>
-                    {kitchen.isVerified && (
-                        <span className="rounded-full bg-accent-100 px-3 py-1 text-xs font-semibold text-accent-700 dark:bg-accent-900/30 dark:text-accent-300">
-                            ✓ Verified
-                        </span>
-                    )}
                 </div>
 
                 {/* Favorite Toggle Button */}
@@ -138,21 +133,40 @@ export function KitchenHeader({ kitchen }: KitchenHeaderProps) {
                 </span>
             </div>
 
-            {/* Delivery Badges */}
-            {kitchen.deliveryOptions && kitchen.deliveryOptions.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                    {kitchen.deliveryOptions.includes("SELF_PICKUP") && (
-                        <span className="rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-300">
-                            🏃 Self Pickup
-                        </span>
-                    )}
-                    {kitchen.deliveryOptions.includes("FREE_DELIVERY") && (
-                        <span className="rounded-full bg-accent-50 px-3 py-1.5 text-xs font-semibold text-accent-700 dark:bg-accent-900/20 dark:text-accent-300">
-                            🛵 Free Delivery
-                        </span>
-                    )}
-                </div>
-            )}
+            {/* Delivery & Verification Badges */}
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+                {kitchen.isVerified && (
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/20 dark:to-neutral-900 border border-emerald-100 dark:border-emerald-800/30 shadow-sm">
+                        <div className="relative flex items-center justify-center">
+                            <div className="absolute inset-0 bg-emerald-500 rounded-full opacity-20 animate-pulse" />
+                            <div className="relative flex items-center justify-center w-5 h-5 bg-emerald-500 rounded-full shadow-sm">
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.1em] leading-none">Verified</span>
+                            <span className="text-[12px] font-semibold text-neutral-900 dark:text-neutral-100 leading-tight">Trust Cook</span>
+                        </div>
+                    </div>
+                )}
+
+                {kitchen.deliveryOptions && kitchen.deliveryOptions.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {kitchen.deliveryOptions.includes("SELF_PICKUP") && (
+                            <span className="inline-flex items-center gap-1.5 rounded-xl bg-neutral-100 px-3.5 py-2 text-xs font-semibold text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 border border-neutral-200/50 dark:border-neutral-700/50">
+                                🏃 Self Pickup
+                            </span>
+                        )}
+                        {kitchen.deliveryOptions.includes("FREE_DELIVERY") && (
+                            <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30">
+                                🛵 Free Delivery
+                            </span>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
