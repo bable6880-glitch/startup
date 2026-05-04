@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireSeller } from "@/lib/auth/seller-guard";
 import { db } from "@/lib/db";
 import { planConfigs, subscriptions } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull, inArray, gt } from "drizzle-orm";
 import { stripe } from "@/lib/stripe";
 import { Redis } from "@upstash/redis";
 import { logger } from "@/lib/utils/logger";
@@ -34,16 +34,23 @@ export async function POST(request: NextRequest) {
 
         const { planId } = parsed.data;
 
-        // Check no active subscription exists
+        // Check no active subscription exists that is still within its billing period
         const activeSub = await db.query.subscriptions.findFirst({
             where: and(
                 eq(subscriptions.kitchenId, kitchen.id),
-                eq(subscriptions.status, 'ACTIVE')
+                isNull(subscriptions.cancelledAt),
+                inArray(subscriptions.status, ['ACTIVE', 'TRIALING']),
+                gt(subscriptions.currentPeriodEnd, new Date()),
             ),
+            with: { planConfig: true },
         });
 
-        if (activeSub && activeSub.planId === planId) {
-            return NextResponse.json({ error: "You already have this active subscription" }, { status: 409 });
+        if (activeSub) {
+            const endDate = activeSub.currentPeriodEnd?.toLocaleDateString('en-PK') ?? 'end of billing cycle';
+            const planName = activeSub.planConfig?.displayName ?? activeSub.planId;
+            return NextResponse.json({
+                error: `You already have an active ${planName} plan that runs until ${endDate}. You can purchase a new plan after your current plan ends.`
+            }, { status: 409 });
         }
 
         // Get plan config from DB

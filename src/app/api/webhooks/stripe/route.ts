@@ -105,7 +105,71 @@ async function handleWebhookEventInline(event: Stripe.Event) {
                 updatedAt: new Date()
             })
             .where(eq(subscriptions.stripeSubscriptionId, subscription.id));
-            
+
+        // Invalidate plan access cache
+        const sub = await db.query.subscriptions.findFirst({
+            where: eq(subscriptions.stripeSubscriptionId, subscription.id),
+        });
+        if (sub) {
+            const { invalidatePlanAccessCache } = await import("@/lib/plans/plan-access");
+            await invalidatePlanAccessCache(sub.kitchenId);
+        }
+
+    } else if (event.type === 'invoice.paid') {
+        // ─── AUTO-RENEWAL SUCCESS ─────────────────────────────────────────────
+        const invoice = event.data.object as Stripe.Invoice;
+        const stripeSubId = invoice.subscription as string;
+        if (!stripeSubId) return;
+
+        const stripeSub = await stripe.subscriptions.retrieve(stripeSubId);
+
+        await db.update(subscriptions)
+            .set({
+                status: 'ACTIVE',
+                currentPeriodStart: new Date(stripeSub.current_period_start * 1000),
+                currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
+                ordersUsedThisMonth: 0, // Reset monthly usage counters
+                updatedAt: new Date(),
+            })
+            .where(eq(subscriptions.stripeSubscriptionId, stripeSubId));
+
+        const sub = await db.query.subscriptions.findFirst({
+            where: eq(subscriptions.stripeSubscriptionId, stripeSubId),
+        });
+        if (sub) {
+            const { invalidatePlanAccessCache } = await import("@/lib/plans/plan-access");
+            await invalidatePlanAccessCache(sub.kitchenId);
+        }
+
+    } else if (event.type === 'invoice.payment_failed') {
+        // ─── AUTO-RENEWAL FAILED ──────────────────────────────────────────────
+        const invoice = event.data.object as Stripe.Invoice;
+        const stripeSubId = invoice.subscription as string;
+        if (!stripeSubId) return;
+
+        await db.update(subscriptions)
+            .set({ status: 'PAST_DUE', updatedAt: new Date() })
+            .where(eq(subscriptions.stripeSubscriptionId, stripeSubId));
+
+        // Notify the cook
+        const sub = await db.query.subscriptions.findFirst({
+            where: eq(subscriptions.stripeSubscriptionId, stripeSubId),
+        });
+        if (sub) {
+            const { invalidatePlanAccessCache } = await import("@/lib/plans/plan-access");
+            await invalidatePlanAccessCache(sub.kitchenId);
+
+            try {
+                const { notifySystemMessage } = await import("@/services/notification.service");
+                await notifySystemMessage(
+                    sub.userId,
+                    "Your subscription renewal failed. Update your payment method to keep your kitchen active."
+                );
+            } catch (e) {
+                console.error("[Stripe Webhook] Payment failed notification error", e);
+            }
+        }
+
     } else if (event.type === 'customer.subscription.deleted') {
         const subscription = event.data.object as Stripe.Subscription;
         
@@ -116,6 +180,14 @@ async function handleWebhookEventInline(event: Stripe.Event) {
                 updatedAt: new Date()
             })
             .where(eq(subscriptions.stripeSubscriptionId, subscription.id));
+
+        const sub = await db.query.subscriptions.findFirst({
+            where: eq(subscriptions.stripeSubscriptionId, subscription.id),
+        });
+        if (sub) {
+            const { invalidatePlanAccessCache } = await import("@/lib/plans/plan-access");
+            await invalidatePlanAccessCache(sub.kitchenId);
+        }
     }
 }
 

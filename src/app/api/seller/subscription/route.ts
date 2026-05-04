@@ -3,7 +3,7 @@ import { requireSeller } from '@/lib/auth/seller-guard';
 import { getKitchenPlanAccess } from '@/lib/plans/plan-access';
 import { db } from '@/lib/db';
 import { subscriptions, meals } from '@/lib/db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, inArray } from 'drizzle-orm';
 import { stripe } from '@/lib/stripe';
 import { notifySystemMessage } from '@/services/notification.service';
 import { invalidatePlanAccessCache } from '@/lib/plans/plan-access';
@@ -83,7 +83,8 @@ export async function DELETE(req: NextRequest) {
         const subRecord = await db.query.subscriptions.findFirst({
             where: and(
                 eq(subscriptions.kitchenId, guard.kitchen.id),
-                eq(subscriptions.status, 'ACTIVE')
+                isNull(subscriptions.cancelledAt),
+                inArray(subscriptions.status, ['ACTIVE', 'TRIALING', 'PAST_DUE']),
             ),
             with: { planConfig: true }
         });

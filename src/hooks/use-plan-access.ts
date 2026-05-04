@@ -48,42 +48,43 @@ export function usePlanAccess() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (!user) {
-            setLoading(false);
-            return;
-        }
-
-        const fetchPlan = async () => {
-            try {
-                const token = await getIdToken();
-                const res = await fetch('/api/seller/subscription', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                const d = await res.json();
-                
-                if (d.success) {
-                    const enrichedData = {
-                        ...d,
-                        planId: (d.subscription?.planId ?? null) as PlanId | null
-                    };
-                    setData(enrichedData);
-                } else {
-                    setError(d.error?.message ?? d.error ?? 'Failed to load plan access');
+    const fetchPlan = async () => {
+        if (!user) return;
+        setLoading(true);
+        try {
+            const token = await getIdToken();
+            const res = await fetch('/api/seller/subscription', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
                 }
-            } catch (err) {
-                setError('Network error');
-            } finally {
-                setLoading(false);
+            });
+            const d = await res.json();
+            
+            if (d.success) {
+                const enrichedData = {
+                    ...d,
+                    planId: (d.subscription?.planId ?? null) as PlanId | null
+                };
+                setData(enrichedData);
+            } else {
+                setError(d.error?.message ?? d.error ?? 'Failed to load plan access');
             }
-        };
+        } catch (err) {
+            setError('Network error');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        fetchPlan();
+    useEffect(() => {
+        if (user) {
+            fetchPlan();
+        } else {
+            setLoading(false);
+        }
     }, [user, getIdToken]);
 
-    return { data, loading, error };
+    return { data, loading, error, refetch: fetchPlan };
 }
 
 export function getPlanColor(planId: string | null): string {

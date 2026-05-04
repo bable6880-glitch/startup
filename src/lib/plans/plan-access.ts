@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { subscriptions, planConfigs, meals, kitchens } from "@/lib/db/schema";
-import { and, eq, isNull, count, sql } from "drizzle-orm";
+import { and, eq, isNull, inArray, count, sql } from "drizzle-orm";
 import { cached, invalidateCache, redis } from "@/lib/redis";
 import { logger } from "@/lib/utils/logger";
 
@@ -88,9 +88,11 @@ export async function getKitchenPlanAccess(kitchenId: string): Promise<PlanAcces
             const sub = await db.query.subscriptions.findFirst({
                 where: and(
                     eq(subscriptions.kitchenId, kitchenId),
-                    eq(subscriptions.status, 'ACTIVE')
+                    isNull(subscriptions.cancelledAt),
+                    inArray(subscriptions.status, ['ACTIVE', 'TRIALING', 'PAST_DUE']),
                 ),
                 with: { planConfig: true },
+                orderBy: (sub, { desc }) => [desc(sub.createdAt)],
             });
 
             if (!sub || !sub.planConfig) {

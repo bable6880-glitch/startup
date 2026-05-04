@@ -17,5 +17,8 @@ export async function POST() {
 
     await clearAdminSession();
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+        success: true,
+        redirectTo: process.env.NEXT_PUBLIC_BASE_URL || "https://smarttiffinfood.vercel.app",
+    });
 }

@@ -1,0 +1,59 @@
+import { cn } from "@/lib/utils";
+
+interface PlanBadgeProps {
+    planId: string | null;
+    className?: string;
+    showIcon?: boolean;
+}
+
+export function PlanBadge({ planId, className, showIcon = true }: PlanBadgeProps) {
+    if (!planId) {
+        return (
+            <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-gray-100 text-gray-500 border border-gray-200", className)}>
+                {showIcon && <span>⚪</span>}
+                Free
+            </div>
+        );
+    }
+
+    const planConfig: Record<string, { label: string, color: string, border: string, icon: string }> = {
+        starter: {
+            label: "Starter",
+            color: "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+            border: "border-blue-200 dark:border-blue-800",
+            icon: "🌱"
+        },
+        growth: {
+            label: "Growth",
+            color: "bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+            border: "border-orange-200 dark:border-orange-800",
+            icon: "🚀"
+        },
+        pro: {
+            label: "Pro",
+            color: "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+            border: "border-amber-200 dark:border-amber-800",
+            icon: "⭐"
+        },
+        elite: {
+            label: "Elite",
+            color: "bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 dark:from-purple-900/30 dark:to-pink-900/30 dark:text-purple-400",
+            border: "border-purple-200 dark:border-purple-800",
+            icon: "👑"
+        }
+    };
+
+    const config = planConfig[planId.toLowerCase()] || planConfig.starter;
+
+    return (
+        <div className={cn(
+            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border shadow-sm",
+            config.color,
+            config.border,
+            className
+        )}>
+            {showIcon && <span>{config.icon}</span>}
+            {config.label}
+        </div>
+    );
+}

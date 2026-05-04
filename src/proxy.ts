@@ -96,8 +96,10 @@ export async function proxy(request: NextRequest) {
 
             // All other /admin-portal/* routes require a valid session
             const token = request.cookies.get("st_admin_session")?.value;
+            const isAdminApi = pathname.startsWith("/api/admin-portal");
 
             if (!token) {
+                if (isAdminApi) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
                 return NextResponse.redirect(new URL("/admin-portal/login", request.url));
             }
 
@@ -117,6 +119,11 @@ export async function proxy(request: NextRequest) {
 
                 return NextResponse.next({ request: { headers } });
             } catch {
+                if (isAdminApi) {
+                    const res = NextResponse.json({ error: "Session expired" }, { status: 401 });
+                    res.cookies.delete("st_admin_session");
+                    return res;
+                }
                 const res = NextResponse.redirect(new URL("/admin-portal/login", request.url));
                 res.cookies.delete("st_admin_session");
                 return res;

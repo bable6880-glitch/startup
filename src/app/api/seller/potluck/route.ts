@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import { potluckDeals } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { createPotluckSchema } from "@/lib/validations/potluck";
-import { guardFeatureAccess, PlanFeatureError } from "@/lib/plans/plan-guards";
 import { getKitchenPlanAccess } from "@/lib/plans/plan-access";
 import { logger } from "@/lib/utils/logger";
 
@@ -14,18 +13,17 @@ export async function POST(req: NextRequest) {
         if (!guard.ok) return guard.response;
         const { user, kitchen } = guard;
 
-        // Verify premium feature access
-        try {
-            await guardFeatureAccess(kitchen.id, 'potluck');
-        } catch (error) {
-            if (error instanceof PlanFeatureError) {
-                return NextResponse.json({ error: error.message }, { status: 403 });
-            }
-            throw error;
+        // Get plan access — the subscription lookup handles all plan states
+        const access = await getKitchenPlanAccess(kitchen.id);
+
+        // Potluck requires an active subscription (any paid plan)
+        if (!access.isActive) {
+            return NextResponse.json({
+                error: "Cannot create deal — requires an active paid plan.",
+                upgradeUrl: "/dashboard/subscription",
+            }, { status: 403 });
         }
 
-        const access = await getKitchenPlanAccess(kitchen.id);
-        
         if (!access.canCreatePotluck()) {
             return NextResponse.json({ error: "You have exhausted your potluck uses for this billing period. Please upgrade your plan." }, { status: 403 });
         }
