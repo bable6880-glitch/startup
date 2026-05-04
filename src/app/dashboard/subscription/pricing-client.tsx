@@ -98,23 +98,34 @@ export function PricingClient({ plans }: { plans: any[] }) {
     const { data } = usePlanAccess();
     const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
-    const handleCheckout = async (planId: string) => {
-        setCheckoutLoading(planId);
+    const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+    const handleCheckout = async (plan: typeof sorted[0]) => {
+        // GUARD: Validate stripePriceId exists before calling API
+        if (!plan.stripePriceId) {
+            console.error(`[Checkout] Missing stripePriceId for plan: ${plan.displayName} (id: ${plan.planId})`);
+            return;
+        }
+
+        setCheckoutLoading(plan.planId);
+        setCheckoutError(null);
+
         try {
             const res = await fetch('/api/seller/subscription/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ planId })
+                body: JSON.stringify({ planId: plan.planId })
             });
             const body = await res.json();
-            if (body.checkoutUrl) {
-                window.location.href = body.checkoutUrl;
+            const url = body.checkoutUrl || body.data?.url;
+            if (url) {
+                window.location.href = url;
             } else {
-                alert(body.error || 'Could not start checkout. Please try again.');
+                setCheckoutError(body.error || 'Could not start checkout. Please try again.');
                 setCheckoutLoading(null);
             }
         } catch {
-            alert('Network error. Please try again.');
+            setCheckoutError('Network error. Please try again.');
             setCheckoutLoading(null);
         }
     };
@@ -184,26 +195,35 @@ export function PricingClient({ plans }: { plans: any[] }) {
                                     <div className="w-full py-3 text-center text-sm font-bold text-green-700 bg-green-50 border border-green-200 rounded-xl">
                                         ✓ Current Plan
                                     </div>
-                                ) : isDowngrade ? null : (
-                                    <button
-                                        disabled={isLoading}
-                                        onClick={() => handleCheckout(plan.planId)}
-                                        className={cn(
-                                            'w-full py-3 rounded-xl text-sm font-bold transition-all duration-200',
-                                            `bg-gradient-to-r ${meta.gradient} text-white hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0`
+                                ) : isDowngrade ? null : !plan.stripePriceId ? (
+                                    <div className="w-full py-3 text-center text-sm font-bold text-gray-400 bg-gray-100 border border-gray-200 rounded-xl cursor-not-allowed">
+                                        Coming Soon
+                                    </div>
+                                ) : (
+                                    <>
+                                        <button
+                                            disabled={isLoading}
+                                            onClick={() => handleCheckout(plan)}
+                                            className={cn(
+                                                'w-full py-3 rounded-xl text-sm font-bold transition-all duration-200',
+                                                `bg-gradient-to-r ${meta.gradient} text-white hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0`
+                                            )}
+                                        >
+                                            {isLoading ? (
+                                                <span className="flex items-center justify-center gap-2">
+                                                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                                    Redirecting...
+                                                </span>
+                                            ) : !data || data.isFree ? (
+                                                `Get ${plan.displayName} →`
+                                            ) : (
+                                                `Upgrade to ${plan.displayName} →`
+                                            )}
+                                        </button>
+                                        {checkoutError && checkoutLoading === null && (
+                                            <p className="mt-2 text-xs text-red-500 text-center">{checkoutError}</p>
                                         )}
-                                    >
-                                        {isLoading ? (
-                                            <span className="flex items-center justify-center gap-2">
-                                                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                                Loading...
-                                            </span>
-                                        ) : !data || data.isFree ? (
-                                            `Get ${plan.displayName} →`
-                                        ) : (
-                                            `Upgrade to ${plan.displayName} →`
-                                        )}
-                                    </button>
+                                    </>
                                 )}
                             </div>
                         </div>

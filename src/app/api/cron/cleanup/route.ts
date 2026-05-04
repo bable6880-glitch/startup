@@ -153,11 +153,31 @@ export async function GET(request: NextRequest) {
             await db.execute(sql`UPDATE subscriptions SET orders_used_this_month = 0, updated_at = NOW()`);
         }
 
+        // ── 7. Daily Menu Reset (NOT_TODAY → AVAILABLE) ─────────────────────
+        // Previously in /api/cron/reset-menu — merged here to stay within Vercel 2-cron limit
+        let menuResetCount = 0;
+        try {
+            const { meals: mealsTable } = await import("@/lib/db/schema");
+            const updatedMeals = await db
+                .update(mealsTable)
+                .set({
+                    availabilityStatus: "AVAILABLE",
+                    isAvailable: true,
+                    updatedAt: now,
+                })
+                .where(eq(mealsTable.availabilityStatus, "NOT_TODAY"))
+                .returning({ id: mealsTable.id });
+            menuResetCount = updatedMeals.length;
+        } catch (menuErr) {
+            console.error("[Cron] Menu reset error:", menuErr);
+        }
+
         return apiSuccess({
             message: "Cleanup complete",
             expiredSubscriptions,
             suspendedKitchens,
             expiredBoosts,
+            menuResetCount,
             timestamp: now.toISOString(),
         });
     } catch (error) {

@@ -6,9 +6,15 @@ import { eq, and } from "drizzle-orm";
 import { apiSuccess, apiUnauthorized, apiBadRequest, apiInternalError } from "@/lib/utils/api-response";
 import { z } from "zod";
 
+const COMING_SOON_METHODS = ["JAZZCASH", "EASYPAISA", "SADAPAY"] as const;
+const ACTIVE_METHODS = ["COD", "STRIPE"] as const;
+const ALL_METHODS = [...ACTIVE_METHODS, ...COMING_SOON_METHODS] as const;
+
 const paymentSchema = z.object({
     orderId: z.string().uuid("Invalid order ID"),
-    paymentMethod: z.enum(["COD", "STRIPE"])
+    paymentMethod: z.enum(ALL_METHODS, {
+        errorMap: () => ({ message: "Invalid payment method. Supported: COD, STRIPE, JAZZCASH, EASYPAISA, SADAPAY" })
+    })
 });
 
 export async function POST(request: NextRequest) {
@@ -24,6 +30,24 @@ export async function POST(request: NextRequest) {
         }
 
         const { orderId, paymentMethod } = parsed.data;
+
+        // ── "Coming Soon" methods ─────────────────────────────────────────
+        if ((COMING_SOON_METHODS as readonly string[]).includes(paymentMethod)) {
+            const methodNames: Record<string, string> = {
+                JAZZCASH: "JazzCash",
+                EASYPAISA: "Easypaisa",
+                SADAPAY: "SadaPay",
+            };
+            return new Response(
+                JSON.stringify({
+                    success: false,
+                    error: `${methodNames[paymentMethod] ?? paymentMethod} is coming soon! We're working on integrating this payment method. Please use Cash on Delivery or Stripe for now.`,
+                    code: "PAYMENT_METHOD_COMING_SOON",
+                    method: paymentMethod,
+                }),
+                { status: 501, headers: { "Content-Type": "application/json" } }
+            );
+        }
 
         const order = await db.query.orders.findFirst({
             where: and(eq(orders.id, orderId), eq(orders.customerId, user.id))
@@ -54,3 +78,4 @@ export async function POST(request: NextRequest) {
         return apiInternalError("Failed to confirm payment status");
     }
 }
+

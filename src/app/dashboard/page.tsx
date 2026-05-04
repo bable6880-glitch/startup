@@ -374,6 +374,10 @@ function DashboardContent() {
                             <span className="text-2xl block">💎</span>
                             <h3 className="mt-1 text-sm font-semibold text-accent-700 dark:text-accent-300">Premium</h3>
                         </Link>
+                        <Link href="/dashboard/ai-assistant" className="rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm hover:shadow-md transition-all group text-center dark:from-amber-900/20 dark:to-neutral-800 dark:border-amber-800">
+                            <span className="text-2xl block">👨‍🍳</span>
+                            <h3 className="mt-1 text-sm font-semibold text-amber-700 dark:text-amber-300">AI Chef</h3>
+                        </Link>
                         <Link href="/explore" className="rounded-2xl border border-primary-200/60 bg-gradient-to-br from-primary-50 to-white p-4 shadow-sm hover:shadow-md transition-all group text-center dark:from-primary-900/20 dark:to-neutral-800 dark:border-primary-800">
                             <span className="text-2xl block">🔍</span>
                             <h3 className="mt-1 text-sm font-semibold text-primary-700 dark:text-primary-300">Browse</h3>

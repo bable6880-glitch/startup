@@ -6,10 +6,11 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createMealSchema, type CreateMealInput } from "@/lib/validations/menu";
-import { Loader2, Plus, Edit2, Trash2, X, Image as ImageIcon, Search } from "lucide-react";
+import { Loader2, Plus, Edit2, Trash2, X, Image as ImageIcon, Search, Sparkles } from "lucide-react";
 import { BackButton } from "@/components/ui/BackButton";
 import { usePlanAccess } from "@/hooks/use-plan-access";
 import { FeatureGate } from "@/components/plans/FeatureGate";
+import { AIPricingPanel } from "@/components/menu/AIPricingPanel";
 
 type Meal = {
     id: string;
@@ -54,6 +55,10 @@ export default function MenuManagementPage() {
     const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
     const [aiTips, setAiTips] = useState<string | null>(null);
     const [aiError, setAiError] = useState<string | null>(null);
+
+    // AI Pricing panel state
+    const [aiPricingMeal, setAiPricingMeal] = useState<Meal | null>(null);
+    const isElite = planData?.planId === 'elite';
 
     const {
         register, handleSubmit, reset, setValue, formState: { errors }, watch
@@ -453,6 +458,13 @@ export default function MenuManagementPage() {
                                         </span>
                                     </label>
 
+                                    <button
+                                        onClick={() => setAiPricingMeal(meal)}
+                                        className="p-2 text-neutral-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors dark:hover:bg-violet-900/30 relative group/ai"
+                                        title="AI Price Suggestion"
+                                    >
+                                        <Sparkles className="w-4 h-4" />
+                                    </button>
                                     <button onClick={() => openModal(meal)} className="p-2 text-neutral-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors dark:hover:bg-primary-900/30">
                                         <Edit2 className="w-4 h-4" />
                                     </button>
@@ -464,6 +476,39 @@ export default function MenuManagementPage() {
                         </div>
                     ))}
                 </div>
+            )}
+
+            {/* AI Pricing Panel (slide-in drawer) */}
+            {aiPricingMeal && kitchenId && (
+                <>
+                    <div
+                        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+                        onClick={() => setAiPricingMeal(null)}
+                    />
+                    <div className="fixed inset-y-0 right-0 w-80 bg-white dark:bg-neutral-900 border-l border-neutral-200 dark:border-neutral-700 z-50 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                        <AIPricingPanel
+                            meal={aiPricingMeal}
+                            kitchenId={kitchenId}
+                            hasAccess={isElite}
+                            onApplyPrice={async (mealId, newPrice) => {
+                                try {
+                                    const token = await getIdToken();
+                                    const res = await fetch(`/api/kitchens/${kitchenId}/menu/${mealId}`, {
+                                        method: "PUT",
+                                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                                        body: JSON.stringify({ price: newPrice }),
+                                    });
+                                    if (res.ok) {
+                                        setMeals(prev => prev.map(m => m.id === mealId ? { ...m, price: newPrice } : m));
+                                    }
+                                } catch (err) {
+                                    console.error("Failed to apply AI price", err);
+                                }
+                            }}
+                            onClose={() => setAiPricingMeal(null)}
+                        />
+                    </div>
+                </>
             )}
 
             {/* AI Assistant Modal */}

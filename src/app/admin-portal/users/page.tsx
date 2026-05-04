@@ -3,8 +3,10 @@
 import React, { useEffect, useState } from "react";
 import { DataTable, Column } from "../_components/DataTable";
 import { EntityDrawer } from "../_components/EntityDrawer";
+import { ConfirmModal } from "../_components/ConfirmModal";
 import { usePrivacy, SensitiveValue } from "../_components/PrivacyMode";
 import { Shield, ShieldOff, MoreVertical } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function AdminUsersPage() {
     const { isPrivacyMode } = usePrivacy();
@@ -13,15 +15,20 @@ export default function AdminUsersPage() {
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState("");
+    const [roleFilter, setRoleFilter] = useState("ALL");
     const limit = 10;
 
     const [selectedUser, setSelectedUser] = useState<any | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-    const fetchUsers = async (currentPage: number, currentSearch: string) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalUser, setModalUser] = useState<any | null>(null);
+    const [isModalLoading, setIsModalLoading] = useState(false);
+
+    const fetchUsers = async (currentPage: number, currentSearch: string, currentRole: string) => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/admin-portal/users?page=${currentPage}&limit=${limit}&search=${currentSearch}`);
+            const res = await fetch(`/api/admin-portal/users?page=${currentPage}&limit=${limit}&search=${currentSearch}&role=${currentRole}`);
             if (res.ok) {
                 const json = await res.json();
                 setData(json.data);
@@ -35,12 +42,18 @@ export default function AdminUsersPage() {
     };
 
     useEffect(() => {
-        fetchUsers(page, search);
-    }, [page, search]);
+        fetchUsers(page, search, roleFilter);
+    }, [page, search, roleFilter]);
 
     const handleSearch = (query: string) => {
         setSearch(query);
         setPage(1); // Reset to first page on new search
+    };
+
+    const handleRoleChange = (role: string) => {
+        if (roleFilter === role) return;
+        setRoleFilter(role);
+        setPage(1);
     };
 
     const handleRowClick = (user: any) => {
@@ -48,33 +61,37 @@ export default function AdminUsersPage() {
         setIsDrawerOpen(true);
     };
 
-    const toggleUserStatus = async (user: any) => {
-        const newStatus = !user.isActive;
-        const confirmMsg = newStatus 
-            ? `Are you sure you want to UNBAN ${user.name || user.email}?`
-            : `Are you sure you want to BAN ${user.name || user.email}? They will not be able to log in.`;
-            
-        if (!confirm(confirmMsg)) return;
+    const openBanModal = (user: any) => {
+        setModalUser(user);
+        setIsModalOpen(true);
+    };
 
+    const confirmToggleStatus = async () => {
+        if (!modalUser) return;
+        setIsModalLoading(true);
+
+        const newStatus = !modalUser.isActive;
         try {
-            const res = await fetch(`/api/admin-portal/users/${user.id}`, {
+            const res = await fetch(`/api/admin-portal/users/${modalUser.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ isActive: newStatus })
             });
 
             if (res.ok) {
-                // Update local state
-                setData(data.map(u => u.id === user.id ? { ...u, isActive: newStatus } : u));
-                if (selectedUser && selectedUser.id === user.id) {
+                setData(data.map(u => u.id === modalUser.id ? { ...u, isActive: newStatus } : u));
+                if (selectedUser && selectedUser.id === modalUser.id) {
                     setSelectedUser({ ...selectedUser, isActive: newStatus });
                 }
+                setIsModalOpen(false);
             } else {
                 alert("Failed to update user status");
             }
         } catch (error) {
             console.error(error);
             alert("Error updating user");
+        } finally {
+            setIsModalLoading(false);
         }
     };
 
@@ -143,10 +160,12 @@ export default function AdminUsersPage() {
     ];
 
     const actions = (user: any) => (
-        <button
-            onClick={(e) => {
+        <motion.button
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={(e: any) => {
                 e.stopPropagation();
-                toggleUserStatus(user);
+                openBanModal(user);
             }}
             title={user.isActive ? "Ban User" : "Unban User"}
             style={{
@@ -154,11 +173,11 @@ export default function AdminUsersPage() {
                 color: user.isActive ? "#EF4444" : "#10B981", padding: 8, borderRadius: 8,
                 transition: "background 0.2s"
             }}
-            onMouseOver={(e) => e.currentTarget.style.background = user.isActive ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)"}
-            onMouseOut={(e) => e.currentTarget.style.background = "transparent"}
+            onMouseOver={(e: any) => e.currentTarget.style.background = user.isActive ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.1)"}
+            onMouseOut={(e: any) => e.currentTarget.style.background = "transparent"}
         >
             {user.isActive ? <ShieldOff size={18} /> : <Shield size={18} />}
-        </button>
+        </motion.button>
     );
 
     return (
@@ -166,6 +185,48 @@ export default function AdminUsersPage() {
             <div>
                 <h1 style={{ margin: "0 0 8px", color: "#F0F2F5", fontSize: 24, fontWeight: 600 }}>User Management</h1>
                 <p style={{ margin: 0, color: "#8B8FA8", fontSize: 14 }}>View, search, and manage platform users.</p>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.02)", padding: 6, borderRadius: 16, width: "fit-content" }}>
+                {["ALL", "CUSTOMER", "COOK", "ADMIN"].map((tab) => {
+                    const isActive = roleFilter === tab;
+                    return (
+                        <button
+                            key={tab}
+                            onClick={() => handleRoleChange(tab)}
+                            style={{
+                                position: "relative",
+                                padding: "8px 20px",
+                                borderRadius: "10px",
+                                fontSize: 13,
+                                fontWeight: 600,
+                                color: isActive ? "#FFF" : "#8B8FA8",
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                transition: "color 0.2s",
+                                outline: "none",
+                                letterSpacing: "0.5px"
+                            }}
+                        >
+                            {isActive && (
+                                <motion.div
+                                    layoutId="activeTabIndicator"
+                                    style={{
+                                        position: "absolute", inset: 0,
+                                        background: "linear-gradient(135deg, rgba(59,130,246,0.15), rgba(139,92,246,0.15))",
+                                        border: "1px solid rgba(59,130,246,0.3)",
+                                        borderRadius: "10px", zIndex: 0
+                                    }}
+                                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                />
+                            )}
+                            <span style={{ position: "relative", zIndex: 1 }}>
+                                {tab === "ALL" ? "All Users" : tab + "S"}
+                            </span>
+                        </button>
+                    );
+                })}
             </div>
 
             <DataTable
@@ -248,7 +309,7 @@ export default function AdminUsersPage() {
                         {/* Actions */}
                         <div style={{ marginTop: "auto", paddingTop: 32 }}>
                             <button
-                                onClick={() => toggleUserStatus(selectedUser)}
+                                onClick={() => openBanModal(selectedUser)}
                                 style={{
                                     width: "100%", padding: "12px", borderRadius: 8, fontSize: 14, fontWeight: 600,
                                     background: selectedUser.isActive ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)",
@@ -256,8 +317,8 @@ export default function AdminUsersPage() {
                                     border: `1px solid ${selectedUser.isActive ? "rgba(239, 68, 68, 0.2)" : "rgba(16, 185, 129, 0.2)"}`,
                                     cursor: "pointer", transition: "all 0.2s"
                                 }}
-                                onMouseOver={(e) => e.currentTarget.style.background = selectedUser.isActive ? "rgba(239, 68, 68, 0.2)" : "rgba(16, 185, 129, 0.2)"}
-                                onMouseOut={(e) => e.currentTarget.style.background = selectedUser.isActive ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)"}
+                                onMouseOver={(e: any) => e.currentTarget.style.background = selectedUser.isActive ? "rgba(239, 68, 68, 0.2)" : "rgba(16, 185, 129, 0.2)"}
+                                onMouseOut={(e: any) => e.currentTarget.style.background = selectedUser.isActive ? "rgba(239, 68, 68, 0.1)" : "rgba(16, 185, 129, 0.1)"}
                             >
                                 {selectedUser.isActive ? "Ban User Account" : "Unban User Account"}
                             </button>
@@ -265,6 +326,28 @@ export default function AdminUsersPage() {
                     </div>
                 )}
             </EntityDrawer>
+
+            <ConfirmModal
+                isOpen={isModalOpen}
+                onClose={() => !isModalLoading && setIsModalOpen(false)}
+                onConfirm={confirmToggleStatus}
+                isLoading={isModalLoading}
+                title={modalUser?.isActive ? "Ban User Account" : "Unban User Account"}
+                description={
+                    modalUser?.isActive ? (
+                        <>
+                            Are you sure you want to ban <strong style={{ color: "#FFF" }}>{modalUser.name || modalUser.email}</strong>? 
+                            They will be immediately logged out and will not be able to access the platform.
+                        </>
+                    ) : (
+                        <>
+                            Are you sure you want to restore access for <strong style={{ color: "#FFF" }}>{modalUser?.name || modalUser?.email}</strong>?
+                        </>
+                    )
+                }
+                type={modalUser?.isActive ? "danger" : "success"}
+                confirmText={modalUser?.isActive ? "Yes, Ban User" : "Yes, Unban User"}
+            />
         </div>
     );
 }

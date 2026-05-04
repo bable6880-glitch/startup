@@ -8,6 +8,7 @@ import { MapLazy } from "@/components/map/MapLazy";
 import { calculateDistance } from "@/lib/utils/distance";
 import Link from "next/link";
 import { OrderTracker } from "@/components/orders/OrderTracker";
+import { PaymentMethodSelector } from "@/components/orders/PaymentMethodSelector";
 
 interface OrderItem {
     id: string;
@@ -51,6 +52,8 @@ interface OrderDetails {
     customerLat: string | null;
     customerLng: string | null;
     customerAddress: string | null;
+    paymentMethod: string;
+    paymentStatus: string;
 }
 
 export default function OrderDetailsPage(props: { params: Promise<{ id: string }> }) {
@@ -263,6 +266,14 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
                             )}
                         </div>
                     </div>
+
+                    {/* Payment Selector block */}
+                    <PaymentMethodSelector 
+                        orderId={order.id} 
+                        currentMethod={order.paymentMethod} 
+                        paymentStatus={order.paymentStatus} 
+                        totalAmount={order.totalAmount} 
+                    />
 
                     {/* Action Buttons */}
                     <div className="space-y-3">

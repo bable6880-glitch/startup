@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { guardAdminPortal } from "@/lib/admin-auth/guard";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { desc, sql, ilike, or, count } from "drizzle-orm";
+import { desc, sql, ilike, or, count, and, eq } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
     const auth = await guardAdminPortal(req);
@@ -13,18 +13,26 @@ export async function GET(req: NextRequest) {
         const page = parseInt(searchParams.get("page") || "1");
         const limit = parseInt(searchParams.get("limit") || "10");
         const search = searchParams.get("search") || "";
+        const role = searchParams.get("role") || "ALL";
 
         const offset = (page - 1) * limit;
 
-        // Build where clause
-        let whereClause = undefined;
+        // Build conditions
+        let searchCondition = undefined;
         if (search) {
-            whereClause = or(
+            searchCondition = or(
                 ilike(users.name, `%${search}%`),
                 ilike(users.email, `%${search}%`),
                 ilike(users.phone, `%${search}%`)
             );
         }
+
+        let roleCondition = undefined;
+        if (role !== "ALL") {
+            roleCondition = eq(users.role, role.toUpperCase() as any);
+        }
+
+        const whereClause = and(searchCondition, roleCondition);
 
         // Get total count
         const totalResult = await db
