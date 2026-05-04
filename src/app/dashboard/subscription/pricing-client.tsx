@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { usePlanAccess } from '@/hooks/use-plan-access';
+import { useAuth } from '@/lib/firebase/auth-context';
 import { cn } from '@/lib/utils';
 
 const PLAN_ORDER = ['starter', 'growth', 'pro', 'elite'];
@@ -96,6 +97,7 @@ const PLAN_META: Record<string, {
 
 export function PricingClient({ plans }: { plans: any[] }) {
     const { data } = usePlanAccess();
+    const { getIdToken } = useAuth();
     const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
     const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -126,9 +128,19 @@ export function PricingClient({ plans }: { plans: any[] }) {
         setCheckoutError(null);
 
         try {
+            const token = await getIdToken();
+            if (!token) {
+                setCheckoutError('Please log in again to continue.');
+                setCheckoutLoading(null);
+                return;
+            }
+
             const res = await fetch('/api/seller/subscription/checkout', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
                 body: JSON.stringify({ planId: plan.planId })
             });
 
