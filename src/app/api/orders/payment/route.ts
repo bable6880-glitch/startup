@@ -12,8 +12,8 @@ const ALL_METHODS = [...ACTIVE_METHODS, ...COMING_SOON_METHODS] as const;
 
 const paymentSchema = z.object({
     orderId: z.string().uuid("Invalid order ID"),
-    paymentMethod: z.enum(ALL_METHODS, {
-        errorMap: () => ({ message: "Invalid payment method. Supported: COD, STRIPE, JAZZCASH, EASYPAISA, SADAPAY" })
+    paymentMethod: z.enum(["COD", "STRIPE", "JAZZCASH", "EASYPAISA", "SADAPAY"], {
+        message: "Invalid payment method. Supported: COD, STRIPE, JAZZCASH, EASYPAISA, SADAPAY"
     })
 });
 

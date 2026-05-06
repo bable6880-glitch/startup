@@ -22,6 +22,10 @@ export default function AdminKitchensPage() {
         setLoading(true);
         try {
             const res = await fetch(`/api/admin-portal/kitchens?page=${currentPage}&limit=${limit}&search=${currentSearch}`);
+            if (res.status === 401) {
+                window.location.href = "/admin-portal/login";
+                return;
+            }
             if (res.ok) {
                 const json = await res.json();
                 setData(json.data);

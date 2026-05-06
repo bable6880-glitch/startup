@@ -114,6 +114,9 @@ export async function getKitchenPlanAccess(kitchenId: string): Promise<PlanAcces
 
 function buildPlanAccess(sub: SubscriptionRow, config: PlanConfigRow): PlanAccess {
     const ordersUsed = sub.ordersUsedThisMonth ?? 0;
+    const extraOrders = (sub as any).extraOrdersLimit ?? 0;
+    const extraPotluck = (sub as any).extraPotluckUses ?? 0;
+    const effectiveOrderLimit = config.monthlyOrderLimit !== null ? config.monthlyOrderLimit + extraOrders : null;
 
     return {
         planId: sub.planId as PlanId,
@@ -128,14 +131,15 @@ function buildPlanAccess(sub: SubscriptionRow, config: PlanConfigRow): PlanAcces
         },
 
         canPlaceOrder(): boolean {
-            if (config.monthlyOrderLimit === null) return true;
-            return ordersUsed < config.monthlyOrderLimit;
+            if (effectiveOrderLimit === null) return true;
+            return ordersUsed < effectiveOrderLimit;
         },
 
         canCreatePotluck(): boolean {
             if (sub.planId === 'elite') return true;
             if (config.potluckUsesPerPeriod === -1) return true;
-            return (sub.potluckUsesRemaining ?? 0) > 0;
+            const totalRemaining = (sub.potluckUsesRemaining ?? 0) + extraPotluck;
+            return totalRemaining > 0;
         },
 
         hasFeature(feature: PlanFeature): boolean {
@@ -147,7 +151,7 @@ function buildPlanAccess(sub: SubscriptionRow, config: PlanConfigRow): PlanAcces
         },
 
         getOrderLimit(): number | null {
-            return config.monthlyOrderLimit;
+            return effectiveOrderLimit;
         },
 
         getOrdersUsed(): number {
@@ -155,8 +159,8 @@ function buildPlanAccess(sub: SubscriptionRow, config: PlanConfigRow): PlanAcces
         },
 
         getOrdersRemaining(): number | null {
-            if (config.monthlyOrderLimit === null) return null;
-            return Math.max(0, config.monthlyOrderLimit - ordersUsed);
+            if (effectiveOrderLimit === null) return null;
+            return Math.max(0, effectiveOrderLimit - ordersUsed);
         },
 
         getPotluckRemaining(): number | null {
@@ -185,8 +189,8 @@ function buildPlanAccess(sub: SubscriptionRow, config: PlanConfigRow): PlanAcces
         },
 
         getOrderUsagePercent(): number | null {
-            if (config.monthlyOrderLimit === null) return null;
-            return Math.round((ordersUsed / config.monthlyOrderLimit) * 100);
+            if (effectiveOrderLimit === null) return null;
+            return Math.round((ordersUsed / effectiveOrderLimit) * 100);
         },
 
         getMenuUsagePercent(currentCount: number): number | null {

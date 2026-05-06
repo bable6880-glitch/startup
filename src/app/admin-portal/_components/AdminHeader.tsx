@@ -16,7 +16,7 @@ export function AdminHeader() {
         fetch("/api/admin-portal/auth/me")
             .then(res => {
                 if (res.status === 401) {
-                    notFound();
+                    router.replace("/admin-portal/login");
                     return null;
                 }
                 return res.json();

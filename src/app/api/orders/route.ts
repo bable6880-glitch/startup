@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { apiSuccess, apiUnauthorized, apiBadRequest, apiInternalError } from "@/lib/utils/api-response";
 import { getAuthUser } from "@/lib/auth/get-auth-user";
 import { db } from "@/lib/db";
@@ -121,6 +121,14 @@ export async function POST(request: NextRequest) {
 
         if (!kitchen || kitchen.status !== "ACTIVE") {
             return apiBadRequest("Kitchen not found or unavailable");
+        }
+
+        // Kitchen lock enforcement: 423 if kitchen is locked
+        if ((kitchen as any).isLocked) {
+            return NextResponse.json(
+                { success: false, error: { code: "KITCHEN_LOCKED", message: "This kitchen is temporarily unable to accept orders. Please try again later." } },
+                { status: 423 }
+            );
         }
 
         // Plan enforcement: check cook's monthly order limit

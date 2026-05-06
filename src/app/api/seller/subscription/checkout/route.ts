@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
         const { planId } = parsed.data;
 
-        // Check no active subscription exists that is still within its billing period
+        // ── Check current subscription status ──────────────────────────
         const activeSub = await db.query.subscriptions.findFirst({
             where: and(
                 eq(subscriptions.kitchenId, kitchen.id),
@@ -45,12 +45,27 @@ export async function POST(request: NextRequest) {
             with: { planConfig: true },
         });
 
+        // ── Decision matrix ──────────────────────────────────────────────
+        // ALLOW if: no active sub (first time, renewal after expiry, restart after cancel)
+        // ALLOW if: active sub + DIFFERENT plan (upgrade)
+        // BLOCK if: active sub + SAME plan (duplicate purchase)
+
+        let isUpgrade = false;
+        let previousPlanId: string | null = null;
+
         if (activeSub) {
-            const endDate = activeSub.currentPeriodEnd?.toLocaleDateString('en-PK') ?? 'end of billing cycle';
-            const planName = activeSub.planConfig?.displayName ?? activeSub.planId;
-            return NextResponse.json({
-                error: `You already have an active ${planName} plan that runs until ${endDate}. You can purchase a new plan after your current plan ends.`
-            }, { status: 409 });
+            if (activeSub.planId === planId) {
+                // BLOCK: same plan while active
+                const endDate = activeSub.currentPeriodEnd?.toLocaleDateString('en-PK') ?? 'end of billing cycle';
+                const planName = activeSub.planConfig?.displayName ?? activeSub.planId;
+                return NextResponse.json({
+                    error: `You already have an active ${planName} plan. It expires on ${endDate}. You can renew after it expires.`
+                }, { status: 409 });
+            }
+
+            // ALLOW: different plan (upgrade)
+            isUpgrade = true;
+            previousPlanId = activeSub.planId;
         }
 
         // Get plan config from DB
@@ -66,9 +81,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Plan not configured for Stripe yet. Contact support." }, { status: 500 });
         }
 
-        // Idempotency check via Redis
+        // ── Idempotency check via Redis ─────────────────────────────────
+        // Skip idempotency for upgrades (always create fresh session)
         const idempotencyKey = `checkout:pending:${kitchen.id}:${planId}`;
-        if (redis) {
+        if (redis && !isUpgrade) {
             const existingUrl = await redis.get<string>(idempotencyKey);
             if (existingUrl) {
                 return NextResponse.json({ success: true, data: { url: existingUrl } });
@@ -81,7 +97,7 @@ export async function POST(request: NextRequest) {
         const session = await stripe.checkout.sessions.create({
             mode: isRecurring ? 'subscription' : 'payment',
             line_items: [{ price: planConfig.stripePriceId, quantity: 1 }],
-            success_url: `${baseUrl}/dashboard/subscription?status=success`,
+            success_url: `${baseUrl}/dashboard/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${baseUrl}/dashboard/subscription?status=cancelled`,
             metadata: {
                 type: 'SUBSCRIPTION',
@@ -90,11 +106,16 @@ export async function POST(request: NextRequest) {
                 planId: planId,
                 priceRs: planConfig.priceRs.toString(),
                 billingMonths: planConfig.billingPeriodMonths.toString(),
+                // Upgrade metadata
+                ...(isUpgrade ? {
+                    isUpgrade: 'true',
+                    previousPlanId: previousPlanId!,
+                } : {}),
             },
             customer_email: user.email || undefined,
         });
 
-        if (redis && session.url) {
+        if (redis && session.url && !isUpgrade) {
             await redis.set(idempotencyKey, session.url, { ex: 30 * 60 }); // 30 mins TTL
         }
 

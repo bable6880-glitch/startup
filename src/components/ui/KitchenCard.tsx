@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PlanBadge } from "@/components/plans/PlanBadge";
 
 type KitchenCardProps = {
     id: string;
@@ -13,6 +14,7 @@ type KitchenCardProps = {
     isVerified?: boolean;
     isBoosted?: boolean;
     distanceKm?: number | null;
+    planId?: string | null;
 };
 
 export default function KitchenCard({
@@ -28,6 +30,7 @@ export default function KitchenCard({
     isVerified,
     isBoosted,
     distanceKm,
+    planId,
 }: KitchenCardProps) {
     return (
         <Link
@@ -51,6 +54,7 @@ export default function KitchenCard({
 
                 {/* Badges */}
                 <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">
+                    {planId && <PlanBadge planId={planId} size="sm" showIcon={true} />}
                     {isVerified && (
                         <span className="rounded-full bg-accent-500 px-2.5 py-1 text-xs font-semibold text-white shadow-sm flex items-center gap-1">
                             ✓ Verified

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/firebase/auth-context";
+import { PlanBadge } from "@/components/plans/PlanBadge";
 
 type KitchenHeaderProps = {
     kitchen: {
@@ -14,6 +15,7 @@ type KitchenHeaderProps = {
         reviewCount: number;
         isVerified: boolean | null;
         deliveryOptions?: string[] | null;
+        planId?: string | null;
     };
 };
 
@@ -86,6 +88,11 @@ export function KitchenHeader({ kitchen }: KitchenHeaderProps) {
                     <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-neutral-50">
                         Tiffin Service & Home Cooked Food by {kitchen.name}
                     </h1>
+                    {kitchen.planId && (
+                        <div className="mt-1 sm:mt-0">
+                            <PlanBadge planId={kitchen.planId} size="lg" />
+                        </div>
+                    )}
                 </div>
 
                 {/* Favorite Toggle Button */}

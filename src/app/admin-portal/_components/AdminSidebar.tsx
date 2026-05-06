@@ -134,10 +134,9 @@ export function AdminSidebar() {
                         onClick={async (e) => {
                             e.preventDefault();
                             try {
-                                const res = await fetch("/api/admin-portal/auth/logout", { method: "POST" });
-                                const data = await res.json();
-                                // Full page redirect to clear all state
-                                window.location.href = data.redirectTo ?? "/";
+                                await fetch("/api/admin-portal/auth/logout", { method: "POST" });
+                                // Full page redirect to home clears all memory state/SWR cache
+                                window.location.href = "/";
                             } catch (err) {
                                 console.error("Logout failed", err);
                                 window.location.href = "/";

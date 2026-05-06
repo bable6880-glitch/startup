@@ -13,7 +13,7 @@ async function updateElitePlan() {
                 potluckUsesPerPeriod: -1, // Unlimited for elite
                 chefAssistant: true,      // Set both just in case
                 advancedAnalytics: true,
-                aiInsights_Analytics: true as any, // The column in schema might be different, let me check
+
                 autoWhatsApp: true,
                 dedicatedManager: true,
                 aiPricing: true,

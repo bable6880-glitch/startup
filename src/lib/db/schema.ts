@@ -44,6 +44,7 @@ export const subscriptionStatusEnum = pgEnum("subscription_status", [
     "PAST_DUE",
     "SUSPENDED",
     "SUPERSEDED",
+    "UPGRADED",
 ]);
 
 export const paymentMethodEnum = pgEnum("payment_method", [
@@ -211,8 +212,15 @@ export const kitchens = pgTable(
         reviewCount: integer("review_count").default(0).notNull(),
 
         // Boost & premium
+        planId: planConfigEnum("plan_id"),
         boostPriority: integer("boost_priority").default(0).notNull(),
         boostExpiresAt: timestamp("boost_expires_at", { withTimezone: true }),
+
+        // Kitchen lock (order limit exceeded, expired sub, etc.)
+        isLocked: boolean("is_locked").default(false).notNull(),
+        lockReason: varchar("lock_reason", { length: 50 }),
+        lockedAt: timestamp("locked_at", { withTimezone: true }),
+        lockedUntil: timestamp("locked_until", { withTimezone: true }),
 
         // Timestamps
         createdAt: timestamp("created_at", { withTimezone: true })
@@ -471,6 +479,9 @@ export const subscriptions = pgTable(
         potluckUsesRemaining: integer("potluck_uses_remaining").notNull().default(0),
         potluckUsesResetAt: timestamp("potluck_uses_reset_at", { withTimezone: true }),
         metadata: jsonb("metadata"),
+        // Extra pack counters (Phase 2)
+        extraOrdersLimit: integer("extra_orders_limit").default(0),
+        extraPotluckUses: integer("extra_potluck_uses").default(0),
         createdAt: timestamp("created_at", { withTimezone: true })
             .defaultNow(),
         updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -913,6 +924,51 @@ export const planUsageLog = pgTable("plan_usage_log", {
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 }, (table) => [
     index("idx_usage_log_kitchen_action").on(table.kitchenId, table.actionType, table.createdAt),
+]);
+
+// ─── Subscription History (Audit Trail) ─────────────────────────────────────
+
+export const subscriptionHistory = pgTable("subscription_history", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    kitchenId: uuid("kitchen_id").notNull().references(() => kitchens.id),
+    cookId: uuid("cook_id").notNull().references(() => users.id),
+    planId: planConfigEnum("plan_id").notNull(),
+    status: varchar("status", { length: 20 }).notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    endReason: varchar("end_reason", { length: 50 }),
+    priceRsPaid: integer("price_rs_paid").notNull(),
+    stripeSessionId: varchar("stripe_session_id", { length: 200 }),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+    index("idx_sub_history_kitchen").on(table.kitchenId, table.createdAt),
+]);
+
+// ─── Extra Packs (One-Time Add-Ons) ─────────────────────────────────────────
+
+export const packTypeEnum = pgEnum("pack_type_enum", [
+    "ORDER_PACK",
+    "POTLUCK_PACK",
+]);
+
+export const extraPacks = pgTable("extra_packs", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    kitchenId: uuid("kitchen_id").notNull().references(() => kitchens.id),
+    cookId: uuid("cook_id").notNull().references(() => users.id),
+    subscriptionId: uuid("subscription_id").notNull().references(() => subscriptions.id),
+    packType: packTypeEnum("pack_type").notNull(),
+    packSize: integer("pack_size").notNull(),
+    priceRs: integer("price_rs").notNull(),
+    status: varchar("status", { length: 20 }).default("PENDING"),
+    stripeSessionId: varchar("stripe_session_id", { length: 200 }),
+    activatedAt: timestamp("activated_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    ordersAdded: integer("orders_added").default(0),
+    potluckAdded: integer("potluck_added").default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+}, (table) => [
+    index("idx_packs_kitchen").on(table.kitchenId, table.packType, table.status),
 ]);
 
 // ─── ADMIN PORTAL AUTH TABLES (isolated from Firebase) ───────────────────────

@@ -20,7 +20,6 @@ const nextConfig: NextConfig = {
   // We run `tsc --noEmit` separately; skip Next.js's built-in re-check to
   // avoid OOM kills on Vercel Hobby (1 GB RAM) and flaky validator.ts diffs.
   typescript: { ignoreBuildErrors: true },
-  eslint:     { ignoreDuringBuilds: true },
 
   // Replace deprecated `domains` with `remotePatterns`
   images: {

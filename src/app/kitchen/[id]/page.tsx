@@ -257,7 +257,8 @@ async function KitchenContent({ id }: { id: string }) {
                         avgRating: String(kitchen.avgRating ?? "0"),
                         reviewCount: Number(kitchen.reviewCount ?? 0),
                         isVerified: kitchen.isVerified,
-                        deliveryOptions: kitchen.deliveryOptions
+                        deliveryOptions: kitchen.deliveryOptions,
+                        planId: (kitchen as any).planId
                     }} />
 
                         {/* U1: Report Button */}

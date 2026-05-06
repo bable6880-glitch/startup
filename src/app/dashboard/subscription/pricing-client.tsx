@@ -99,8 +99,10 @@ export function PricingClient({ plans }: { plans: any[] }) {
     const { data } = usePlanAccess();
     const { getIdToken } = useAuth();
     const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
-
     const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+    // ── Non-refundable confirmation modal state ──────────────────────
+    const [confirmPlan, setConfirmPlan] = useState<typeof plans[0] | null>(null);
 
     /**
      * Safely extract a displayable error string from any API response shape.
@@ -117,12 +119,19 @@ export function PricingClient({ plans }: { plans: any[] }) {
         return fallback;
     };
 
-    const handleCheckout = async (plan: typeof sorted[0]) => {
-        // GUARD: Validate stripePriceId exists before calling API
+    // Step 1: User clicks button → show confirmation modal
+    const requestCheckout = (plan: typeof plans[0]) => {
         if (!plan.stripePriceId) {
             console.error(`[Checkout] Missing stripePriceId for plan: ${plan.displayName} (id: ${plan.planId})`);
             return;
         }
+        setCheckoutError(null);
+        setConfirmPlan(plan);
+    };
+
+    // Step 2: User confirms in modal → proceed to Stripe
+    const handleCheckout = async (plan: typeof sorted[0]) => {
+        setConfirmPlan(null); // close modal
 
         setCheckoutLoading(plan.planId);
         setCheckoutError(null);
@@ -248,7 +257,7 @@ export function PricingClient({ plans }: { plans: any[] }) {
                                     <>
                                         <button
                                             disabled={isLoading}
-                                            onClick={() => handleCheckout(plan)}
+                                            onClick={() => requestCheckout(plan)}
                                             className={cn(
                                                 'w-full py-3 rounded-xl text-sm font-bold transition-all duration-200',
                                                 `bg-gradient-to-r ${meta.gradient} text-white hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0`
@@ -361,6 +370,87 @@ export function PricingClient({ plans }: { plans: any[] }) {
                     </table>
                 </div>
             </div>
+
+            {/* ── Non-Refundable Confirmation Modal ──────────────────────── */}
+            {confirmPlan && (() => {
+                const meta = PLAN_META[confirmPlan.planId];
+                const isUpgrading = data && !data.isFree && data.planId !== confirmPlan.planId;
+                return (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setConfirmPlan(null)}>
+                        {/* Backdrop */}
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+                        {/* Modal */}
+                        <div
+                            className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className={cn('p-6 bg-gradient-to-br text-white', meta?.gradient || 'from-orange-500 to-amber-500')}>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-3xl">{meta?.icon || '💎'}</span>
+                                    <div>
+                                        <p className="text-xs font-semibold uppercase tracking-wider opacity-80">
+                                            {isUpgrading ? 'Confirm Upgrade' : 'Confirm Purchase'}
+                                        </p>
+                                        <h3 className="text-xl font-extrabold">{confirmPlan.displayName}</h3>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-6 space-y-4">
+                                {/* Price summary */}
+                                <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4">
+                                    <span className="text-sm text-gray-600">Total</span>
+                                    <div className="text-right">
+                                        <span className="text-2xl font-black text-gray-900">Rs.{confirmPlan.priceRs?.toLocaleString()}</span>
+                                        <span className="text-xs text-gray-400 block">{meta?.billing}</span>
+                                    </div>
+                                </div>
+
+                                {/* Upgrade notice */}
+                                {isUpgrading && (
+                                    <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                                        <span className="text-amber-500 text-base flex-shrink-0">⚠️</span>
+                                        <p className="text-xs text-amber-700 leading-relaxed">
+                                            Your current <strong>{data?.planConfig?.displayName}</strong> plan will end immediately.
+                                            Remaining time on your current plan will <strong>not</strong> be refunded or prorated.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Non-refundable warning */}
+                                <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl p-3">
+                                    <span className="text-red-500 text-base flex-shrink-0">🔒</span>
+                                    <p className="text-xs text-red-700 leading-relaxed">
+                                        All subscription purchases are <strong>non-refundable</strong>.
+                                        By proceeding, you agree to our terms and acknowledge that no refunds will be issued.
+                                    </p>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex gap-3 pt-2">
+                                    <button
+                                        onClick={() => setConfirmPlan(null)}
+                                        className="flex-1 py-3 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={() => handleCheckout(confirmPlan)}
+                                        className={cn(
+                                            'flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5',
+                                            `bg-gradient-to-r ${meta?.gradient || 'from-orange-500 to-amber-500'}`
+                                        )}
+                                    >
+                                        {isUpgrading ? 'Confirm Upgrade' : 'Proceed to Payment'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }

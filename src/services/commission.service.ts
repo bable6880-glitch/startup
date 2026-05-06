@@ -39,7 +39,15 @@ export async function recordCommission(
             await incrementOrderCount(access.subscription.id);
         }
 
-        // 3. Auto-generate Khata entries for plans with digital_khata
+        // 3. Auto-lock kitchen if order limit reached
+        try {
+            const { checkAndLockIfLimitReached } = await import("@/services/kitchen-lock.service");
+            await checkAndLockIfLimitReached(kitchenId);
+        } catch (lockErr) {
+            logger.warn("Auto-lock check failed (non-critical)", { kitchenId, error: lockErr });
+        }
+
+        // 4. Auto-generate Khata entries for plans with digital_khata
         if (access.hasFeature('digital_khata')) {
             await autoKhataEntry(kitchenId, cookId, orderId, orderAmountRs, commissionAmount);
         }

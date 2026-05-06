@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useKitchenSSE } from "@/hooks/use-kitchen-sse";
 import { PlanWidget } from "@/components/plans/PlanWidget";
+import { usePlanAccess } from "@/hooks/use-plan-access";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,6 +66,10 @@ function DashboardContent() {
     const [topFood, setTopFood] = useState<TopFood[]>([]);
     const [analyticsMonth, setAnalyticsMonth] = useState("");
     const [loading, setLoading] = useState(true);
+
+    // ── PHASE 5: Check if Elite ──────────────────────────────────────────────
+    const { data: planAccess } = usePlanAccess();
+    const isElite = planAccess?.planId === 'elite';
 
     // ── PHASE 4 ADDED: Real-time toast state ──────────────────────────────────
     const [realtimeToast, setRealtimeToast] = useState<string | null>(null);
@@ -378,6 +383,15 @@ function DashboardContent() {
                             <span className="text-2xl block">👨‍🍳</span>
                             <h3 className="mt-1 text-sm font-semibold text-amber-700 dark:text-amber-300">AI Chef</h3>
                         </Link>
+                        {isElite && (
+                            <Link href="/dashboard/elite" className="col-span-2 sm:col-span-4 lg:col-span-2 rounded-2xl border-2 border-purple-300/60 bg-gradient-to-r from-purple-50 to-pink-50 p-4 shadow-[0_0_15px_rgba(168,85,247,0.2)] hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:-translate-y-0.5 transition-all group flex items-center justify-center gap-3 dark:from-purple-900/30 dark:to-pink-900/30 dark:border-purple-700/50">
+                                <span className="text-3xl animate-pulse-subtle">👑</span>
+                                <div className="text-left">
+                                    <h3 className="text-sm font-extrabold text-purple-700 dark:text-purple-400 uppercase tracking-wide">Elite Command</h3>
+                                    <p className="text-[10px] text-purple-600/80 dark:text-purple-400/80 font-medium">Exclusive Features</p>
+                                </div>
+                            </Link>
+                        )}
                         <Link href="/explore" className="rounded-2xl border border-primary-200/60 bg-gradient-to-br from-primary-50 to-white p-4 shadow-sm hover:shadow-md transition-all group text-center dark:from-primary-900/20 dark:to-neutral-800 dark:border-primary-800">
                             <span className="text-2xl block">🔍</span>
                             <h3 className="mt-1 text-sm font-semibold text-primary-700 dark:text-primary-300">Browse</h3>

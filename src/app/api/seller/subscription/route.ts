@@ -68,6 +68,10 @@ export async function GET(req: NextRequest) {
             isActive: access.isActive,
             canUpgrade: access.planId !== 'elite',
             canCancel: !!(access.isActive && access.subscription && !access.subscription.cancelAtPeriodEnd),
+
+            // Kitchen lock status (for KitchenLockedModal)
+            isKitchenLocked: !!(guard.kitchen as any).isLocked,
+            lockReason: (guard.kitchen as any).lockReason || null,
         });
     } catch (error) {
         logger.error("Failed to fetch subscription management data", { error });

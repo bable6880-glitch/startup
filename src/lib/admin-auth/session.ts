@@ -74,9 +74,19 @@ export async function getAdminSession(): Promise<AdminSession | null> {
 
 export async function clearAdminSession(): Promise<void> {
     const cookieStore = await cookies();
-    // Delete the new root path cookie
+    
+    // Explicitly overwrite with expired date to ensure deletion across all browsers
+    cookieStore.set(COOKIE, "", {
+        httpOnly: true,
+        secure:   process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        path:     "/",
+        expires:  new Date(0),
+        maxAge:   0,
+    });
+
+    // Also try standard delete for both possible paths
     cookieStore.delete({ name: COOKIE, path: "/" });
-    // Force delete the old scoped cookie in case it's stuck in the user's browser
     cookieStore.delete({ name: COOKIE, path: "/admin-portal" });
 }
 

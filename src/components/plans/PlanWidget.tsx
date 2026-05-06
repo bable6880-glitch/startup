@@ -2,8 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePlanAccess, getPlanBadgeColor, SubscriptionData } from '@/hooks/use-plan-access';
+import { usePlanAccess, SubscriptionData } from '@/hooks/use-plan-access';
 import { cn } from '@/lib/utils';
+import { PlanBadge } from '@/components/plans/PlanBadge';
+import { LimitWarningModal } from '@/components/plans/LimitWarningModal';
 
 export function PlanWidget() {
     const { data, loading, error } = usePlanAccess();
@@ -31,12 +33,7 @@ export function PlanWidget() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-gray-600">Your Plan</span>
-                    <span className={cn(
-                        'text-xs font-semibold px-2.5 py-1 rounded-full border',
-                        getPlanBadgeColor(data.planId)
-                    )}>
-                        {data.planConfig?.displayName ?? 'Free'}
-                    </span>
+                    <PlanBadge planId={data.planId} size="sm" showIcon={true} />
                 </div>
                 <div className="flex items-center gap-3">
                     {!data.isFree && (
@@ -127,6 +124,16 @@ export function PlanWidget() {
                         </Link>
                     </div>
                 </div>
+            )}
+
+            {/* LIMIT WARNING MODAL (90%+ usage) */}
+            {!data.isFree && (data.usage.ordersPercent ?? 0) >= 90 && data.usage.ordersLimit !== null && data.subscription && (
+                <LimitWarningModal
+                    kitchenId={(data.subscription as any).kitchenId || ''}
+                    used={data.usage.ordersUsed}
+                    limit={data.usage.ordersLimit}
+                    remaining={data.usage.ordersRemaining ?? 0}
+                />
             )}
         </div>
     );

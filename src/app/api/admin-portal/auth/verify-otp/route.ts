@@ -95,8 +95,10 @@ export async function POST(req: NextRequest) {
         .set({ usedAt: new Date() })
         .where(eq(adminOtpCodes.id, otp.id));
 
-    // Delete pending token from Redis
-    await redis.del(`admin_pending:${pendingToken}`);
+    // Delete pending token from Redis immediately
+    if (redis) {
+        await redis.del(`admin_pending:${pendingToken}`);
+    }
 
     // Get admin details
     const admin = await db.query.adminUsers.findFirst({
@@ -111,12 +113,14 @@ export async function POST(req: NextRequest) {
     const { jti } = await createAdminSession(admin.id, admin.username, admin.role);
 
     // Store session record in DB for revocation support
+    // Use the same TTL as the JWT (8 hours)
+    const SESSION_TTL_MS = 8 * 60 * 60 * 1000; 
     await db.insert(adminSessions).values({
         adminUserId:   admin.id,
         jtiHash:       hashJti(jti),
         ipAddress:     ip,
         userAgent:     req.headers.get("user-agent") ?? "",
-        expiresAt:     new Date(Date.now() + 8 * 60 * 60 * 1000), // 8 hours
+        expiresAt:     new Date(Date.now() + SESSION_TTL_MS),
     });
 
     // Update last login timestamp

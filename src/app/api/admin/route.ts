@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
                     limit,
                     offset,
                     with: {
-                        admin: { columns: { id: true, name: true } },
+                        admin: { columns: { id: true, displayName: true } },
                     },
                 }),
                 database

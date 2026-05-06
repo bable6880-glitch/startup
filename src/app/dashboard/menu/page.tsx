@@ -10,6 +10,7 @@ import { Loader2, Plus, Edit2, Trash2, X, Image as ImageIcon, Search, Sparkles }
 import { BackButton } from "@/components/ui/BackButton";
 import { usePlanAccess } from "@/hooks/use-plan-access";
 import { FeatureGate } from "@/components/plans/FeatureGate";
+import { KitchenLockedModal } from "@/components/plans/KitchenLockedModal";
 import { AIPricingPanel } from "@/components/menu/AIPricingPanel";
 
 type Meal = {
@@ -333,6 +334,10 @@ export default function MenuManagementPage() {
 
     return (
         <div className="mx-auto max-w-5xl px-4 py-8 bg-neutral-50/50 min-h-[calc(100vh-80px)] dark:bg-neutral-900 border border-transparent">
+            {/* Kitchen Locked Overlay */}
+            {planData && (planData as any).isKitchenLocked && (
+                <KitchenLockedModal lockReason={(planData as any).lockReason || 'ORDER_LIMIT_REACHED'} />
+            )}
             <BackButton label="Dashboard" />
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 mt-2">

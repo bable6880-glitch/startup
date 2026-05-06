@@ -29,6 +29,10 @@ export default function AdminUsersPage() {
         setLoading(true);
         try {
             const res = await fetch(`/api/admin-portal/users?page=${currentPage}&limit=${limit}&search=${currentSearch}&role=${currentRole}`);
+            if (res.status === 401) {
+                window.location.href = "/admin-portal/login";
+                return;
+            }
             if (res.ok) {
                 const json = await res.json();
                 setData(json.data);

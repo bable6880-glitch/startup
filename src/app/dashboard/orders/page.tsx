@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { OrderCard } from "@/components/dashboard/OrderCard";
 import { useKitchenSSE } from "@/hooks/use-kitchen-sse";
+import { usePlanAccess } from "@/hooks/use-plan-access";
+import { KitchenLockedModal } from "@/components/plans/KitchenLockedModal";
 import Link from "next/link";
 import { BackButton } from "@/components/ui/BackButton";
 
@@ -15,6 +17,7 @@ export default function SellerOrdersPage() {
     const [loading, setLoading] = useState(true);
     const [kitchenId, setKitchenId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<"PENDING" | "ACTIVE" | "HISTORY">("PENDING");
+    const { data: planAccess } = usePlanAccess();
 
     const fetchOrders = useCallback(async () => {
         try {
@@ -123,6 +126,10 @@ export default function SellerOrdersPage() {
 
     return (
         <div className="mx-auto max-w-5xl px-4 py-8">
+            {/* Kitchen Locked Overlay */}
+            {planAccess && (planAccess as any).isKitchenLocked && (
+                <KitchenLockedModal lockReason={(planAccess as any).lockReason || 'ORDER_LIMIT_REACHED'} />
+            )}
             <BackButton label="Dashboard" />
             <div className="flex items-center justify-between mb-8 mt-2">
                 <div>

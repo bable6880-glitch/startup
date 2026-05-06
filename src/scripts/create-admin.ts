@@ -16,8 +16,8 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 import { Pool, neonConfig } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-serverless";
-import * as schema from "../src/lib/db/schema";
-import { adminUsers } from "../src/lib/db/schema";
+import * as schema from "../lib/db/schema";
+import { adminUsers } from "../lib/db/schema";
 import bcrypt from "bcryptjs";
 
 neonConfig.poolQueryViaFetch = true;

@@ -507,3 +507,23 @@ body {
     background: #525252;
   }
 }
+
+/* ─── Elite Privacy Mode ─────────────────────────────────────────────────── */
+
+.privacy-mode .sensitive-data {
+  filter: blur(6px);
+  user-select: none;
+  pointer-events: none;
+  transition: filter 0.3s ease;
+}
+
+/* ─── Elite Badge Glow Animation ─────────────────────────────────────────── */
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}

@@ -29,8 +29,8 @@ export default function AdminDashboardPage() {
             .then(json => {
                 if (json) {
                     setData(json);
-                    setLoading(false);
                 }
+                setLoading(false);
             })
             .catch(err => {
                 setError(err.message);
