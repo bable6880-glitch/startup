@@ -111,6 +111,35 @@ export async function proxy(request: NextRequest) {
                     audience: "admin-portal",
                 });
 
+                // --- STRICT DB VALIDATION ---
+                // We check the DB to ensure the session hasn't been revoked
+                // This prevents "ghost sessions" where a valid JWT is used after logout
+                try {
+                    const { db } = await import("@/lib/db");
+                    const { adminSessions } = await import("@/lib/db/schema");
+                    const { hashJti } = await import("@/lib/admin-auth/session");
+                    const { and, eq, isNull, gt } = await import("drizzle-orm");
+
+                    const jtiH = hashJti(payload.jti as string);
+                    const dbSession = await db.query.adminSessions.findFirst({
+                        where: and(
+                            eq(adminSessions.jtiHash, jtiH),
+                            isNull(adminSessions.revokedAt),
+                            gt(adminSessions.expiresAt, new Date())
+                        ),
+                    });
+
+                    if (!dbSession) {
+                        throw new Error("Session revoked or expired in DB");
+                    }
+                } catch (dbErr) {
+                    console.error("[Proxy] DB Session Validation Failed:", dbErr);
+                    const res = NextResponse.redirect(new URL("/admin-portal/login", request.url));
+                    res.cookies.delete("st_admin_session");
+                    return res;
+                }
+                // --- END STRICT DB VALIDATION ---
+
                 // Inject admin identity into request headers for server components
                 const headers = new Headers(request.headers);
                 headers.set("x-admin-id", payload.sub as string);
@@ -118,7 +147,8 @@ export async function proxy(request: NextRequest) {
                 headers.set("x-admin-role", payload.role as string);
 
                 return NextResponse.next({ request: { headers } });
-            } catch {
+            } catch (err) {
+                console.error("[Proxy] Auth Error:", err);
                 if (isAdminApi) {
                     const res = NextResponse.json({ error: "Session expired" }, { status: 401 });
                     res.cookies.delete("st_admin_session");
