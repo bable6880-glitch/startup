@@ -313,11 +313,22 @@ async function KitchenContent({ id }: { id: string }) {
                     {/* Menu */}
                     <section className="mt-12">
                         <ClientOrderBanner kitchenName={kitchen.name} />
+
+                        {/* Customer-facing lock message — generic, no internal lockReason exposed */}
+                        {(kitchen as any).isLocked && (
+                            <div className="mb-6 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950 p-4 flex items-center gap-3">
+                                <span className="text-xl flex-shrink-0">⚠️</span>
+                                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                                    This kitchen is not accepting new orders right now.
+                                </p>
+                            </div>
+                        )}
+
                         <h2 className="text-xl font-bold text-neutral-900 mb-6 dark:text-neutral-50">
                             Menu ({menu.length} items)
                         </h2>
                         {menu.length > 0 ? (
-                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                            <div className={`grid grid-cols-1 gap-4 lg:grid-cols-2 ${(kitchen as any).isLocked ? 'opacity-50 pointer-events-none' : ''}`}>
                                 {menu.map((m: MealData) => (
                                     <MealItem key={m.id} meal={m} kitchenId={kitchen.id} kitchenName={kitchen.name} />
                                 ))}

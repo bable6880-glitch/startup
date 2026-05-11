@@ -61,13 +61,26 @@ export default function AdminPortalLayout({
 
             <PrivacyProvider>
                 <ClientLayoutWrapper>
+                    {/* Preload Google Fonts (non-blocking, replaces render-blocking @import) */}
+                    <link
+                        rel="preconnect"
+                        href="https://fonts.googleapis.com"
+                    />
+                    <link
+                        rel="preconnect"
+                        href="https://fonts.gstatic.com"
+                        crossOrigin="anonymous"
+                    />
+                    <link
+                        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+                        rel="stylesheet"
+                    />
                     {children}
                 </ClientLayoutWrapper>
             </PrivacyProvider>
 
             {/* Keyframe animations */}
             <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
                 @keyframes adminOrbFloat1 {
                     0%, 100% { transform: translate(0, 0) scale(1); }

@@ -48,13 +48,11 @@ export async function PATCH(
             } else {
                 await notifyOrderCompleted(order.customerId, orderId, order.kitchen.name);
 
-                // Record commission + increment order count on COMPLETED
+                // Record commission (if chargeable) + always increment order count
                 try {
                     const { recordCommission } = await import("@/services/commission.service");
                     const orderAmount = order.totalAmount ? Number(order.totalAmount) : 0;
-                    if (orderAmount > 0) {
-                        await recordCommission(orderId, order.kitchenId, guard.user.id, orderAmount);
-                    }
+                    await recordCommission(orderId, order.kitchenId, guard.user.id, orderAmount);
                 } catch (commErr) {
                     console.error("[Commission Recording Error]", commErr);
                     // Don't fail the status update if commission recording fails

@@ -18,7 +18,7 @@ const PLAN_META: Record<string, {
 }> = {
     starter: {
         gradient: 'from-gray-600 to-gray-800',
-        textColor: 'text-gray-700',
+        textColor: 'text-gray-700 dark:text-gray-300',
         icon: '🌱',
         tagline: 'Perfect to start your journey',
         billing: 'per month',
@@ -122,7 +122,12 @@ export function PricingClient({ plans }: { plans: any[] }) {
     // Step 1: User clicks button → show confirmation modal
     const requestCheckout = (plan: typeof plans[0]) => {
         if (!plan.stripePriceId) {
+            // Show user-facing error — never fail silently
             console.error(`[Checkout] Missing stripePriceId for plan: ${plan.displayName} (id: ${plan.planId})`);
+            setCheckoutError(
+                `${plan.displayName} checkout is temporarily unavailable. ` +
+                `Please contact support or try again later.`
+            );
             return;
         }
         setCheckoutError(null);
@@ -209,8 +214,8 @@ export function PricingClient({ plans }: { plans: any[] }) {
                         <div
                             key={plan.planId}
                             className={cn(
-                                'relative flex flex-col rounded-2xl border bg-white overflow-hidden shadow-sm transition-all duration-200',
-                                isCurrent ? 'ring-2 ring-orange-500 shadow-orange-100 shadow-lg' : 'hover:shadow-lg hover:-translate-y-0.5'
+                                'relative flex flex-col rounded-2xl border bg-white dark:bg-neutral-900 dark:border-neutral-700 overflow-hidden shadow-sm dark:shadow-neutral-900/50 transition-all duration-200',
+                                isCurrent ? 'ring-2 ring-orange-500 shadow-orange-100 dark:shadow-orange-900/30 shadow-lg' : 'hover:shadow-lg hover:-translate-y-0.5'
                             )}
                         >
                             {/* Badge */}
@@ -239,19 +244,19 @@ export function PricingClient({ plans }: { plans: any[] }) {
                                     {meta.features.map((f, i) => (
                                         <li key={i} className="flex items-start gap-2.5 text-sm">
                                             <span className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-[10px] font-bold">✓</span>
-                                            <span className="text-gray-700 leading-snug">{f}</span>
+                                            <span className="text-gray-700 dark:text-neutral-300 leading-snug">{f}</span>
                                         </li>
                                     ))}
                                 </ul>
 
                                 {/* CTA */}
                                 {isCurrent ? (
-                                    <div className="w-full py-3 text-center text-sm font-bold text-green-700 bg-green-50 border border-green-200 rounded-xl">
+                                    <div className="w-full py-3 text-center text-sm font-bold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
                                         ✓ Current Plan
                                     </div>
                                 ) : isDowngrade ? null : !plan.stripePriceId ? (
-                                    <div className="w-full py-3 text-center text-sm font-bold text-gray-400 bg-gray-100 border border-gray-200 rounded-xl cursor-not-allowed">
-                                        Coming Soon
+                                    <div className="w-full py-3 text-center text-sm font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl cursor-not-allowed">
+                                        ⏳ Temporarily Unavailable
                                     </div>
                                 ) : (
                                     <>
@@ -304,10 +309,10 @@ export function PricingClient({ plans }: { plans: any[] }) {
                         { label: "Target needed", value: "10 orders", sub: "to activate the deal" },
                         { label: "You earn more", value: "Bulk sales", sub: "zero per-order hassle" },
                     ].map((item) => (
-                        <div key={item.label} className="bg-white rounded-xl p-4 border border-orange-100 text-center">
+                        <div key={item.label} className="bg-white dark:bg-neutral-800 rounded-xl p-4 border border-orange-100 dark:border-orange-900/30 text-center">
                             <p className="text-xs text-orange-500 font-semibold uppercase tracking-wider mb-1">{item.label}</p>
-                            <p className="text-xl font-extrabold text-gray-900">{item.value}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>
+                            <p className="text-xl font-extrabold text-gray-900 dark:text-neutral-100">{item.value}</p>
+                            <p className="text-xs text-gray-400 dark:text-neutral-500 mt-0.5">{item.sub}</p>
                         </div>
                     ))}
                 </div>
@@ -315,12 +320,12 @@ export function PricingClient({ plans }: { plans: any[] }) {
 
             {/* ── Comparison Table ─────────────────────────────────────── */}
             <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Full Comparison</h2>
-                <div className="overflow-x-auto rounded-2xl border border-gray-100 shadow-sm">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-neutral-100 mb-6 text-center">Full Comparison</h2>
+                <div className="overflow-x-auto rounded-2xl border border-gray-100 dark:border-neutral-700 shadow-sm dark:shadow-neutral-900/50">
                     <table className="w-full text-left border-collapse min-w-[640px]">
                         <thead>
-                            <tr className="bg-gray-50 border-b border-gray-100">
-                                <th className="text-xs uppercase text-gray-400 font-semibold p-4 w-44">Feature</th>
+                            <tr className="bg-gray-50 dark:bg-neutral-800 border-b border-gray-100 dark:border-neutral-700">
+                                <th className="text-xs uppercase text-gray-400 dark:text-neutral-500 font-semibold p-4 w-44">Feature</th>
                                 {sorted.map(plan => {
                                     const meta = PLAN_META[plan.planId];
                                     const isCurrent = data?.planId === plan.planId;
@@ -347,8 +352,8 @@ export function PricingClient({ plans }: { plans: any[] }) {
                                 ["Search Priority", ["Standard", "Limited", "High", "Top 👑"]],
                                 ["Account Manager", ["—", "—", "—", "24/7"]],
                             ].map(([label, values]) => (
-                                <tr key={label as string} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                                    <td className="p-4 font-medium text-gray-600 text-xs">{label as string}</td>
+                                <tr key={label as string} className="border-b border-gray-50 dark:border-neutral-700 hover:bg-gray-50/50 dark:hover:bg-neutral-800/50 transition-colors">
+                                    <td className="p-4 font-medium text-gray-600 dark:text-neutral-400 text-xs">{label as string}</td>
                                     {(values as string[]).map((val, i) => {
                                         const planId = sorted[i]?.planId;
                                         const isCurrent = data?.planId === planId;
@@ -359,7 +364,7 @@ export function PricingClient({ plans }: { plans: any[] }) {
                                                 ) : val === "✓" ? (
                                                     <span className="text-green-500 font-bold">✓</span>
                                                 ) : (
-                                                    <span className="text-gray-700">{val}</span>
+                                                    <span className="text-gray-700 dark:text-neutral-300">{val}</span>
                                                 )}
                                             </td>
                                         );
@@ -381,7 +386,7 @@ export function PricingClient({ plans }: { plans: any[] }) {
                         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
                         {/* Modal */}
                         <div
-                            className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+                            className="relative w-full max-w-md bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl dark:shadow-neutral-900/50 overflow-hidden"
                             onClick={e => e.stopPropagation()}
                         >
                             {/* Header */}
@@ -400,11 +405,11 @@ export function PricingClient({ plans }: { plans: any[] }) {
                             {/* Body */}
                             <div className="p-6 space-y-4">
                                 {/* Price summary */}
-                                <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4">
-                                    <span className="text-sm text-gray-600">Total</span>
+                                <div className="flex items-center justify-between bg-gray-50 dark:bg-neutral-800 rounded-xl p-4">
+                                    <span className="text-sm text-gray-600 dark:text-neutral-400">Total</span>
                                     <div className="text-right">
-                                        <span className="text-2xl font-black text-gray-900">Rs.{confirmPlan.priceRs?.toLocaleString()}</span>
-                                        <span className="text-xs text-gray-400 block">{meta?.billing}</span>
+                                        <span className="text-2xl font-black text-gray-900 dark:text-neutral-100">Rs.{confirmPlan.priceRs?.toLocaleString()}</span>
+                                        <span className="text-xs text-gray-400 dark:text-neutral-500 block">{meta?.billing}</span>
                                     </div>
                                 </div>
 
@@ -420,9 +425,9 @@ export function PricingClient({ plans }: { plans: any[] }) {
                                 )}
 
                                 {/* Non-refundable warning */}
-                                <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl p-3">
-                                    <span className="text-red-500 text-base flex-shrink-0">🔒</span>
-                                    <p className="text-xs text-red-700 leading-relaxed">
+                                <div className="flex items-start gap-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3">
+                                    <span className="text-red-500 text-lg leading-none">🔒</span>
+                                    <p className="text-xs text-red-700 dark:text-red-300 leading-relaxed">
                                         All subscription purchases are <strong>non-refundable</strong>.
                                         By proceeding, you agree to our terms and acknowledge that no refunds will be issued.
                                     </p>
@@ -432,7 +437,7 @@ export function PricingClient({ plans }: { plans: any[] }) {
                                 <div className="flex gap-3 pt-2">
                                     <button
                                         onClick={() => setConfirmPlan(null)}
-                                        className="flex-1 py-3 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+                                        className="flex-1 py-3 rounded-xl text-sm font-semibold text-gray-600 dark:text-neutral-300 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 transition-colors"
                                     >
                                         Cancel
                                     </button>

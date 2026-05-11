@@ -129,5 +129,8 @@ export async function POST(req: NextRequest) {
         .set({ lastLoginAt: new Date() })
         .where(eq(adminUsers.id, admin.id));
 
-    return NextResponse.json({ success: true });
+    // Return csrfToken (jti) to client — stored in sessionStorage for
+    // X-CSRF-Token header on state-changing admin requests.
+    // The jti is a UUID, NOT the JWT itself (which remains HttpOnly).
+    return NextResponse.json({ success: true, csrfToken: jti });
 }

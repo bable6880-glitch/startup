@@ -245,6 +245,68 @@ function DashboardContent() {
                 </div>
             )}
 
+            {/* ── Kitchen Lock Banner ── */}
+            {planAccess?.isKitchenLocked && (
+                <div className="mb-6 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 p-4 sm:p-5 shadow-sm">
+                    <div className="flex gap-3">
+                        <span className="text-2xl flex-shrink-0">🔒</span>
+                        <div className="flex-1 min-w-0">
+                            <h3 className="text-base font-bold text-red-900 dark:text-red-100">
+                                Your Kitchen is Locked
+                            </h3>
+                            <p className="mt-1 text-sm text-red-700 dark:text-red-300">
+                                {planAccess.lockReason === 'ORDER_LIMIT_REACHED'
+                                    ? "You've used all your monthly orders. Buy more capacity or upgrade your plan."
+                                    : planAccess.lockReason === 'SUBSCRIPTION_EXPIRED'
+                                        ? "Your subscription has expired. Renew now to keep accepting orders."
+                                        : planAccess.lockReason === 'PAYMENT_FAILED'
+                                            ? "Your last payment failed. Update your payment method to restore access."
+                                            : planAccess.lockReason === 'MENU_LIMIT'
+                                                ? "You've reached your menu item limit. Remove items or upgrade your plan."
+                                                : "Your kitchen is temporarily locked. Please contact support."}
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                {planAccess.lockReason === 'ORDER_LIMIT_REACHED' && (
+                                    <>
+                                        <Link href="/dashboard/packs" className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 transition-colors">
+                                            Buy Extra Pack →
+                                        </Link>
+                                        <Link href="/dashboard/subscription" className="inline-flex items-center rounded-lg border border-red-300 dark:border-red-700 px-4 py-2 text-xs font-semibold text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+                                            Upgrade Plan →
+                                        </Link>
+                                    </>
+                                )}
+                                {planAccess.lockReason === 'SUBSCRIPTION_EXPIRED' && (
+                                    <Link href="/dashboard/subscription" className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 transition-colors">
+                                        Renew Plan →
+                                    </Link>
+                                )}
+                                {planAccess.lockReason === 'PAYMENT_FAILED' && (
+                                    <Link href="/dashboard/subscription" className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 transition-colors">
+                                        Manage Subscription →
+                                    </Link>
+                                )}
+                                {planAccess.lockReason === 'MENU_LIMIT' && (
+                                    <>
+                                        <Link href="/dashboard/menu" className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 transition-colors">
+                                            Manage Menu →
+                                        </Link>
+                                        <Link href="/dashboard/subscription" className="inline-flex items-center rounded-lg border border-red-300 dark:border-red-700 px-4 py-2 text-xs font-semibold text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+                                            Upgrade Plan →
+                                        </Link>
+                                    </>
+                                )}
+                                {!planAccess.lockReason && (
+                                    <Link href="/dashboard/subscription" className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 transition-colors">
+                                        Contact Support →
+                                    </Link>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Header — PHASE 4: added Live/Reconnecting dot next to title */}
             <div className="flex items-center justify-between mb-8">
                 <div>

@@ -32,12 +32,15 @@ export async function GET(request: NextRequest) {
             return apiUnauthorized("Invalid cron secret");
         }
 
+        const startTime = Date.now();
         const now = new Date();
+        console.log('[CRON:cleanup] Starting: general cleanup');
         let expiredSubscriptions = 0;
         let expiredBoosts = 0;
         let suspendedKitchens = 0;
 
         // ── 1. Expire subscriptions past their period end ──────────────
+        console.log('[CRON:cleanup] Starting: subscription expiry');
         const expiredSubs = await db.query.subscriptions.findMany({
             where: and(
                 sql`${subscriptions.status} IN ('TRIALING', 'ACTIVE')`,
@@ -75,6 +78,7 @@ export async function GET(request: NextRequest) {
             suspendedKitchens++;
         }
 
+        console.log(`[CRON:cleanup] Expired ${expiredSubscriptions} subscriptions, suspended ${suspendedKitchens} kitchens`);
         // ── 3. Expire boosts past their expiry ────────────────────────
         const expiredBoostRecords = await db.query.boosts.findMany({
             where: and(
@@ -145,12 +149,47 @@ export async function GET(request: NextRequest) {
         }
 
         // ── 5. Notification Cleanup (Delete > 30 days old) ───────────────────
+        console.log('[CRON:cleanup] Starting: notification cleanup');
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
         await db.execute(sql`DELETE FROM notifications WHERE created_at < ${thirtyDaysAgo}`);
 
         // ── 6. Monthly Order Limit Reset (Only on 1st of the month) ─────────
+        // Sequential inserts — Neon HTTP does not support transactions
+        let orderResetCount = 0;
         if (now.getDate() === 1) {
-            await db.execute(sql`UPDATE subscriptions SET orders_used_this_month = 0, updated_at = NOW()`);
+            console.log('[CRON:cleanup] 1st of month — resetting order counts...');
+            const { planConfigs } = await import("@/lib/db/schema");
+            const activeSubs = await db.query.subscriptions.findMany({
+                where: sql`${subscriptions.status} IN ('ACTIVE', 'TRIALING')`,
+                with: { planConfig: true },
+            });
+
+            for (const sub of activeSubs) {
+                const config = sub.planConfig;
+                if (!config) continue;
+
+                const updates: Record<string, unknown> = {
+                    ordersUsedThisMonth: 0,
+                    ordersResetAt: now,
+                    updatedAt: now,
+                };
+
+                // Monthly plans (billingPeriodMonths=1) also reset potluck uses.
+                // Multi-month plans (Growth=6, Pro=12, Elite=12) reset potluck on renewal, not monthly.
+                if (config.billingPeriodMonths === 1 && config.potluckUsesPerPeriod > 0) {
+                    updates.potluckUsesRemaining = config.potluckUsesPerPeriod;
+                    updates.potluckUsesResetAt = now;
+                }
+
+                await db.update(subscriptions)
+                    .set(updates as any)
+                    .where(eq(subscriptions.id, sub.id));
+
+                orderResetCount++;
+            }
+            console.log(`[CRON:cleanup] Reset order counts for ${orderResetCount} subscriptions`);
+        } else {
+            console.log('[CRON:cleanup] Skipping order count reset (not 1st of month)');
         }
 
         // ── 7. Daily Menu Reset (NOT_TODAY → AVAILABLE) ─────────────────────
@@ -172,12 +211,17 @@ export async function GET(request: NextRequest) {
             console.error("[Cron] Menu reset error:", menuErr);
         }
 
+        const totalMs = Date.now() - startTime;
+        console.log(`[CRON:cleanup] All tasks complete in ${totalMs}ms`);
+
         return apiSuccess({
             message: "Cleanup complete",
             expiredSubscriptions,
             suspendedKitchens,
             expiredBoosts,
+            orderResetCount,
             menuResetCount,
+            executionMs: totalMs,
             timestamp: now.toISOString(),
         });
     } catch (error) {

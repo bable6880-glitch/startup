@@ -9,6 +9,8 @@ import {
     ClipboardEvent,
 } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { setAdminCsrfToken } from "@/app/admin-portal/_lib/admin-fetch";
 
 const OTP_LENGTH = 6;
 
@@ -17,7 +19,9 @@ export default function AdminVerifyPage() {
     const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [showErrorCard, setShowErrorCard] = useState(false);
     const [attemptsLeft, setAttemptsLeft] = useState(3);
+    const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [shaking, setShaking] = useState(false);
     const [maxAttemptsReached, setMaxAttemptsReached] = useState(false);
     const [expired, setExpired] = useState(false);
@@ -89,6 +93,8 @@ export default function AdminVerifyPage() {
             submittingRef.current = true;
             setLoading(true);
             setError("");
+            setShowErrorCard(false);
+            if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
 
             try {
                 const res = await fetch("/api/admin-portal/auth/verify-otp", {
@@ -105,11 +111,21 @@ export default function AdminVerifyPage() {
                         return;
                     }
 
-                    setError(data.error || "Verification failed");
+                    const errorMsg = data.error === "Invalid verification code"
+                        ? "Verification Failed: The code entered is incorrect. Please double-check your email. ✉️"
+                        : (data.error || "Verification failed");
+
+                    setError(errorMsg);
+                    setShowErrorCard(true);
                     if (data.attemptsLeft !== undefined) {
                         setAttemptsLeft(data.attemptsLeft);
                     }
                     triggerShake();
+
+                    // Auto-hide error after 7 seconds
+                    errorTimeoutRef.current = setTimeout(() => {
+                        setShowErrorCard(false);
+                    }, 7000);
 
                     // Clear inputs and focus first
                     setDigits(Array(OTP_LENGTH).fill(""));
@@ -117,7 +133,10 @@ export default function AdminVerifyPage() {
                     return;
                 }
 
-                // Success — clear session storage and redirect
+                // Success — store CSRF token and clear session storage
+                if (data.csrfToken) {
+                    setAdminCsrfToken(data.csrfToken);
+                }
                 sessionStorage.removeItem("apt");
                 sessionStorage.removeItem("ame");
                 sessionStorage.removeItem("aexp");
@@ -392,18 +411,58 @@ export default function AdminVerifyPage() {
                     </span>
                 </div>
 
-                {/* Error */}
-                {error && (
-                    <div style={{
-                        marginBottom: 16, padding: "10px 16px",
-                        background: "rgba(239,68,68,0.12)",
-                        border: "1px solid rgba(239,68,68,0.2)",
-                        borderRadius: 8, color: "#FCA5A5", fontSize: 13,
-                        textAlign: "center", animation: "adminFadeInUp 0.2s ease-out",
-                    }}>
-                        {error}
-                    </div>
-                )}
+                {/* Error message card */}
+                <div style={{ position: "relative", zIndex: 10 }}>
+                    <AnimatePresence>
+                        {showErrorCard && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                                style={{
+                                    position: "absolute",
+                                    bottom: "100%",
+                                    left: 0,
+                                    right: 0,
+                                    marginBottom: 16,
+                                    padding: "16px",
+                                    background: "rgba(239,68,68,0.1)",
+                                    backdropFilter: "blur(12px)",
+                                    border: "1px solid rgba(239,68,68,0.2)",
+                                    borderRadius: 14,
+                                    boxShadow: "0 8px 32px rgba(239,68,68,0.15)",
+                                    display: "flex",
+                                    gap: 12,
+                                    alignItems: "flex-start"
+                                }}
+                            >
+                                <div style={{ 
+                                    width: 32, height: 32, borderRadius: "50%", 
+                                    background: "rgba(239,68,68,0.2)", 
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    flexShrink: 0
+                                }}>
+                                    <span style={{ fontSize: 16 }}>⚠️</span>
+                                </div>
+                                <div style={{ flex: 1, textAlign: "left" }}>
+                                    <h4 style={{ margin: "0 0 4px", color: "#FCA5A5", fontSize: 14, fontWeight: 600 }}>Access Denied</h4>
+                                    <p style={{ margin: 0, color: "rgba(252,165,165,0.8)", fontSize: 13, lineHeight: 1.4 }}>
+                                        {error}
+                                    </p>
+                                </div>
+                                <button 
+                                    onClick={() => setShowErrorCard(false)}
+                                    style={{ 
+                                        background: "none", border: "none", color: "rgba(252,165,165,0.4)", 
+                                        cursor: "pointer", padding: 4, fontSize: 18 
+                                    }}
+                                >
+                                    ×
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
 
                 {/* Verify button */}
                 <button

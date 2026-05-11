@@ -25,7 +25,7 @@ type GuardSuccess = { ok: true;  admin: AuthedAdmin };
 type GuardFailure = { ok: false; response: NextResponse };
 export type GuardResult = GuardSuccess | GuardFailure;
 
-export async function guardAdminPortal(_req: NextRequest): Promise<GuardResult> {
+export async function guardAdminPortal(req: NextRequest): Promise<GuardResult> {
     const session = await getAdminSession();
 
     if (!session) {
@@ -33,6 +33,25 @@ export async function guardAdminPortal(_req: NextRequest): Promise<GuardResult> 
             ok: false,
             response: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
         };
+    }
+
+    // ── CSRF Protection (state-changing methods only) ────────────────────
+    // Double-submit variant: the JWT cookie contains a unique jti.
+    // The client sends the same jti as X-CSRF-Token header.
+    // SameSite:strict prevents cross-origin cookie attachment,
+    // and the header proves same-origin JS initiated the request.
+    const method = req.method.toUpperCase();
+    if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+        const csrfToken = req.headers.get("x-csrf-token");
+        if (!csrfToken || csrfToken !== session.jti) {
+            return {
+                ok: false,
+                response: NextResponse.json(
+                    { error: "CSRF token missing or invalid" },
+                    { status: 403 }
+                ),
+            };
+        }
     }
 
     // Verify session is not revoked in DB

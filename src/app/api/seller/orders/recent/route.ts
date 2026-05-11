@@ -10,6 +10,13 @@ export async function GET(request: NextRequest) {
         if (!guard.ok) return guard.response;
         const { kitchen } = guard;
 
+        // Verify Elite plan
+        const { getKitchenPlanAccess } = await import("@/lib/plans/plan-access");
+        const access = await getKitchenPlanAccess(kitchen.id);
+        if (access.planId !== 'elite') {
+            return NextResponse.json({ error: "Elite plan required" }, { status: 403 });
+        }
+
         const recentOrders = await db.query.orders.findMany({
             where: eq(orders.kitchenId, kitchen.id),
             orderBy: [desc(orders.createdAt)],

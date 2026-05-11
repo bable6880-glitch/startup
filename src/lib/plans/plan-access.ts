@@ -114,8 +114,8 @@ export async function getKitchenPlanAccess(kitchenId: string): Promise<PlanAcces
 
 function buildPlanAccess(sub: SubscriptionRow, config: PlanConfigRow): PlanAccess {
     const ordersUsed = sub.ordersUsedThisMonth ?? 0;
-    const extraOrders = (sub as any).extraOrdersLimit ?? 0;
-    const extraPotluck = (sub as any).extraPotluckUses ?? 0;
+    const extraOrders = sub.extraOrdersLimit ?? 0;
+    const extraPotluck = sub.extraPotluckUses ?? 0;
     const effectiveOrderLimit = config.monthlyOrderLimit !== null ? config.monthlyOrderLimit + extraOrders : null;
 
     return {
@@ -330,6 +330,17 @@ async function expireSubscription(subscriptionId: string, kitchenId: string) {
     await db.update(subscriptions)
         .set({ status: 'EXPIRED', updatedAt: new Date() })
         .where(eq(subscriptions.id, subscriptionId));
+
+    // 1b. Clear planId from kitchen (prevent stale badge) and lock kitchen
+    await db.update(kitchens)
+        .set({
+            planId: null,
+            isLocked: true,
+            lockReason: 'SUBSCRIPTION_EXPIRED',
+            lockedAt: new Date(),
+            updatedAt: new Date(),
+        })
+        .where(eq(kitchens.id, kitchenId));
 
     // 2. Handle menu item overflow — hide excess meals beyond free tier limit
     const mealCountResult = await db

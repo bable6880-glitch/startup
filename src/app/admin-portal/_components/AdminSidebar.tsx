@@ -13,6 +13,7 @@ import {
     Activity,
     LogOut
 } from "lucide-react";
+import { adminFetch, clearAdminCsrfToken } from "@/app/admin-portal/_lib/admin-fetch";
 
 export function AdminSidebar() {
     const pathname = usePathname();
@@ -134,11 +135,13 @@ export function AdminSidebar() {
                         onClick={async (e) => {
                             e.preventDefault();
                             try {
-                                await fetch("/api/admin-portal/auth/logout", { method: "POST" });
+                                await adminFetch("/api/admin-portal/auth/logout", { method: "POST" });
+                                clearAdminCsrfToken();
                                 // Full page redirect to home clears all memory state/SWR cache
                                 window.location.href = "/";
                             } catch (err) {
                                 console.error("Logout failed", err);
+                                clearAdminCsrfToken();
                                 window.location.href = "/";
                             }
                         }}

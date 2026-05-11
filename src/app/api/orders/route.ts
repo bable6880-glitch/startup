@@ -123,10 +123,18 @@ export async function POST(request: NextRequest) {
             return apiBadRequest("Kitchen not found or unavailable");
         }
 
-        // Kitchen lock enforcement: 423 if kitchen is locked
-        if ((kitchen as any).isLocked) {
+        // Kitchen lock enforcement: HTTP 423 if kitchen is locked
+        // 423 = Locked (RFC 4918) — semantically correct for business-rule locks
+        if (kitchen.isLocked) {
             return NextResponse.json(
-                { success: false, error: { code: "KITCHEN_LOCKED", message: "This kitchen is temporarily unable to accept orders. Please try again later." } },
+                {
+                    success: false,
+                    error: {
+                        code: "KITCHEN_LOCKED",
+                        // Generic message — do NOT expose internal lockReason to customers
+                        message: "This kitchen is temporarily not accepting orders. Please try again later.",
+                    },
+                },
                 { status: 423 }
             );
         }

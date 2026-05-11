@@ -498,35 +498,6 @@ export const subscriptions = pgTable(
     ]
 );
 
-// ─── Premium Plans ──────────────────────────────────────────────────────────
-
-export const premiumPlans = pgTable("premium_plans", {
-    id: uuid("id").defaultRandom().primaryKey(),
-    name: varchar("name", { length: 255 }).notNull(),
-    description: text("description"),
-    priceMonthly: integer("price_monthly").notNull(), // in smallest unit
-    priceQuarterly: integer("price_quarterly"),
-    priceYearly: integer("price_yearly"),
-    currency: varchar("currency", { length: 3 }).default("PKR").notNull(),
-    region: varchar("region", { length: 100 }).default("PK").notNull(),
-    features: text("features").array(),
-    includesVerifiedBadge: boolean("includes_verified_badge")
-        .default(false)
-        .notNull(),
-    includesBoost: boolean("includes_boost").default(false).notNull(),
-    boostDurationDays: integer("boost_duration_days"),
-    isActive: boolean("is_active").default(true).notNull(),
-    stripePriceIdMonthly: varchar("stripe_price_id_monthly", { length: 255 }),
-    stripePriceIdQuarterly: varchar("stripe_price_id_quarterly", { length: 255 }),
-    stripePriceIdYearly: varchar("stripe_price_id_yearly", { length: 255 }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
-});
-
 // ─── Boosts ─────────────────────────────────────────────────────────────────
 
 export const boosts = pgTable(

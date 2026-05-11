@@ -1,6 +1,12 @@
+/**
+ * @migrated 2026-05-10
+ * Previously queried the legacy `premium_plans` table.
+ * Now queries `plan_configs` (the active plan system).
+ * The legacy table has been dropped from the DB.
+ * Do not re-introduce premium_plans queries here.
+ */
 import { db } from "@/lib/db";
 import {
-    premiumPlans,
     subscriptions,
     boosts,
     kitchens,
@@ -46,15 +52,15 @@ export type SubscriptionStatusResult = {
     canAcceptOrders: boolean;
 };
 
-// ─── List Premium Plans ─────────────────────────────────────────────────────
+// ─── List Plans ─────────────────────────────────────────────────────────────
+// MIGRATION: Now queries plan_configs instead of premium_plans.
+// The cache key remains `plans:{region}` for backward compatibility.
 
 export async function listPlans(region = "PK") {
-    return cached(CacheKeys.premiumPlans(region), CacheTTL.PLANS, async () => {
-        return db.query.premiumPlans.findMany({
-            where: and(
-                eq(premiumPlans.region, region),
-                eq(premiumPlans.isActive, true)
-            ),
+    return cached(CacheKeys.planConfigs(region), CacheTTL.PLANS, async () => {
+        return db.query.planConfigs.findMany({
+            where: eq(planConfigs.isActive, true),
+            orderBy: [planConfigs.sortOrder],
         });
     });
 }
@@ -77,35 +83,9 @@ export async function startFreeTrial(kitchenId: string, userId: string) {
         now.getTime() + TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000
     );
 
-    // Get or create a default plan for trial records
-    let defaultPlan = await db.query.premiumPlans.findFirst({
-        where: eq(premiumPlans.region, "PK"),
-    });
-
-    if (!defaultPlan) {
-        // Seed a default plan if none exists
-        const [seeded] = await db
-            .insert(premiumPlans)
-            .values({
-                name: "Base Plan",
-                description: "Standard seller subscription",
-                priceMonthly: SUBSCRIPTION_PLANS.BASE_MONTHLY.price,
-                priceQuarterly: SUBSCRIPTION_PLANS.BASE_2MONTH.price,
-                priceYearly: SUBSCRIPTION_PLANS.BASE_4MONTH.price,
-                currency: "PKR",
-                region: "PK",
-                features: [
-                    "Kitchen listing on platform",
-                    "Menu management",
-                    "Order notifications",
-                    "Customer reviews",
-                    "Basic analytics",
-                ],
-                isActive: true,
-            })
-            .returning();
-        defaultPlan = seeded;
-    }
+    // MIGRATION: Removed dead code that queried/seeded premium_plans.
+    // The defaultPlan variable was never used after creation.
+    // Trial subscription always uses planId: "starter".
 
     // Create trial subscription
     const [subscription] = await db
@@ -208,6 +188,10 @@ export async function getSubscriptionStatus(
 }
 
 // ─── Create Checkout Session ────────────────────────────────────────────────
+// MIGRATION: Now queries plan_configs for Stripe price IDs instead of premium_plans.
+// The planType→planId mapping defaults to "starter" for the legacy checkout flow
+// since the old system had a single plan with multiple billing periods.
+// The new checkout flow (/api/seller/subscription/checkout) already uses planConfigs directly.
 
 export async function createSubscriptionCheckout(
     userId: string,
@@ -232,24 +216,20 @@ export async function createSubscriptionCheckout(
         throw error;
     }
 
-    // Find the plan in DB
-    const plan = await db.query.premiumPlans.findFirst({
+    // MIGRATION: Query plan_configs instead of premium_plans.
+    // The legacy checkout flow defaults to "starter" plan tier.
+    const plan = await db.query.planConfigs.findFirst({
         where: and(
-            eq(premiumPlans.region, "PK"),
-            eq(premiumPlans.isActive, true)
+            eq(planConfigs.planId, "starter"),
+            eq(planConfigs.isActive, true)
         ),
     });
 
-    if (!plan) throw new NotFoundError("Premium plan");
+    if (!plan) throw new NotFoundError("Plan configuration");
 
-    // Determine which Stripe price ID to use based on plan type
-    const priceIdMap: Record<SubscriptionPlanType, string | null> = {
-        BASE_MONTHLY: plan.stripePriceIdMonthly,
-        BASE_2MONTH: plan.stripePriceIdQuarterly,
-        BASE_4MONTH: plan.stripePriceIdYearly,
-    };
-
-    const stripePriceId = priceIdMap[planType];
+    // MIGRATION: plan_configs has a single stripePriceId per row.
+    // The legacy multi-price mapping (monthly/quarterly/yearly) is no longer needed.
+    const stripePriceId = plan.stripePriceId;
 
     // If no Stripe price ID configured, create a one-time checkout
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
@@ -276,7 +256,7 @@ export async function createSubscriptionCheckout(
             metadata: {
                 userId,
                 kitchenId,
-                planId: plan.id,
+                planId: plan.planId,
                 planType,
             },
         });
@@ -300,7 +280,7 @@ export async function createSubscriptionCheckout(
         metadata: {
             userId,
             kitchenId,
-            planId: plan.id,
+            planId: plan.planId,
             planType,
         },
     });
@@ -434,12 +414,12 @@ export async function handleStripeEvent(event: Stripe.Event) {
             }
 
             const now = new Date();
-            const planConfig =
+            const planConfigConst =
                 SUBSCRIPTION_PLANS[
                 (planType as SubscriptionPlanType) || "BASE_MONTHLY"
                 ];
             const periodEnd = new Date(
-                now.getTime() + planConfig.durationDays * 24 * 60 * 60 * 1000
+                now.getTime() + planConfigConst.durationDays * 24 * 60 * 60 * 1000
             );
 
             await db.insert(subscriptions).values({
@@ -462,20 +442,24 @@ export async function handleStripeEvent(event: Stripe.Event) {
                 .set({ status: "ACTIVE", updatedAt: now })
                 .where(eq(kitchens.id, kitchenId));
 
-            // Check if plan includes boost
-            const plan = await db.query.premiumPlans.findFirst({
-                where: eq(premiumPlans.id, planId),
+            // MIGRATION: Query plan_configs instead of premium_plans for boost/badge.
+            // planId in metadata is now the enum value (starter/growth/pro/elite).
+            const plan = await db.query.planConfigs.findFirst({
+                where: eq(planConfigs.planId, planId as "starter" | "growth" | "pro" | "elite"),
             });
 
-            if (plan?.includesBoost && plan.boostDurationDays) {
+            // MIGRATION: premium_plans.includesBoost → planConfigs.featuredBoostLevel != 'none'
+            if (plan?.featuredBoostLevel && plan.featuredBoostLevel !== 'none') {
+                // Default boost duration of 30 days (was plan.boostDurationDays in old schema)
                 await activateBoost(
                     kitchenId,
                     userId,
-                    plan.boostDurationDays
+                    30
                 );
             }
 
-            if (plan?.includesVerifiedBadge) {
+            // MIGRATION: premium_plans.includesVerifiedBadge → planConfigs.brandingLevel != 'none'
+            if (plan?.brandingLevel && plan.brandingLevel !== 'none') {
                 await db
                     .update(kitchens)
                     .set({ isVerified: true, updatedAt: now })

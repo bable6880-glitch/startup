@@ -65,7 +65,7 @@ export const CacheKeys = {
     kitchenProfile: (id: string) => `kitchen:${id}:profile`,
     kitchenMenu: (id: string) => `kitchen:${id}:menu`,
     trendingByCity: (citySlug: string) => `trending:${citySlug}`,
-    premiumPlans: (region: string) => `plans:${region}`,
+    planConfigs: (region: string) => `plans:${region}`,
     subscriptionStatus: (kitchenId: string) => `subscription:status:${kitchenId}`,
 } as const;
 

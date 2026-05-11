@@ -43,16 +43,7 @@ const SIZE_CLASSES = {
 
 export function PlanBadge({ planId, className, showIcon = true, size = 'md' }: PlanBadgeProps) {
     if (!planId) {
-        return (
-            <div className={cn(
-                "inline-flex items-center rounded-full font-bold uppercase tracking-wider bg-gray-100 text-gray-500 border border-gray-200",
-                SIZE_CLASSES[size],
-                className
-            )}>
-                {showIcon && <span>⚪</span>}
-                Free
-            </div>
-        );
+        return null;
     }
 
     const config = PLAN_CONFIG[planId.toLowerCase()] || PLAN_CONFIG.starter;
@@ -70,18 +61,6 @@ export function PlanBadge({ planId, className, showIcon = true, size = 'md' }: P
         )}>
             {showIcon && <span>{config.icon}</span>}
             {config.label}
-            {/* Elite shimmer effect */}
-            {isElite && (
-                <style dangerouslySetInnerHTML={{ __html: `
-                    @keyframes pulse-subtle {
-                        0%, 100% { opacity: 1; }
-                        50% { opacity: 0.85; }
-                    }
-                    .animate-pulse-subtle {
-                        animation: pulse-subtle 2s ease-in-out infinite;
-                    }
-                `}} />
-            )}
         </div>
     );
 }

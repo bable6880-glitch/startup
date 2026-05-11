@@ -17,9 +17,9 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "";
 const nextConfig: NextConfig = {
   serverExternalPackages: ["firebase-admin"],
 
-  // We run `tsc --noEmit` separately; skip Next.js's built-in re-check to
-  // avoid OOM kills on Vercel Hobby (1 GB RAM) and flaky validator.ts diffs.
-  typescript: { ignoreBuildErrors: true },
+  // TypeScript checking is now enabled during builds.
+  // If Vercel OOM kills occur, run `tsc --noEmit` in CI instead.
+  typescript: { ignoreBuildErrors: false },
 
   // Replace deprecated `domains` with `remotePatterns`
   images: {
@@ -72,7 +72,9 @@ const nextConfig: NextConfig = {
           { key: "Access-Control-Allow-Credentials", value: "true" },
           {
             key: "Access-Control-Allow-Origin",
-            value: BASE_URL || "*",
+            // Never use '*' with credentials — browsers reject it.
+            // Fall back to localhost for local development.
+            value: BASE_URL || "http://localhost:3000",
           },
           {
             key: "Access-Control-Allow-Methods",

@@ -40,6 +40,9 @@ export interface SubscriptionData {
     canUpgrade: boolean;
     canCancel: boolean;
     planId: PlanId | null; // Synthesized locally for convenience in components
+    // Kitchen lock status (returned by /api/seller/subscription)
+    isKitchenLocked?: boolean;
+    lockReason?: string | null;
 }
 
 export function usePlanAccess() {
