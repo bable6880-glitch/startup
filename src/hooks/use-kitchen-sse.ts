@@ -9,9 +9,10 @@ interface UseKitchenSSEOptions {
     onNewOrder?: (payload: Record<string, unknown>) => void;
     onOrderStatusChanged?: (payload: Record<string, unknown>) => void;
     onSubscriptionChanged?: (payload: Record<string, unknown>) => void;
+    onPotluckUpdate?: (payload: Record<string, unknown>) => void;
 }
 
-export function useKitchenSSE({ kitchenId, onNewOrder, onOrderStatusChanged, onSubscriptionChanged }: UseKitchenSSEOptions) {
+export function useKitchenSSE({ kitchenId, onNewOrder, onOrderStatusChanged, onSubscriptionChanged, onPotluckUpdate }: UseKitchenSSEOptions) {
     const { getIdToken } = useAuth();
     const [connected, setConnected] = useState(false);
     const [status, setStatus] = useState<"connecting" | "connected" | "disconnected">("disconnected");
@@ -25,9 +26,11 @@ export function useKitchenSSE({ kitchenId, onNewOrder, onOrderStatusChanged, onS
     const onNewOrderRef = useRef(onNewOrder);
     const onOrderStatusChangedRef = useRef(onOrderStatusChanged);
     const onSubChangedRef = useRef(onSubscriptionChanged);
+    const onPotluckUpdateRef = useRef(onPotluckUpdate);
     useLayoutEffect(() => { onNewOrderRef.current = onNewOrder; }, [onNewOrder]);
     useLayoutEffect(() => { onOrderStatusChangedRef.current = onOrderStatusChanged; }, [onOrderStatusChanged]);
     useLayoutEffect(() => { onSubChangedRef.current = onSubscriptionChanged; }, [onSubscriptionChanged]);
+    useLayoutEffect(() => { onPotluckUpdateRef.current = onPotluckUpdate; }, [onPotluckUpdate]);
 
     const connect = useCallback(async () => {
         if (!kitchenId) return;
@@ -83,6 +86,9 @@ export function useKitchenSSE({ kitchenId, onNewOrder, onOrderStatusChanged, onS
                             break;
                         case "SUBSCRIPTION_CHANGED":
                             onSubChangedRef.current?.(data.payload);
+                            break;
+                        case "POTLUCK_UPDATE":
+                            onPotluckUpdateRef.current?.(data.payload);
                             break;
                     }
                 } catch (err) {

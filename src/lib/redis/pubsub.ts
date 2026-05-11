@@ -15,6 +15,7 @@ export type SSEEventType =
     | "ORDER_STATUS_CHANGED"
     | "NEW_REVIEW"
     | "SUBSCRIPTION_CHANGED"
+    | "POTLUCK_UPDATE"
     | "CONNECTED"
     | "HEARTBEAT";
 

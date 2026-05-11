@@ -61,33 +61,33 @@ export function PotluckCard({ deal, onReserve, showKitchenName, hasReserved, res
     const [dealStatus, setDealStatus] = useState(deal.status);
     const { timeLeft, isUrgent } = useCountdown(deal.expiresAt);
 
-    // SSE Integration
+    // Lightweight polling for real-time updates (replaces deleted /api/potluck/sse)
+    // Consumer-facing component has no auth context for kitchen SSE, so poll every 15s
     useEffect(() => {
-        let eventSource: EventSource | null = null;
-        try {
-            eventSource = new EventSource(`/api/potluck/sse?citySlug=${deal.citySlug}`);
-            
-            eventSource.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.type === 'POTLUCK_UPDATE' && data.dealId === deal.id) {
-                    if (typeof data.currentOrderCount === 'number') {
-                        setCurrentCount(data.currentOrderCount);
+        if (dealStatus !== 'ACTIVE') return;
+
+        const poll = async () => {
+            try {
+                const res = await fetch(`/api/potluck?city=${deal.citySlug}&limit=10`);
+                if (!res.ok) return;
+                const { deals } = await res.json();
+                const updated = deals?.find((d: any) => d.id === deal.id);
+                if (updated) {
+                    if (typeof updated.currentOrderCount === 'number') {
+                        setCurrentCount(updated.currentOrderCount);
                     }
-                    if (data.status) {
-                        setDealStatus(data.status);
+                    if (updated.status && updated.status !== dealStatus) {
+                        setDealStatus(updated.status);
                     }
                 }
-            };
-        } catch (e) {
-            console.error("SSE Connection failed", e);
-        }
-
-        return () => {
-            if (eventSource) {
-                eventSource.close();
+            } catch {
+                // Polling failure is non-critical — next interval will retry
             }
         };
-    }, [deal.citySlug, deal.id]);
+
+        const interval = setInterval(poll, 15_000);
+        return () => clearInterval(interval);
+    }, [deal.citySlug, deal.id, dealStatus]);
 
     const fillPercent = Math.min((currentCount / deal.targetOrderCount) * 100, 100);
 

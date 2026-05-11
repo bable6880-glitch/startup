@@ -67,10 +67,19 @@ export interface PlanAccess {
     getMenuUsagePercent(currentCount: number): number | null;
 }
 
+// ─── Cached Data Type (plain JSON-serializable, NO methods) ─────────────────
+
+interface CachedPlanData {
+    sub: SubscriptionRow | null;
+    planConfig: PlanConfigRow | null;
+    kitchenPlanId: string | null;
+}
+
 // ─── Cache Keys ─────────────────────────────────────────────────────────────
 
 function planAccessCacheKey(kitchenId: string): string {
-    return `plan:access:${kitchenId}`;
+    // v2 prefix invalidates all stale v1 entries that contain broken serialized objects
+    return `plan:access:v2:${kitchenId}`;
 }
 
 export async function invalidatePlanAccessCache(kitchenId: string): Promise<void> {
@@ -81,7 +90,9 @@ export async function invalidatePlanAccessCache(kitchenId: string): Promise<void
 // ─── Main Entry Point ───────────────────────────────────────────────────────
 
 export async function getKitchenPlanAccess(kitchenId: string): Promise<PlanAccess> {
-    return cached<PlanAccess>(
+    // Step 1: Cache only plain serializable data (no methods)
+    // This prevents Redis JSON.stringify from stripping methods
+    const rawData = await cached<CachedPlanData>(
         planAccessCacheKey(kitchenId),
         PLAN_ACCESS_CACHE_TTL,
         async () => {
@@ -96,18 +107,31 @@ export async function getKitchenPlanAccess(kitchenId: string): Promise<PlanAcces
             });
 
             if (!sub || !sub.planConfig) {
-                return buildFreeAccess();
+                return { sub: null, planConfig: null, kitchenPlanId: null };
             }
 
             // Auto-expire if period ended (missed webhook fallback)
             if (new Date() > sub.currentPeriodEnd) {
                 await expireSubscription(sub.id, kitchenId);
-                return buildFreeAccess();
+                return { sub: null, planConfig: null, kitchenPlanId: null };
             }
 
-            return buildPlanAccess(sub, sub.planConfig);
+            return {
+                sub: sub,
+                planConfig: sub.planConfig,
+                kitchenPlanId: sub.planId,
+            };
         }
     );
+
+    // Step 2: Build PlanAccess with methods OUTSIDE the cache
+    // Methods are rebuilt fresh from cached plain data every time
+    // Redis never sees or strips the methods
+    if (!rawData.sub || !rawData.planConfig) {
+        return buildFreeAccess();
+    }
+
+    return buildPlanAccess(rawData.sub, rawData.planConfig);
 }
 
 // ─── Build Plan Access (active subscription) ────────────────────────────────

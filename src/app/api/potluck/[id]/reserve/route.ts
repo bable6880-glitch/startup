@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { potluckDeals, potluckOrders } from "@/lib/db/schema";
 import { eq, sql, and } from "drizzle-orm";
 import { logger } from "@/lib/utils/logger";
+import { publishEvent, CHANNELS } from "@/lib/redis/pubsub";
 import { getAuthUser } from "@/lib/auth/get-auth-user";
 
 export async function POST(
@@ -63,6 +64,7 @@ export async function POST(
                 targetOrderCount: potluckDeals.targetOrderCount,
                 status: potluckDeals.status,
                 pricePerPlateRs: potluckDeals.pricePerPlateRs,
+                kitchenId: potluckDeals.kitchenId,
             });
 
         if (result.length === 0) {
@@ -92,6 +94,20 @@ export async function POST(
             newCount: updatedDeal.currentOrderCount,
             status: updatedDeal.status,
         });
+
+        // Publish real-time update through existing kitchen SSE channel
+        // No separate /api/potluck/sse endpoint needed — prevents Vercel 300s timeouts
+        if (updatedDeal.kitchenId) {
+            await publishEvent(CHANNELS.kitchenOrders(updatedDeal.kitchenId), {
+                type: 'POTLUCK_UPDATE',
+                payload: {
+                    dealId,
+                    currentCount: updatedDeal.currentOrderCount,
+                    targetCount: updatedDeal.targetOrderCount,
+                    status: updatedDeal.status,
+                },
+            });
+        }
 
         // If deal just became FILLED, log it (order creation for all reservations
         // would need a separate background job in production)

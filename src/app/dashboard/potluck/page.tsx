@@ -91,18 +91,12 @@ export default function PotluckDashboardPage() {
     useEffect(() => {
         fetchDeals();
 
-        const evtSource = new EventSource("/api/potluck/sse");
-        evtSource.onmessage = (event) => {
-            if (event.data.startsWith(":")) return;
-            try {
-                const data = JSON.parse(event.data);
-                if (data.type === "ORDER_PLACED" || data.type === "DEAL_ACTIVATED" || data.type === "DEAL_EXPIRED") {
-                    fetchDeals();
-                }
-            } catch (e) {}
-        };
+        // Poll for updates every 30s (replaces deleted /api/potluck/sse to prevent Vercel 300s timeouts)
+        const interval = setInterval(() => {
+            fetchDeals();
+        }, 30_000);
 
-        return () => evtSource.close();
+        return () => clearInterval(interval);
     }, []);
 
     const fetchDeals = async () => {
