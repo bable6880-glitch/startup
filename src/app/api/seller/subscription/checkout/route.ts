@@ -81,10 +81,15 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Plan not configured for Stripe yet. Contact support." }, { status: 500 });
         }
 
-        // Stripe Checkout Sessions are ephemeral. We intentionally do NOT cache them.
-        // A fresh session URL is generated on every checkout attempt to prevent
-        // "Checkout Session is no longer active" errors if a user retries after
-        // abandoning or completing a previous attempt.
+        // ── Idempotency check via Redis ─────────────────────────────────
+        // Skip idempotency for upgrades (always create fresh session)
+        const idempotencyKey = `checkout:pending:${kitchen.id}:${planId}`;
+        if (redis && !isUpgrade) {
+            const existingUrl = await redis.get<string>(idempotencyKey);
+            if (existingUrl) {
+                return NextResponse.json({ success: true, data: { url: existingUrl } });
+            }
+        }
 
         const isRecurring = planConfig.billingPeriodMonths === 1;
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
@@ -110,7 +115,9 @@ export async function POST(request: NextRequest) {
             customer_email: user.email || undefined,
         });
 
-
+        if (redis && session.url && !isUpgrade) {
+            await redis.set(idempotencyKey, session.url, { ex: 30 * 60 }); // 30 mins TTL
+        }
 
         return NextResponse.json({ success: true, data: { url: session.url } });
     } catch (error) {
