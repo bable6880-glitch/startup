@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   description: 'Pakistan\'s home food marketplace. Fresh daily tiffin from trusted home cooks.',
   manifest: '/manifest.json',
   verification: {
-    google: 'REPLACE_WITH_YOUR_CODE',
+    google: 'pc-7mt4zNiUbk0CsFxXoqMybykQ9ZbZH-GJpFgevx94',
   },
 };
 
@@ -43,6 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={inter.variable}>
       <head>
+        <meta name="google-site-verification" content="pc-7mt4zNiUbk0CsFxXoqMybykQ9ZbZH-GJpFgevx94" />
       </head>
       <body className="min-h-screen flex flex-col font-sans">
         <AuthProvider>
