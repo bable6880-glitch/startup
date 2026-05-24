@@ -1028,3 +1028,22 @@ export const adminAuditLog = pgTable(
 export const adminAuditLogRelations = relations(adminAuditLog, ({ one }) => ({
     admin: one(adminUsers, { fields: [adminAuditLog.adminId], references: [adminUsers.id] }),
 }));
+
+// ─── STRIPE PROCESSED EVENTS (Idempotency Tracking) ──────────────────────────
+export const stripeProcessedEvents = pgTable(
+    "stripe_processed_events",
+    {
+        id: varchar("id", { length: 255 }).primaryKey(), // Stripe Event ID (evt_...)
+        type: varchar("type", { length: 100 }).notNull(),
+        status: varchar("status", { length: 20 }).notNull(), // 'processing' | 'completed' | 'failed'
+        error: text("error"),
+        processedAt: timestamp("processed_at", { withTimezone: true }),
+        createdAt: timestamp("created_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+    },
+    (table) => [
+        index("idx_stripe_event_status").on(table.status),
+        index("idx_stripe_event_created").on(table.createdAt),
+    ]
+);

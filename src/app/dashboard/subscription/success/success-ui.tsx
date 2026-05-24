@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { broadcastPlanUpdate } from "@/hooks/use-plan-access";
 
 const PLAN_ICONS: Record<string, string> = {
     starter: "🌱",
@@ -43,6 +44,11 @@ export function SuccessUI({
 }) {
     const router = useRouter();
     const remaining = useCountdown(5, () => router.push(redirectUrl));
+
+    useEffect(() => {
+        // Broadcast the update to other tabs
+        broadcastPlanUpdate();
+    }, []);
 
     const id = planId ?? planName.toLowerCase();
     const icon = PLAN_ICONS[id] ?? "🎉";

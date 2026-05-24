@@ -99,7 +99,6 @@ export async function getKitchenPlanAccess(kitchenId: string): Promise<PlanAcces
             const sub = await db.query.subscriptions.findFirst({
                 where: and(
                     eq(subscriptions.kitchenId, kitchenId),
-                    isNull(subscriptions.cancelledAt),
                     inArray(subscriptions.status, ['ACTIVE', 'TRIALING', 'PAST_DUE']),
                 ),
                 with: { planConfig: true },

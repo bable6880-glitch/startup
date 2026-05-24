@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/firebase/auth-context';
-import { usePlanAccess } from '@/hooks/use-plan-access';
+import { usePlanAccess, isPlanAtLeast } from '@/hooks/use-plan-access';
 import Link from 'next/link';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -33,8 +33,8 @@ export default function AIPricingPage() {
     const [suggestion, setSuggestion] = useState<PricingSuggestion | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // Check if user has access to ai_pricing feature
-    const hasAccess = !!(planAccess as any)?.isActive && planAccess?.planId === 'elite';
+    // Check if user has access to ai_pricing feature (requires Elite plan)
+    const hasAccess = !!planAccess?.isActive && isPlanAtLeast(planAccess?.planId, 'elite');
 
     // Fetch cook's meals for the selector
     const fetchMeals = useCallback(async () => {

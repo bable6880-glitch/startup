@@ -87,7 +87,6 @@ export async function DELETE(req: NextRequest) {
         const subRecord = await db.query.subscriptions.findFirst({
             where: and(
                 eq(subscriptions.kitchenId, guard.kitchen.id),
-                isNull(subscriptions.cancelledAt),
                 inArray(subscriptions.status, ['ACTIVE', 'TRIALING', 'PAST_DUE']),
             ),
             with: { planConfig: true }

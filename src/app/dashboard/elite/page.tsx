@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase/auth-context';
-import { usePlanAccess } from '@/hooks/use-plan-access';
+import { usePlanAccess, isPlanAtLeast } from '@/hooks/use-plan-access';
 import { PlanBadge } from '@/components/plans/PlanBadge';
 import { useKitchenSSE } from '@/hooks/use-kitchen-sse';
 import Link from 'next/link';
@@ -152,7 +152,7 @@ export default function EliteDashboardPage() {
         if (planLoading || !planAccess) return;
 
         // Guard: Non-Elite redirect
-        if (planAccess.planId !== 'elite') {
+        if (!isPlanAtLeast(planAccess.planId, 'elite')) {
             router.push('/dashboard/subscription');
             return;
         }
@@ -176,7 +176,7 @@ export default function EliteDashboardPage() {
         );
     }
 
-    if (!planAccess || planAccess.planId !== 'elite') return null;
+    if (!planAccess || !isPlanAtLeast(planAccess.planId, 'elite')) return null;
 
     const maxRevenue = revenueData ? Math.max(...revenueData.revenues, 1) : 1;
 

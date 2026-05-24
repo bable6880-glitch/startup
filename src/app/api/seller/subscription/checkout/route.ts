@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireSeller } from "@/lib/auth/seller-guard";
 import { db } from "@/lib/db";
 import { planConfigs, subscriptions } from "@/lib/db/schema";
-import { eq, and, isNull, inArray, gt } from "drizzle-orm";
+import { eq, and, inArray, gt } from "drizzle-orm";
 import { stripe } from "@/lib/stripe";
 import { Redis } from "@upstash/redis";
 import { logger } from "@/lib/utils/logger";
@@ -38,7 +38,6 @@ export async function POST(request: NextRequest) {
         const activeSub = await db.query.subscriptions.findFirst({
             where: and(
                 eq(subscriptions.kitchenId, kitchen.id),
-                isNull(subscriptions.cancelledAt),
                 inArray(subscriptions.status, ['ACTIVE', 'TRIALING']),
                 gt(subscriptions.currentPeriodEnd, new Date()),
             ),

@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useKitchenSSE } from "@/hooks/use-kitchen-sse";
 import { PlanWidget } from "@/components/plans/PlanWidget";
-import { usePlanAccess } from "@/hooks/use-plan-access";
+import { usePlanAccess, isPlanAtLeast } from "@/hooks/use-plan-access";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,7 +69,7 @@ function DashboardContent() {
 
     // ── PHASE 5: Check if Elite ──────────────────────────────────────────────
     const { data: planAccess } = usePlanAccess();
-    const isElite = planAccess?.planId === 'elite';
+    const isElite = isPlanAtLeast(planAccess?.planId ?? null, 'elite');
 
     // ── PHASE 4 ADDED: Real-time toast state ──────────────────────────────────
     const [realtimeToast, setRealtimeToast] = useState<string | null>(null);

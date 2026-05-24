@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireSeller } from "@/lib/auth/seller-guard";
 import { db } from "@/lib/db";
 import { subscriptions, extraPacks } from "@/lib/db/schema";
-import { eq, and, isNull, inArray, gt } from "drizzle-orm";
+import { eq, and, inArray, gt } from "drizzle-orm";
 import { stripe } from "@/lib/stripe";
 import { ORDER_PACKS, POTLUCK_PACKS } from "@/config/pack-pricing";
 import { logger } from "@/lib/utils/logger";
@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
         const activeSub = await db.query.subscriptions.findFirst({
             where: and(
                 eq(subscriptions.kitchenId, guard.kitchen.id),
-                isNull(subscriptions.cancelledAt),
                 inArray(subscriptions.status, ['ACTIVE', 'TRIALING']),
                 gt(subscriptions.currentPeriodEnd, new Date()),
             ),
@@ -80,7 +79,6 @@ export async function POST(request: NextRequest) {
         const activeSub = await db.query.subscriptions.findFirst({
             where: and(
                 eq(subscriptions.kitchenId, kitchen.id),
-                isNull(subscriptions.cancelledAt),
                 inArray(subscriptions.status, ['ACTIVE', 'TRIALING']),
                 gt(subscriptions.currentPeriodEnd, new Date()),
             ),

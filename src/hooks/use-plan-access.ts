@@ -1,10 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/firebase/auth-context';
 
-// You might want to import PlanId from your types, but we'll define locally for completeness.
+// ─── Types ──────────────────────────────────────────────────────────────────
+
 export type PlanId = 'starter' | 'growth' | 'pro' | 'elite';
+
+const PLAN_HIERARCHY: PlanId[] = ['starter', 'growth', 'pro', 'elite'];
+
+/**
+ * Check if a planId is at least as high as a minimum tier.
+ * Example: isPlanAtLeast('pro', 'growth') → true
+ */
+export function isPlanAtLeast(current: PlanId | string | null, minimum: PlanId): boolean {
+    if (!current) return false;
+    const currentIdx = PLAN_HIERARCHY.indexOf(current as PlanId);
+    const minimumIdx = PLAN_HIERARCHY.indexOf(minimum);
+    if (currentIdx === -1 || minimumIdx === -1) return false;
+    return currentIdx >= minimumIdx;
+}
 
 export interface SubscriptionData {
     subscription: {
@@ -45,13 +60,19 @@ export interface SubscriptionData {
     lockReason?: string | null;
 }
 
+// ─── Cross-Tab Sync Constants ───────────────────────────────────────────────
+
+const PLAN_UPDATED_KEY = 'st:plan_updated';
+
+// ─── Hook ───────────────────────────────────────────────────────────────────
+
 export function usePlanAccess() {
     const { user, getIdToken } = useAuth();
     const [data, setData] = useState<SubscriptionData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchPlan = async () => {
+    const fetchPlan = useCallback(async () => {
         if (!user) return;
         setLoading(true);
         try {
@@ -77,7 +98,7 @@ export function usePlanAccess() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user, getIdToken]);
 
     useEffect(() => {
         if (user) {
@@ -85,10 +106,34 @@ export function usePlanAccess() {
         } else {
             setLoading(false);
         }
-    }, [user, getIdToken]);
+    }, [user, fetchPlan]);
+
+    // ── Phase 5: Cross-Tab Synchronization ─────────────────────────────
+    // When a purchase completes in another tab and writes to localStorage,
+    // this listener fires a refetch so all tabs reflect the new plan instantly.
+    useEffect(() => {
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === PLAN_UPDATED_KEY && e.newValue && user) {
+                fetchPlan();
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, [user, fetchPlan]);
 
     return { data, loading, error, refetch: fetchPlan };
 }
+
+/**
+ * Call this from success/purchase pages to notify all other open tabs
+ * that the plan was updated. Triggers a background refetch in each tab.
+ */
+export function broadcastPlanUpdate() {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(PLAN_UPDATED_KEY, Date.now().toString());
+}
+
+// ─── Styling Helpers ────────────────────────────────────────────────────────
 
 export function getPlanColor(planId: string | null): string {
     const colors: Record<string, string> = {
