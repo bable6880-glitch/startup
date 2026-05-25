@@ -85,6 +85,13 @@
       "when": 1778364834631,
       "tag": "0011_public_gunslinger",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1779685589355,
+      "tag": "0012_crazy_marrow",
+      "breakpoints": true
     }
   ]
 }

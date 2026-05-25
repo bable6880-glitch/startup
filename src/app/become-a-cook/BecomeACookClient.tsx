@@ -131,8 +131,8 @@ export default function BecomeACookPage() {
             // Force Firebase token refresh to pick up new COOK custom claims
             await refreshUser();
 
-            // Strict redirect to dashboard
-            router.push("/dashboard?registered=true");
+            // Strict redirect to subscription page — payment required before dashboard access
+            router.push("/dashboard/subscription?onboarding=true");
         } catch (err) {
             setError(err instanceof Error ? err.message : "Something went wrong");
         } finally {

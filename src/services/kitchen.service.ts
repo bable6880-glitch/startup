@@ -47,6 +47,7 @@ export async function createKitchen(ownerId: string, input: CreateKitchenInput) 
             contactEmail: input.contactEmail,
             cuisineTypes: input.cuisineTypes,
             dietaryTags: input.dietaryTags,
+            status: "INACTIVE", // Paid-first: kitchens start INACTIVE until Stripe payment
         })
         .returning();
 

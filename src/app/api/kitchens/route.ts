@@ -149,18 +149,8 @@ export async function POST(request: NextRequest) {
         }
 
         // ── Step 1: Insert kitchen (ownerId from auth, never from body) ──
+        // Kitchen is created as INACTIVE — payment required to activate
         const kitchen = await createKitchen(user.id, parsed.data);
-
-        // ── Non-blocking Trial Creation ──
-        let trialCreated = true;
-        try {
-            const { startFreeTrial } = await import("@/services/premium.service");
-            await startFreeTrial(kitchen.id, user.id);
-        } catch (err) {
-            trialCreated = false;
-            console.error("[CRITICAL] Trial creation failed", { kitchenId: kitchen.id, err });
-            // Kitchen remains ACTIVE — do not fail registration
-        }
 
         // ── Step 2: Update user role to COOK ──
         try {
@@ -181,7 +171,7 @@ export async function POST(request: NextRequest) {
         }
 
         // ── Success ──
-        return apiCreated({ kitchen, role: "COOK" as const, trialCreated });
+        return apiCreated({ kitchen, role: "COOK" as const });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "Unknown error";
         console.error("[Create Kitchen Error]", error);

@@ -5,7 +5,6 @@ import {
     createSubscriptionCheckout,
     cancelSubscription,
     getSubscriptionStatus,
-    startFreeTrial,
 } from "@/services/premium.service";
 import { getAuthUser } from "@/lib/auth/get-auth-user";
 import { db } from "@/lib/db";
@@ -147,28 +146,5 @@ export async function getSubscriptionStatusAction() {
             error: err instanceof Error ? err.message : "Unknown",
         });
         return { success: false, error: "Failed to get subscription status" };
-    }
-}
-
-// ─── Start Free Trial ───────────────────────────────────────────────────────
-
-export async function startFreeTrialAction() {
-    try {
-        const { error, user, kitchen } = await getSellerContext();
-        if (error || !user || !kitchen) {
-            return { success: false, error: error || "Authentication required" };
-        }
-
-        const result = await startFreeTrial(kitchen.id, user.id);
-        return { success: true, data: result };
-    } catch (err) {
-        logger.error("startFreeTrialAction failed", {
-            error: err instanceof Error ? err.message : "Unknown",
-        });
-        return {
-            success: false,
-            error:
-                err instanceof Error ? err.message : "Failed to start trial",
-        };
     }
 }

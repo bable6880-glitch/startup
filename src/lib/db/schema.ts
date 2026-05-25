@@ -196,7 +196,7 @@ export const kitchens = pgTable(
         dietaryTags: text("dietary_tags").array(), // veg, non-veg, vegan, etc.
 
         // Status & verification
-        status: kitchenStatusEnum("status").default("ACTIVE").notNull(),
+        status: kitchenStatusEnum("status").default("INACTIVE").notNull(),
         isOpen: boolean("is_open").default(true).notNull(),
         isVerified: boolean("is_verified").default(false).notNull(),
         isWhatsappVerified: boolean("is_whatsapp_verified")
@@ -204,8 +204,6 @@ export const kitchens = pgTable(
             .notNull(),
 
         // Trial & subscription tracking
-        trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
-        isTrialUsed: boolean("is_trial_used").default(false).notNull(),
 
         // Aggregated ratings (denormalized for performance)
         avgRating: decimal("avg_rating", { precision: 3, scale: 2 }).default("0"),
@@ -473,7 +471,6 @@ export const subscriptions = pgTable(
         }),
         autoRenew: boolean("auto_renew").default(true).notNull(),
         cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
-        trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
         ordersUsedThisMonth: integer("orders_used_this_month").default(0),
         ordersResetAt: timestamp("orders_reset_at", { withTimezone: true }),
         potluckUsesRemaining: integer("potluck_uses_remaining").notNull().default(0),

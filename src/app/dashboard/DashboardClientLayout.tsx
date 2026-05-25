@@ -1,6 +1,7 @@
 "use client";
 
 import { RoleGuard } from "@/components/auth/RoleGuard";
+import { SubscriptionGuard } from "@/components/dashboard/SubscriptionGuard";
 import { type ReactNode, useEffect, useState, useRef, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/firebase/auth-context";
@@ -13,6 +14,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     const pathname = usePathname();
     const [kitchenId, setKitchenId] = useState<string | null>(null);
     const [kitchenName, setKitchenName] = useState<string>("Your Kitchen");
+    const [kitchenStatus, setKitchenStatus] = useState<string | null>(null);
     const [pendingOrder, setPendingOrder] = useState<OrderPopupData | null>(null);
     const popupShownRef = useRef<Set<string>>(new Set());
 
@@ -29,6 +31,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     if (data.data && data.data.length > 0) {
                         setKitchenId(data.data[0].id);
                         setKitchenName(data.data[0].name);
+                        setKitchenStatus(data.data[0].status);
                     }
                 }
             } catch (err) {
@@ -78,7 +81,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <meta name="robots" content="noindex,nofollow" />
                 <title>Seller Dashboard – Manage Your Tiffin Service & Meal Delivery</title>
             </head>
-            {children}
+            <SubscriptionGuard kitchenStatus={kitchenStatus}>
+                {children}
+            </SubscriptionGuard>
 
             {pendingOrder && (
                 <OrderPopup
@@ -90,3 +95,4 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </RoleGuard>
     );
 }
+

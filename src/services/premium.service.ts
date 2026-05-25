@@ -18,7 +18,6 @@ import { NotFoundError, ConflictError } from "@/lib/utils/errors";
 import { logger } from "@/lib/utils/logger";
 import {
     SUBSCRIPTION_PLANS,
-    TRIAL_DURATION_DAYS,
     GRACE_PERIOD_DAYS,
     type SubscriptionPlanType,
 } from "@/lib/validations/subscription";
@@ -45,8 +44,6 @@ export type SubscriptionStatusResult = {
     | "CANCELLED"
     | "NONE";
     subscription: (typeof subscriptions.$inferSelect & { planConfig?: typeof planConfigs.$inferSelect | null }) | null;
-    trialEndsAt: Date | null;
-    isTrialUsed: boolean;
     daysRemaining: number;
     gracePeriodEndsAt: Date | null;
     canAcceptOrders: boolean;
@@ -65,64 +62,9 @@ export async function listPlans(region = "PK") {
     });
 }
 
-// ─── Start Free Trial ───────────────────────────────────────────────────────
-
-export async function startFreeTrial(kitchenId: string, userId: string) {
-    const kitchen = await db.query.kitchens.findFirst({
-        where: eq(kitchens.id, kitchenId),
-    });
-
-    if (!kitchen) throw new NotFoundError("Kitchen");
-
-    if (kitchen.isTrialUsed) {
-        throw new ConflictError("Free trial has already been used for this kitchen");
-    }
-
-    const now = new Date();
-    const trialEndsAt = new Date(
-        now.getTime() + TRIAL_DURATION_DAYS * 24 * 60 * 60 * 1000
-    );
-
-    // MIGRATION: Removed dead code that queried/seeded premium_plans.
-    // The defaultPlan variable was never used after creation.
-    // Trial subscription always uses planId: "starter".
-
-    // Create trial subscription
-    const [subscription] = await db
-        .insert(subscriptions)
-        .values({
-            userId,
-            kitchenId,
-            planId: "starter",
-            planType: "BASE_MONTHLY",
-            paymentMethod: "FREE_TRIAL",
-            status: "TRIALING",
-            currentPeriodStart: now,
-            currentPeriodEnd: trialEndsAt,
-            autoRenew: false,
-        })
-        .returning();
-
-    // Update kitchen trial status
-    await db
-        .update(kitchens)
-        .set({
-            trialEndsAt,
-            isTrialUsed: true,
-            updatedAt: now,
-        })
-        .where(eq(kitchens.id, kitchenId));
-
-    logger.info("Free trial started", {
-        kitchenId,
-        userId,
-        trialEndsAt: trialEndsAt.toISOString(),
-    });
-
-    await invalidateCache(SubscriptionCacheKeys.status(kitchenId));
-
-    return subscription;
-}
+// ─── Start Free Trial (REMOVED) ─────────────────────────────────────────────
+// The free trial system has been removed in favor of a paid-first onboarding model.
+// Kitchens are now created as INACTIVE and activated only upon Stripe payment.
 
 // ─── Get Subscription Status ────────────────────────────────────────────────
 
@@ -150,8 +92,6 @@ export async function getSubscriptionStatus(
                 return {
                     status: "NONE" as const,
                     subscription: null,
-                    trialEndsAt: kitchen.trialEndsAt,
-                    isTrialUsed: kitchen.isTrialUsed,
                     daysRemaining: 0,
                     gracePeriodEndsAt: null,
                     canAcceptOrders: false,
@@ -177,8 +117,6 @@ export async function getSubscriptionStatus(
             return {
                 status: subscription.status as SubscriptionStatusResult["status"],
                 subscription,
-                trialEndsAt: kitchen.trialEndsAt,
-                isTrialUsed: kitchen.isTrialUsed,
                 daysRemaining,
                 gracePeriodEndsAt: subscription.gracePeriodEndsAt,
                 canAcceptOrders,
