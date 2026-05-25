@@ -74,7 +74,7 @@ export default function BecomeACookPage() {
     const goNext = async () => {
         let fields: (keyof CreateKitchenInput)[] = [];
         if (step === 1) fields = ["name", "city"];
-        if (step === 2) fields = [];
+        if (step === 2) fields = ["contactPhone", "contactWhatsapp", "contactEmail"];
         const valid = await trigger(fields);
         if (valid) setStep((s) => Math.min(s + 1, totalSteps));
     };

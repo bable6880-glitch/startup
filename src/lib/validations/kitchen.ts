@@ -32,15 +32,18 @@ export const createKitchenSchema = z.object({
     longitude: z.number().min(-180).max(180).optional(),
 
     // Contact
-    contactPhone: z
-        .string()
-        .regex(/^\+?[\d\s-]{7,20}$/, "Invalid phone number")
-        .optional(),
-    contactWhatsapp: z
-        .string()
-        .regex(/^\+?[\d\s-]{7,20}$/, "Invalid WhatsApp number")
-        .optional(),
-    contactEmail: z.string().email("Invalid email").optional(),
+    contactPhone: z.preprocess(
+        (val) => (val === "" ? undefined : val),
+        z.string().regex(/^\+?[\d\s-]{7,20}$/, "Invalid phone number").optional()
+    ),
+    contactWhatsapp: z.preprocess(
+        (val) => (val === "" ? undefined : val),
+        z.string().regex(/^\+?[\d\s-]{7,20}$/, "Invalid WhatsApp number").optional()
+    ),
+    contactEmail: z.preprocess(
+        (val) => (val === "" ? undefined : val),
+        z.string().email("Invalid email").optional()
+    ),
 
     // Food
     cuisineTypes: z.array(z.string().max(100)).max(20).optional(),
