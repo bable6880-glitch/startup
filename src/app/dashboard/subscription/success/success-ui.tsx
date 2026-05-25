@@ -43,7 +43,7 @@ export function SuccessUI({
     redirectUrl: string;
 }) {
     const router = useRouter();
-    const remaining = useCountdown(5, () => router.push(redirectUrl));
+    const remaining = useCountdown(5, () => window.location.assign(redirectUrl));
 
     useEffect(() => {
         // Broadcast the update to other tabs
@@ -162,7 +162,7 @@ export function SuccessUI({
                         </div>
 
                         <button
-                            onClick={() => router.push(redirectUrl)}
+                            onClick={() => window.location.assign(redirectUrl)}
                             className={`mt-6 w-full py-3.5 rounded-2xl bg-gradient-to-r ${gradient} text-white font-bold text-sm hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5`}
                         >
                             Go to Dashboard →
