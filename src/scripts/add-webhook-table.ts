@@ -9,7 +9,7 @@ async function main() {
     console.log("Checking and syncing database for stripe_processed_events table...");
     try {
         // Dynamically import db AFTER dotenv config has executed to prevent empty DATABASE_URL
-        const { db } = await import("../src/lib/db");
+        const { db } = await import("../lib/db");
         const { sql } = await import("drizzle-orm");
 
         await db.execute(sql`
