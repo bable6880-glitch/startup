@@ -4,14 +4,18 @@ import { useAuth } from "@/lib/firebase/auth-context";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 
-function RefreshAfterDelay({ delayMs }: { delayMs: number }) {
+function RefreshAfterDelay({ delayMs, onRefresh }: { delayMs: number; onRefresh?: () => void }) {
     const router = useRouter();
     useEffect(() => {
         const t = setTimeout(() => {
-            router.refresh();
+            if (onRefresh) {
+                onRefresh();
+            } else {
+                router.refresh();
+            }
         }, delayMs);
         return () => clearTimeout(t);
-    }, [delayMs, router]);
+    }, [delayMs, router, onRefresh]);
     return null;
 }
 
@@ -34,6 +38,7 @@ export function SubscriptionGuard({ children, kitchenStatus, fetchError }: Subsc
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const { getIdToken } = useAuth();
     const [isAllowed, setIsAllowed] = useState<boolean | null>(null);
 
     const justSubscribed = searchParams.get('subscribed') === 'true';
@@ -119,7 +124,31 @@ export function SubscriptionGuard({ children, kitchenStatus, fetchError }: Subsc
                     <p className="text-gray-500 dark:text-neutral-400 text-sm">
                         Your payment was successful. We&apos;re setting up your plan. This takes just a moment.
                     </p>
-                    <RefreshAfterDelay delayMs={3000} />
+                    <RefreshAfterDelay 
+                        delayMs={3000} 
+                        onRefresh={async () => {
+                            // Fetch directly from API to bypass client layout state
+                            try {
+                                const token = await getIdToken();
+                                if (!token) return router.refresh();
+                                
+                                const res = await fetch("/api/kitchens?ownerId=me", {
+                                    headers: { Authorization: `Bearer ${token}` }
+                                });
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    if (data.data && data.data[0]?.status === 'ACTIVE') {
+                                        // Hard reload to reset all layouts with new status
+                                        window.location.href = '/dashboard';
+                                        return;
+                                    }
+                                }
+                            } catch (e) {
+                                // ignore
+                            }
+                            router.refresh();
+                        }}
+                    />
                 </div>
             </div>
         );
