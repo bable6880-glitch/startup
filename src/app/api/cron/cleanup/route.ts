@@ -53,6 +53,20 @@ export async function GET(request: NextRequest) {
                 .update(subscriptions)
                 .set({ status: "EXPIRED", updatedAt: now })
                 .where(eq(subscriptions.id, sub.id));
+            
+            await db
+                .update(kitchens)
+                .set({ 
+                    status: "INACTIVE", 
+                    isLocked: true, 
+                    lockReason: "SUBSCRIPTION_EXPIRED", 
+                    lockedAt: now 
+                })
+                .where(eq(kitchens.id, sub.kitchenId));
+
+            const { invalidatePlanAccessCache } = await import("@/lib/plans/plan-access");
+            await invalidatePlanAccessCache(sub.kitchenId);
+
             expiredSubscriptions++;
         }
 
@@ -156,6 +170,7 @@ export async function GET(request: NextRequest) {
         // ── 6. Monthly Order Limit Reset (Only on 1st of the month) ─────────
         // Sequential inserts — Neon HTTP does not support transactions
         let orderResetCount = 0;
+        let unlockedKitchens = 0;
         if (now.getDate() === 1) {
             console.log('[CRON:cleanup] 1st of month — resetting order counts...');
             const { planConfigs } = await import("@/lib/db/schema");
@@ -187,7 +202,32 @@ export async function GET(request: NextRequest) {
 
                 orderResetCount++;
             }
-            console.log(`[CRON:cleanup] Reset order counts for ${orderResetCount} subscriptions`);
+
+            // Find and unlock kitchens locked due to ORDER_LIMIT_REACHED
+            const lockedKitchens = await db.query.kitchens.findMany({
+                where: and(
+                    eq(kitchens.isLocked, true),
+                    eq(kitchens.lockReason, 'ORDER_LIMIT_REACHED')
+                )
+            });
+
+            for (const kitchen of lockedKitchens) {
+                await db.update(kitchens)
+                    .set({
+                        isLocked: false,
+                        lockReason: null,
+                        lockedAt: null,
+                        lockedUntil: null,
+                        updatedAt: now
+                    })
+                    .where(eq(kitchens.id, kitchen.id));
+                
+                const { invalidatePlanAccessCache } = await import("@/lib/plans/plan-access");
+                await invalidatePlanAccessCache(kitchen.id);
+                unlockedKitchens++;
+            }
+
+            console.log(`[CRON:cleanup] Reset order counts for ${orderResetCount} subscriptions, unlocked ${unlockedKitchens} kitchens`);
         } else {
             console.log('[CRON:cleanup] Skipping order count reset (not 1st of month)');
         }

@@ -495,6 +495,19 @@ export async function POST(request: NextRequest) {
         }
 
         // ── Phase 1: Database-backed Event Check & Idempotency ────────────
+        const idempotencyKey = `stripe:evt:${event.id}`;
+        
+        // Step 1: Check for duplicate in Redis
+        if (redis) {
+            const alreadyProcessed = await redis.get(idempotencyKey);
+            if (alreadyProcessed === 'done') {
+                console.log(`[Stripe Webhook] Duplicate ignored: ${event.id}`);
+                return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
+            }
+            // Step 2: Claim BEFORE any DB operations (prevents concurrent duplicates)
+            await redis.set(idempotencyKey, 'processing', { ex: 86400 }); // 24h
+        }
+
         const existingEvent = await db.query.stripeProcessedEvents.findFirst({
             where: eq(stripeProcessedEvents.id, event.id),
         });
@@ -532,42 +545,34 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Redis Event claiming
-        const idempotencyKey = `st:stripe:event:${event.id}`;
-        if (redis) {
-            await redis.set(idempotencyKey, "processing", { ex: 86400 });
-        }
-
-        // ── Phase 2: Transaction Safety Drizzle execution ─────────────────
+        // ── Phase 2: Sequential execution (Neon HTTP does NOT support db.transaction) ──
         try {
-            await db.transaction(async (tx) => {
-                await handleWebhookEventInline(tx, event);
+            await handleWebhookEventInline(db, event);
 
-                // Update processed events tracking table to completed
-                await tx.update(stripeProcessedEvents)
-                    .set({
-                        status: "completed",
-                        processedAt: new Date(),
-                    })
-                    .where(eq(stripeProcessedEvents.id, event.id));
-                
-                console.log(`[Stripe Webhook] ✅ Successfully processed event: ${event.id}`);
-            });
+            // Update processed events tracking table to completed
+            await db.update(stripeProcessedEvents)
+                .set({
+                    status: "completed",
+                    processedAt: new Date(),
+                })
+                .where(eq(stripeProcessedEvents.id, event.id));
+            
+            console.log(`[Stripe Webhook] ✅ Successfully processed event: ${event.id}`);
 
             if (redis) {
-                await redis.set(idempotencyKey, "done", { ex: 86400 });
+                await redis.set(idempotencyKey, "done", { ex: 604800 });
             }
 
             return NextResponse.json({ received: true }, { status: 200 });
 
-        } catch (txError: any) {
-            console.error(`[Stripe Webhook tx error for event ${event.id}]:`, txError);
+        } catch (processingError: any) {
+            console.error(`[Stripe Webhook] ❌ Processing failed for event ${event.id}:`, processingError);
             
-            // Database recovery rollback logging
+            // Mark event as failed so it can be retried by Stripe
             await db.update(stripeProcessedEvents)
                 .set({
                     status: "failed",
-                    error: txError instanceof Error ? txError.message : String(txError),
+                    error: processingError instanceof Error ? processingError.message : String(processingError),
                 })
                 .where(eq(stripeProcessedEvents.id, event.id));
 
@@ -575,8 +580,7 @@ export async function POST(request: NextRequest) {
                 await redis.del(idempotencyKey);
             }
 
-            console.error(`[Stripe Webhook] ❌ Transaction aborted & rolled back for event ${event.id}`);
-            throw txError;
+            throw processingError;
         }
 
     } catch (error) {

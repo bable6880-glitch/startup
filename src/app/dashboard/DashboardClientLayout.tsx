@@ -15,6 +15,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     const [kitchenId, setKitchenId] = useState<string | null>(null);
     const [kitchenName, setKitchenName] = useState<string>("Your Kitchen");
     const [kitchenStatus, setKitchenStatus] = useState<string | null>(null);
+    const [kitchenFetchError, setKitchenFetchError] = useState(false);
     const [pendingOrder, setPendingOrder] = useState<OrderPopupData | null>(null);
     const popupShownRef = useRef<Set<string>>(new Set());
 
@@ -24,7 +25,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             try {
                 const token = await getIdToken();
                 const res = await fetch("/api/kitchens?ownerId=me", {
-                    headers: { Authorization: `Bearer ${token}` }
+                    headers: { Authorization: `Bearer ${token}` },
+                    signal: AbortSignal.timeout(10000), // 10 second max
                 });
                 if (res.ok) {
                     const data = await res.json();
@@ -35,7 +37,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     }
                 }
             } catch (err) {
-                console.error("Failed to fetch kitchen in layout", err);
+                console.error("[DashboardClientLayout] Kitchen fetch failed:", err);
+                setKitchenFetchError(true);
             }
         };
         fetchKitchen();
@@ -81,7 +84,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <meta name="robots" content="noindex,nofollow" />
                 <title>Seller Dashboard – Manage Your Tiffin Service & Meal Delivery</title>
             </head>
-            <SubscriptionGuard kitchenStatus={kitchenStatus}>
+            <SubscriptionGuard kitchenStatus={kitchenStatus} fetchError={kitchenFetchError}>
                 {children}
             </SubscriptionGuard>
 

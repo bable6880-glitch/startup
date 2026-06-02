@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { potluckDeals, potluckOrders, subscriptions, kitchens } from "@/lib/db/schema";
+import { potluckDeals, potluckOrders } from "@/lib/db/schema";
 import { lt, eq, and } from "drizzle-orm";
 import { logger } from "@/lib/utils/logger";
 import { Redis } from "@upstash/redis";
@@ -98,46 +98,16 @@ export async function GET(req: Request) {
             }
         }
 
-        // ── 2. Subscription Expiry (merged from /api/cron/expire-subscriptions) ──
-        // Previously a separate cron — merged here to stay within Vercel 2-cron limit
-        let subExpireCount = 0;
-        try {
-            const expiredSubs = await db.query.subscriptions.findMany({
-                where: and(
-                    eq(subscriptions.status, 'ACTIVE'),
-                    lt(subscriptions.currentPeriodEnd, now)
-                ),
-            });
+        // NOTE: Subscription expiry is handled by /api/cron/cleanup (runs daily at 2 AM).
+        // It was previously duplicated here but removed to prevent conflicting status transitions.
 
-            for (const sub of expiredSubs) {
-                const newStatus = sub.autoRenew ? 'PAST_DUE' : 'EXPIRED';
-
-                await db.update(subscriptions)
-                    .set({
-                        status: newStatus,
-                        updatedAt: now,
-                    })
-                    .where(eq(subscriptions.id, sub.id));
-
-                await db.update(kitchens)
-                    .set({ status: 'SUSPENDED', updatedAt: now })
-                    .where(eq(kitchens.id, sub.kitchenId));
-
-                subExpireCount++;
-            }
-        } catch (subErr) {
-            logger.error("Subscription expiry error in potluck-expiry cron", { error: subErr });
-        }
-
-        logger.info("Completed potluck + subscription expiry check", {
+        logger.info("Completed potluck expiry check", {
             potluckExpired: expireCount,
-            subscriptionsExpired: subExpireCount,
         });
 
         return NextResponse.json({
             success: true,
             potluckExpired: expireCount,
-            subscriptionsExpired: subExpireCount,
         });
     } catch (error) {
         logger.error("Failed to run potluck-expiry CRON", { error });

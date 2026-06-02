@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useKitchenSSE } from "@/hooks/use-kitchen-sse";
 import { PlanWidget } from "@/components/plans/PlanWidget";
-import { usePlanAccess, isPlanAtLeast } from "@/hooks/use-plan-access";
+import { usePlanAccess, isPlanAtLeast, broadcastPlanUpdate } from "@/hooks/use-plan-access";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +58,8 @@ function DashboardContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const justRegistered = searchParams.get("registered") === "true";
+    const justSubscribed = searchParams.get("subscribed") === "true";
+    const newPlan = searchParams.get("plan");
 
     const [kitchen, setKitchen] = useState<Kitchen | null>(null);
     const [stats, setStats] = useState<Stats>({ totalOrders: 0, totalMeals: 0 });
@@ -73,6 +75,18 @@ function DashboardContent() {
 
     // ── PHASE 4 ADDED: Real-time toast state ──────────────────────────────────
     const [realtimeToast, setRealtimeToast] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (justSubscribed && newPlan) {
+            broadcastPlanUpdate();
+            setRealtimeToast(`🎉 Welcome to ${newPlan}! Your kitchen is now active.`);
+
+            const url = new URL(window.location.href);
+            url.searchParams.delete('subscribed');
+            url.searchParams.delete('plan');
+            window.history.replaceState({}, '', url.toString());
+        }
+    }, [justSubscribed, newPlan]);
 
     // ── PHASE 4 ADDED: Handle new order arriving via SSE ─────────────────────
     const handleNewOrder = useCallback((payload: Record<string, unknown>) => {
@@ -658,14 +672,19 @@ function AcceptOrderButton({
 }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { getIdToken } = useAuth();
 
     const handleAccept = async () => {
         setLoading(true);
         setError(null);
         try {
+            const token = await getIdToken();
             const res = await fetch(`/api/orders/${orderId}`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
                 body: JSON.stringify({ status: "ACCEPTED" }),
             });
             if (!res.ok) throw new Error("Failed");
