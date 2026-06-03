@@ -27,6 +27,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 const res = await fetch("/api/kitchens?ownerId=me", {
                     headers: { Authorization: `Bearer ${token}` },
                     signal: AbortSignal.timeout(10000), // 10 second max
+                    cache: 'no-store',
                 });
                 if (res.ok) {
                     const data = await res.json();

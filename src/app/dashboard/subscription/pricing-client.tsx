@@ -254,10 +254,10 @@ export function PricingClient({ plans }: { plans: any[] }) {
                                     <div className="w-full py-3 text-center text-sm font-bold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
                                         ✓ Current Plan
                                     </div>
-                                ) : isDowngrade ? null : !plan.stripePriceId ? (
-                                    <div className="w-full py-3 text-center text-sm font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl cursor-not-allowed">
-                                        ⏳ Temporarily Unavailable
-                                    </div>
+                                ) : isDowngrade ? null : (!plan.stripePriceId || typeof plan.stripePriceId !== 'string' || plan.stripePriceId.trim() === '') ? (
+                                    <button disabled className="w-full py-3 rounded-xl text-sm font-bold text-gray-500 bg-gray-100 dark:bg-neutral-800 cursor-not-allowed">
+                                        Coming Soon
+                                    </button>
                                 ) : (
                                     <>
                                         <button

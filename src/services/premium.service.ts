@@ -167,6 +167,9 @@ export async function createSubscriptionCheckout(
 
     // MIGRATION: plan_configs has a single stripePriceId per row.
     // The legacy multi-price mapping (monthly/quarterly/yearly) is no longer needed.
+    if (!plan.stripePriceId || !plan.stripeProductId) {
+        throw new Error(`Plan ${plan.planId} is missing Stripe configuration. Check plan_configs table.`);
+    }
     const stripePriceId = plan.stripePriceId;
 
     // If no Stripe price ID configured, create a one-time checkout
@@ -189,10 +192,11 @@ export async function createSubscriptionCheckout(
                     quantity: 1,
                 },
             ],
-            success_url: `${baseUrl}/dashboard/subscription?status=success&plan=${planType}`,
+            success_url: `${baseUrl}/dashboard/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${baseUrl}/dashboard/subscription?status=cancelled`,
             metadata: {
-                userId,
+                type: 'SUBSCRIPTION',
+                cookId: userId,
                 kitchenId,
                 planId: plan.planId,
                 planType,
@@ -213,10 +217,11 @@ export async function createSubscriptionCheckout(
     const session = await stripe.checkout.sessions.create({
         mode: "subscription",
         line_items: [{ price: stripePriceId, quantity: 1 }],
-        success_url: `${baseUrl}/dashboard/subscription?status=success&plan=${planType}`,
+        success_url: `${baseUrl}/dashboard/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/dashboard/subscription?status=cancelled`,
         metadata: {
-            userId,
+            type: 'SUBSCRIPTION',
+            cookId: userId,
             kitchenId,
             planId: plan.planId,
             planType,
@@ -296,6 +301,79 @@ export async function cancelSubscription(
 }
 
 // ─── Handle Stripe Webhook Events ──────────────────────────────────────────
+
+export async function invalidateCookCache(kitchenId: string, userId: string) {
+    await invalidateCache(`kitchen:${kitchenId}`);
+    await invalidateCache(`kitchen:${kitchenId}:menu`);
+    await invalidateCache(`plan:${kitchenId}`);
+    await invalidateCache(`seller:subscription:${userId}`);
+    await invalidateCache(`plan-access:${userId}`);
+}
+
+export async function forceActivateKitchen(kitchenId: string, stripeSession: Stripe.Checkout.Session) {
+    const metadata = stripeSession.metadata || {};
+    if (!metadata.planId || !metadata.cookId) {
+        throw new Error(`forceActivateKitchen: missing metadata (planId: ${metadata.planId}, cookId: ${metadata.cookId})`);
+    }
+
+    const now = new Date();
+
+    const existingActiveSub = await db.query.subscriptions.findFirst({
+        where: and(
+            eq(subscriptions.kitchenId, kitchenId),
+            eq(subscriptions.status, 'ACTIVE')
+        ),
+        orderBy: [desc(subscriptions.createdAt)]
+    });
+    if (existingActiveSub) {
+        await db.update(kitchens)
+            .set({ status: 'ACTIVE', planId: metadata.planId as any, isLocked: false, updatedAt: now })
+            .where(eq(kitchens.id, kitchenId));
+        await invalidateCookCache(kitchenId, metadata.cookId);
+        return;
+    }
+
+    await db.update(kitchens)
+        .set({ status: 'ACTIVE', planId: metadata.planId as any, isLocked: false, updatedAt: now })
+        .where(eq(kitchens.id, kitchenId));
+    
+    const planConfig = await db.query.planConfigs.findFirst({
+        where: eq(planConfigs.planId, metadata.planId as any)
+    });
+    const months = planConfig?.billingPeriodMonths || 1;
+    const periodEnd = new Date(now);
+    periodEnd.setMonth(periodEnd.getMonth() + months);
+
+    let existingSub = null;
+    if (stripeSession.subscription) {
+        existingSub = await db.query.subscriptions.findFirst({
+            where: eq(subscriptions.stripeSubscriptionId, stripeSession.subscription as string)
+        });
+    }
+
+    if (existingSub && existingSub.status !== 'ACTIVE') {
+        await db.update(subscriptions)
+            .set({ status: 'ACTIVE', updatedAt: now })
+            .where(eq(subscriptions.id, existingSub.id));
+    } else if (!existingSub) {
+        await db.insert(subscriptions).values({
+            userId: metadata.cookId,
+            kitchenId,
+            planId: metadata.planId as any,
+            planType: "BASE_MONTHLY",
+            status: 'ACTIVE',
+            paymentMethod: 'STRIPE',
+            stripeSubscriptionId: typeof stripeSession.subscription === 'string' ? stripeSession.subscription : null,
+            stripeCustomerId: typeof stripeSession.customer === 'string' ? stripeSession.customer : null,
+            currentPeriodStart: now,
+            currentPeriodEnd: periodEnd,
+            autoRenew: !!stripeSession.subscription,
+        });
+    }
+    
+    await invalidateCookCache(kitchenId, metadata.cookId);
+}
+
 
 export async function handleStripeEvent(event: Stripe.Event) {
     logger.info("Processing Stripe event", {
@@ -404,7 +482,7 @@ export async function handleStripeEvent(event: Stripe.Event) {
                     .where(eq(kitchens.id, kitchenId));
             }
 
-            await invalidateCache(SubscriptionCacheKeys.status(kitchenId));
+            await invalidateCookCache(kitchenId, userId);
 
             logger.info("Subscription activated via checkout", {
                 kitchenId,
@@ -458,6 +536,13 @@ export async function handleStripeEvent(event: Stripe.Event) {
                         subscription.id
                     )
                 );
+
+            const existing = await db.query.subscriptions.findFirst({
+                where: eq(subscriptions.stripeSubscriptionId, subscription.id)
+            });
+            if (existing) {
+                await invalidateCookCache(existing.kitchenId, existing.userId);
+            }
 
             logger.info("Subscription updated via webhook", {
                 stripeSubscriptionId: subscription.id,

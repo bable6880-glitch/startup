@@ -156,6 +156,7 @@ export async function getOrderById(orderId: string, userId: string) {
             kitchen: {
                 columns: {
                     id: true,
+                    ownerId: true,
                     name: true,
                     slug: true,
                     contactPhone: true,
@@ -174,7 +175,7 @@ export async function getOrderById(orderId: string, userId: string) {
     if (!order) throw new NotFoundError("Order");
 
     // Only customer or kitchen owner can view
-    if (order.customerId !== userId && order.kitchen.id !== userId) {
+    if (order.customerId !== userId && order.kitchen.ownerId !== userId) {
         throw new AuthorizationError("Not authorized to view this order");
     }
 

@@ -80,7 +80,8 @@ export function usePlanAccess() {
             const res = await fetch('/api/seller/subscription', {
                 headers: {
                     'Authorization': `Bearer ${token}`
-                }
+                },
+                cache: 'no-store'
             });
             const d = await res.json();
             

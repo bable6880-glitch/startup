@@ -53,7 +53,7 @@ export function SubscriptionGuard({ children, kitchenStatus, fetchError }: Subsc
         const isSubscriptionPage = pathname === "/dashboard/subscription" ||
             pathname.startsWith("/dashboard/subscription/");
 
-        if (isSubscriptionPage) {
+        if (isSubscriptionPage || pathname === '/dashboard/subscription/success') {
             setIsAllowed(true);
             return;
         }
@@ -130,7 +130,7 @@ export function SubscriptionGuard({ children, kitchenStatus, fetchError }: Subsc
                             // Fetch directly from API to bypass client layout state
                             try {
                                 const token = await getIdToken();
-                                if (!token) return router.refresh();
+                                if (!token) return window.location.reload();
                                 
                                 const res = await fetch("/api/kitchens?ownerId=me", {
                                     headers: { Authorization: `Bearer ${token}` }
@@ -146,7 +146,7 @@ export function SubscriptionGuard({ children, kitchenStatus, fetchError }: Subsc
                             } catch (e) {
                                 // ignore
                             }
-                            router.refresh();
+                            window.location.reload();
                         }}
                     />
                 </div>

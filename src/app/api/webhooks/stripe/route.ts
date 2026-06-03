@@ -49,14 +49,22 @@ async function logSubscriptionHistory(tx: any, entry: {
 
 export async function handleSubscriptionCheckout(tx: any, session: Stripe.Checkout.Session) {
     const metadata = session.metadata;
-    if (!metadata || !metadata.kitchenId || !metadata.planId) return;
+    if (!metadata || !metadata.kitchenId || !metadata.planId) {
+        throw new Error(`Missing metadata in checkout session: ${session.id}`);
+    }
 
     const planConfig = await tx.query.planConfigs.findFirst({
         where: eq(planConfigs.planId, metadata.planId as any),
     });
     if (!planConfig) {
-        console.error(`[Stripe Webhook] Plan config not found for ${metadata.planId}`);
-        return;
+        throw new Error(`Plan config not found for planId: ${metadata.planId}`);
+    }
+
+    const kitchenCheck = await tx.query.kitchens.findFirst({
+        where: eq(kitchens.id, metadata.kitchenId),
+    });
+    if (!kitchenCheck || kitchenCheck.ownerId !== metadata.cookId) {
+        throw new Error(`Metadata mismatch: kitchen ${metadata.kitchenId} does not belong to user ${metadata.cookId}`);
     }
 
     const now = new Date();
@@ -125,6 +133,15 @@ export async function handleSubscriptionCheckout(tx: any, session: Stripe.Checko
         }
     }
 
+    // Idempotency for one-time payments (mode: 'payment' has no subscription ID)
+    const [alreadyProcessed] = await tx.select().from(subscriptionHistory)
+        .where(eq(subscriptionHistory.stripeSessionId, session.id))
+        .limit(1);
+    if (alreadyProcessed) {
+        console.warn(`[Stripe Webhook] Session ${session.id} already processed via subscriptionHistory. Skipping.`);
+        return;
+    }
+
     // ── Create new subscription ──────────────────────────────────────
     await tx.insert(subscriptions).values({
         userId: metadata.cookId,
@@ -157,9 +174,11 @@ export async function handleSubscriptionCheckout(tx: any, session: Stripe.Checko
     });
 
     // ── Set kitchen active and update planId ───────────────────────
-    await tx.update(kitchens).set({ 
+    await tx.update(kitchens).set({
         status: 'ACTIVE',
-        planId: metadata.planId as any
+        planId: metadata.planId as any,
+        isLocked: false,
+        updatedAt: new Date()
     }).where(eq(kitchens.id, metadata.kitchenId));
 
     if (planConfig.featuredBoostLevel !== 'none' && planConfig.featuredBoostLevel !== null) {
@@ -172,6 +191,9 @@ export async function handleSubscriptionCheckout(tx: any, session: Stripe.Checko
     // ── Invalidate access cache ─────────────────────────────────────
     const { invalidatePlanAccessCache } = await import("@/lib/plans/plan-access");
     await invalidatePlanAccessCache(metadata.kitchenId);
+    
+    const { invalidateCookCache } = await import("@/services/premium.service");
+    await invalidateCookCache(metadata.kitchenId, metadata.cookId);
 
     // ── Notify cook ─────────────────────────────────────────────────
     try {
@@ -277,7 +299,12 @@ async function handleWebhookEventInline(tx: any, event: Stripe.Event) {
         const metadata = session.metadata;
 
         if (metadata?.type === 'SUBSCRIPTION') {
-            await handleSubscriptionCheckout(tx, session);
+            try {
+                await handleSubscriptionCheckout(tx, session);
+            } catch (err) {
+                console.error("[Stripe Webhook] handleSubscriptionCheckout failed:", err);
+                throw err;
+            }
         } else if (metadata?.type === 'EXTRA_PACK') {
             await handleExtraPackCheckout(tx, session);
         }

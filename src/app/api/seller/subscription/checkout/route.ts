@@ -55,10 +55,8 @@ export async function POST(request: NextRequest) {
         if (activeSub) {
             if (activeSub.planId === planId) {
                 // BLOCK: same plan while active
-                const endDate = activeSub.currentPeriodEnd?.toLocaleDateString('en-PK') ?? 'end of billing cycle';
-                const planName = activeSub.planConfig?.displayName ?? activeSub.planId;
                 return NextResponse.json({
-                    error: `You already have an active ${planName} plan. It expires on ${endDate}. You can renew after it expires.`
+                    error: "Active subscription already exists"
                 }, { status: 409 });
             }
 
