@@ -1,7 +1,9 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useRef } from "react";
 import { PotluckCard } from "@/components/potluck/PotluckCard";
+import { PotluckSkeleton } from "@/components/potluck/PotluckSkeleton";
+import { PotluckEmptyState } from "@/components/potluck/PotluckEmptyState";
 import { Button } from "@/components/ui/button";
 import { Plus, Info, X, Loader2, Image as ImageIcon, Trash2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -9,6 +11,7 @@ import { BackButton } from "@/components/ui/BackButton";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { usePlanAccess } from "@/hooks/use-plan-access";
 import { cn } from "@/lib/utils";
+import type { PotluckDeal } from "@/types/potluck";
 
 // ─── Image Compression ─────────────────────────────────────────────────────
 
@@ -19,7 +22,6 @@ async function compressImage(file: File, maxSizeKB = 2000): Promise<File> {
         const url = URL.createObjectURL(file);
 
         img.onload = () => {
-            // Scale down if necessary
             let { width, height } = img;
             const MAX_DIM = 1200;
             if (width > MAX_DIM || height > MAX_DIM) {
@@ -32,7 +34,6 @@ async function compressImage(file: File, maxSizeKB = 2000): Promise<File> {
             const ctx = canvas.getContext("2d")!;
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Try quality 0.8 first, drop to 0.6 if still too large
             let quality = 0.8;
             const tryBlob = (q: number) => {
                 canvas.toBlob(
@@ -59,8 +60,11 @@ async function compressImage(file: File, maxSizeKB = 2000): Promise<File> {
 export default function PotluckDashboardPage() {
     const { getIdToken } = useAuth();
     const { data: planData } = usePlanAccess();
-    const [deals, setDeals] = useState<any[]>([]);
+    const [deals, setDeals] = useState<PotluckDeal[]>([]);
     const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState(false);
+    const [activeFilter, setActiveFilter] = useState<'All' | 'Live' | 'Scheduled' | 'Ended'>('All');
+    const [isInfoDismissed, setIsInfoDismissed] = useState(true); // Default true to prevent hydration mismatch, set to false in useEffect
 
     const potluckRemaining = planData?.usage.potluckRemaining ?? null;
     const potluckLimit = planData?.usage.potluckLimit ?? 0;
@@ -72,7 +76,7 @@ export default function PotluckDashboardPage() {
     const [submitting, setSubmitting] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
 
-    // Image state — 1 required + 2 optional
+    // Image state
     const [images, setImages] = useState<{ file: File | null; preview: string }[]>([]);
     const [imageUploading, setImageUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,18 +93,22 @@ export default function PotluckDashboardPage() {
     });
 
     useEffect(() => {
+        setIsInfoDismissed(localStorage.getItem('potluck-info-dismissed') === 'true');
         fetchDeals();
 
-        // Poll for updates every 30s (replaces deleted /api/potluck/sse to prevent Vercel 300s timeouts)
         const interval = setInterval(() => {
-            fetchDeals();
+            fetchDeals(true);
         }, 30_000);
 
         return () => clearInterval(interval);
     }, []);
 
-    const fetchDeals = async () => {
+    const fetchDeals = async (silent = false) => {
         try {
+            if (!silent) {
+                setLoading(true);
+                setFetchError(false);
+            }
             const token = await getIdToken();
             if (!token) return;
             const res = await fetch("/api/seller/potluck", {
@@ -109,10 +117,20 @@ export default function PotluckDashboardPage() {
             const data = await res.json();
             if (data.success) {
                 setDeals(data.deals);
+                setFetchError(false);
+            } else {
+                setFetchError(true);
             }
+        } catch {
+            setFetchError(true);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
+    };
+
+    const handleDismissInfo = () => {
+        localStorage.setItem('potluck-info-dismissed', 'true');
+        setIsInfoDismissed(true);
     };
 
     // ── Image Upload Handling ────────────────────────────────────────────────
@@ -138,7 +156,6 @@ export default function PotluckDashboardPage() {
         const preview = URL.createObjectURL(file);
         setImages(prev => [...prev, { file, preview }]);
 
-        // Reset file input so same file can be re-selected
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
@@ -155,7 +172,6 @@ export default function PotluckDashboardPage() {
         const urls: string[] = [];
         for (const img of images) {
             if (!img.file) continue;
-            // Compress to max 2MB
             const compressed = await compressImage(img.file, 1800);
             const fd = new FormData();
             fd.append("file", compressed);
@@ -177,12 +193,10 @@ export default function PotluckDashboardPage() {
 
     const handleCreateDeal = async (e: React.FormEvent) => {
         e.preventDefault();
-
         if (images.length === 0) {
             setFormError("Please add at least one meal image.");
             return;
         }
-
         setSubmitting(true);
         setFormError(null);
 
@@ -190,7 +204,6 @@ export default function PotluckDashboardPage() {
             const token = await getIdToken();
             if (!token) throw new Error("Not authenticated");
 
-            // Upload images first
             setImageUploading(true);
             const uploadedUrls = await uploadImages(token);
             setImageUploading(false);
@@ -215,8 +228,8 @@ export default function PotluckDashboardPage() {
                     pricePerPlateRs: Number(formData.pricePerPlateRs),
                     regularPriceRs: Number(formData.regularPriceRs),
                     expiresAt: new Date(formData.expiresAt).toISOString(),
-                    imageUrl: uploadedUrls[0],   // primary image
-                    images: uploadedUrls,         // all images
+                    imageUrl: uploadedUrls[0],
+                    images: uploadedUrls,
                 })
             });
 
@@ -228,7 +241,6 @@ export default function PotluckDashboardPage() {
                 setImages([]);
                 fetchDeals();
             } else {
-                // Richer error messages
                 if (res.status === 403) {
                     setFormError(
                         data.error?.includes("exhaust") || data.error?.includes("uses")
@@ -255,6 +267,13 @@ export default function PotluckDashboardPage() {
         setFormError(null);
         setIsModalOpen(true);
     };
+
+    const filteredDeals = deals.filter(deal => {
+        if (activeFilter === 'Live') return deal.status === 'ACTIVE' || deal.status === 'FILLED';
+        if (activeFilter === 'Scheduled') return deal.status === 'SCHEDULED' || deal.status === 'PENDING' || deal.status === 'DRAFT';
+        if (activeFilter === 'Ended') return deal.status === 'EXPIRED' || deal.status === 'CANCELLED';
+        return true;
+    });
 
     return (
         <div className="container py-8 max-w-6xl mx-auto space-y-6">
@@ -290,7 +309,7 @@ export default function PotluckDashboardPage() {
                 </div>
             </div>
 
-            {isOutOfUses ? (
+            {isOutOfUses && (
                 <div className="relative overflow-hidden rounded-2xl border border-amber-200 bg-amber-50 p-6 flex items-start gap-4">
                     <Info className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
@@ -301,34 +320,83 @@ export default function PotluckDashboardPage() {
                         </a>
                     </div>
                 </div>
-            ) : (
-                <Alert className="bg-blue-50 border-blue-200">
-                    <Info className="h-4 w-4 text-blue-600" />
-                    <AlertTitle className="text-blue-800">Community Potluck</AlertTitle>
-                    <AlertDescription className="text-blue-700">
-                        Set a target order count — when reached, the deal activates automatically for all participants.
-                    </AlertDescription>
-                </Alert>
             )}
 
-            {loading ? (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse">
-                    {[1, 2, 3].map(i => <div key={i} className="h-64 bg-muted rounded-xl" />)}
+            {!isInfoDismissed && !isOutOfUses && (
+                <div className="rounded-xl border border-orange-200 dark:border-orange-800/50 bg-orange-50 dark:bg-orange-900/20 p-4 mb-6">
+                    <div className="flex items-start gap-3">
+                        <span className="text-2xl mt-0.5">🍱</span>
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-orange-900 dark:text-orange-300 text-sm">
+                                Community Potluck — Group Deals
+                            </h3>
+                            <p className="text-orange-700 dark:text-orange-400 text-xs mt-1 leading-relaxed">
+                                Set a target order count. When reached, the deal
+                                activates automatically — everyone gets the discount.
+                                Share your deal link to fill up faster.
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleDismissInfo}
+                            className="text-orange-400 hover:text-orange-600 dark:text-orange-600 dark:hover:text-orange-400 transition-colors flex-shrink-0"
+                            aria-label="Dismiss info"
+                        >
+                            ✕
+                        </button>
+                    </div>
                 </div>
-            ) : deals.length > 0 ? (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {deals.map(deal => (
-                        <PotluckCard key={deal.id} deal={deal} isSellerView />
+            )}
+
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-6 border-b border-gray-200 dark:border-neutral-800 pt-2">
+                {['All', 'Live', 'Scheduled', 'Ended'].map((tab) => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveFilter(tab as any)}
+                        className={`pb-3 text-sm font-medium transition-colors relative ${
+                            activeFilter === tab
+                                ? 'text-orange-600 dark:text-orange-400'
+                                : 'text-gray-500 hover:text-orange-500 dark:text-neutral-400 dark:hover:text-orange-400'
+                        }`}
+                    >
+                        {tab === 'Live' ? '🔴 Live' : tab === 'Scheduled' ? '📅 Scheduled' : tab === 'Ended' ? '✓ Ended' : 'All'}
+                        {activeFilter === tab && (
+                            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-500 rounded-t-full" />
+                        )}
+                    </button>
+                ))}
+            </div>
+
+            {loading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[1, 2].map(i => <PotluckSkeleton key={i} />)}
+                </div>
+            ) : fetchError ? (
+                <div className="text-center py-20 bg-red-50/50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30">
+                    <p className="text-red-600 dark:text-red-400 mb-4">Something went wrong loading your deals.</p>
+                    <Button variant="outline" onClick={() => fetchDeals()} className="border-red-200 text-red-600 hover:bg-red-50">
+                        Try Again
+                    </Button>
+                </div>
+            ) : filteredDeals.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredDeals.map((deal, i) => (
+                        <div key={deal.id} className="potluck-card-enter" style={{ animationDelay: `${Math.min(i * 80, 400)}ms` }}>
+                            <PotluckCard deal={deal} onRefresh={() => fetchDeals(true)} />
+                        </div>
                     ))}
                 </div>
             ) : (
-                <div className="text-center py-20 bg-muted/30 rounded-xl border border-dashed">
-                    <span className="text-4xl block mb-4">🫕</span>
-                    <h3 className="text-lg font-semibold">No active potlucks</h3>
-                    <p className="text-muted-foreground mt-2 max-w-sm mx-auto text-sm">
-                        Create a potluck deal to sell in bulk at a group discount price.
-                    </p>
-                    <Button className="mt-6" onClick={openModal} disabled={isOutOfUses}>Create your first deal</Button>
+                <div className="py-8">
+                    {activeFilter === 'All' ? (
+                        <div onClick={openModal} className="cursor-pointer">
+                            <PotluckEmptyState />
+                        </div>
+                    ) : (
+                        <div className="text-center py-12 text-gray-500 dark:text-neutral-400">
+                            No {activeFilter.toLowerCase()} deals found.
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -347,8 +415,6 @@ export default function PotluckDashboardPage() {
                         </div>
 
                         <div className="p-6 overflow-y-auto flex-1">
-
-                            {/* ── Error Banner ── */}
                             {formError && (
                                 <div className="mb-5 flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm dark:bg-red-900/20 dark:border-red-900/50 dark:text-red-400">
                                     <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -365,8 +431,6 @@ export default function PotluckDashboardPage() {
                             )}
 
                             <form id="potluckForm" onSubmit={handleCreateDeal} className="space-y-5">
-
-                                {/* ── Image Upload ── */}
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-800 mb-1">
                                         Meal Images <span className="text-red-500">*</span>
@@ -413,7 +477,6 @@ export default function PotluckDashboardPage() {
                                     <p className="text-xs text-gray-400 mt-2">Images are auto-compressed to under 2MB before upload.</p>
                                 </div>
 
-                                {/* Title */}
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-800 mb-1">Deal Title <span className="text-red-500">*</span></label>
                                     <input required type="text" value={formData.title}
@@ -422,7 +485,6 @@ export default function PotluckDashboardPage() {
                                         className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm dark:bg-neutral-800 dark:border-neutral-700 outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500" />
                                 </div>
 
-                                {/* Description */}
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-800 mb-1">Description</label>
                                     <textarea value={formData.description}
@@ -432,7 +494,6 @@ export default function PotluckDashboardPage() {
                                         className="w-full rounded-xl border border-neutral-300 px-4 py-2.5 text-sm dark:bg-neutral-800 dark:border-neutral-700 outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 resize-none" />
                                 </div>
 
-                                {/* Plates + Target */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-800 mb-1">Total Plates <span className="text-red-500">*</span></label>
@@ -452,7 +513,6 @@ export default function PotluckDashboardPage() {
                                     </div>
                                 </div>
 
-                                {/* Prices */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-800 mb-1">Potluck Price (Rs) <span className="text-red-500">*</span></label>
@@ -470,7 +530,6 @@ export default function PotluckDashboardPage() {
                                     </div>
                                 </div>
 
-                                {/* Expiry */}
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-800 mb-1">Expiry Date & Time <span className="text-red-500">*</span></label>
                                     <input required type="datetime-local" value={formData.expiresAt}

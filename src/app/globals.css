@@ -526,4 +526,73 @@ body {
 
 .animate-pulse-subtle {
   animation: pulse-subtle 2s ease-in-out infinite;
+}  
+/* Potluck shimmer animation - only plays when .potluck-shimmer is present */
+@keyframes potluck-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.potluck-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    theme('colors.orange.500') 0%,
+    theme('colors.amber.400') 35%,
+    theme('colors.orange.300') 50%,
+    theme('colors.amber.400') 65%,
+    theme('colors.orange.500') 100%
+  );
+  background-size: 200% 100%;
+  animation: potluck-shimmer 2s linear infinite;
+}
+
+/* Card hover lift - GPU-accelerated transform only */
+.potluck-card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  will-change: transform;
+}
+.potluck-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px -8px rgba(249, 115, 22, 0.2),
+              0 4px 12px -4px rgba(0, 0, 0, 0.15);
+}
+
+/* Live pulse ring for ACTIVE badge */
+@keyframes potluck-pulse-ring {
+  0%   { transform: scale(0.85); opacity: 0.6; }
+  100% { transform: scale(2.2);  opacity: 0; }
+}
+.potluck-live-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: #ef4444;
+  animation: potluck-pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+/* Dashboard staggered fade in */
+@keyframes potluck-fade-in-up {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.potluck-card-enter {
+  animation: potluck-fade-in-up 0.5s ease-out both;
+}
+
+/* Respect reduced motion - disable all potluck animations */
+@media (prefers-reduced-motion: reduce) {
+  .potluck-shimmer {
+    animation: none;
+    background-image: none;
+  }
+  .potluck-card-hover {
+    transition: none;
+  }
+  .potluck-live-ring::before {
+    animation: none;
+  }
+  .potluck-card-enter {
+    animation: none;
+  }
 }

@@ -179,15 +179,47 @@ function MealCard({ meal }: { meal: MealData }) {
 
 import { MealItem } from "@/components/menu/MealItem";
 import { CartPanel } from "@/components/cart/CartPanel";
+import { PotluckPublicCard } from "@/components/potluck/PotluckPublicCard";
+import { db } from "@/lib/db";
+import { potluckDeals } from "@/lib/db/schema";
+import { eq, and, gt, inArray } from "drizzle-orm";
+
+async function getActivePotluck(kitchenId: string) {
+    try {
+        const [deal] = await db.select().from(potluckDeals)
+            .where(
+                and(
+                    eq(potluckDeals.kitchenId, kitchenId),
+                    inArray(potluckDeals.status, ['ACTIVE', 'FILLED']),
+                    gt(potluckDeals.expiresAt, new Date())
+                )
+            )
+            .limit(1);
+        
+        if (!deal) return null;
+        
+        return {
+            ...deal,
+            pricePerPlateRs: deal.pricePerPlateRs.toString(),
+            regularPriceRs: deal.regularPriceRs.toString(),
+            expiresAt: deal.expiresAt.toISOString(),
+            createdAt: deal.createdAt?.toISOString() || new Date().toISOString(),
+        } as any;
+    } catch (err) {
+        console.error("Failed to fetch potluck deal:", err);
+        return null;
+    }
+}
 
 // ─── Kitchen Content ────────────────────────────────────────────────────────
 
 async function KitchenContent({ id }: { id: string }) {
-    const [kitchen, menu, reviewData, reviewStats] = await Promise.all([
+    const [kitchen, menu, reviewData, reviewStats, activePotluck] = await Promise.all([
         getKitchen(id),
         getMenu(id),
         getReviews(id),
         getKitchenReviewStats(id),
+        getActivePotluck(id),
     ]);
 
     if (!kitchen) {
@@ -313,6 +345,16 @@ async function KitchenContent({ id }: { id: string }) {
                     {/* Menu */}
                     <section className="mt-12">
                         <ClientOrderBanner kitchenName={kitchen.name} />
+
+                        {activePotluck && (
+                            <div className="mb-10">
+                                <h2 className="text-xl font-bold text-neutral-900 mb-6 dark:text-neutral-50 flex items-center gap-2">
+                                    <span className="text-2xl">🔥</span> 
+                                    Community Potluck Deal
+                                </h2>
+                                <PotluckPublicCard deal={activePotluck} />
+                            </div>
+                        )}
 
                         {/* Customer-facing lock message — generic, no internal lockReason exposed */}
                         {(kitchen as any).isLocked && (
