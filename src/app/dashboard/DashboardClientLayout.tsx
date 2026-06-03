@@ -5,8 +5,7 @@ import { SubscriptionGuard } from "@/components/dashboard/SubscriptionGuard";
 import { type ReactNode, useEffect, useState, useRef, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/firebase/auth-context";
-import { useKitchenSSE } from "@/hooks/use-kitchen-sse";
-import { OrderPopup, OrderPopupData } from "@/components/dashboard/OrderPopup";
+import { IncomingOrderProvider } from "@/contexts/IncomingOrderContext";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const { user, getIdToken } = useAuth();
@@ -16,8 +15,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     const [kitchenName, setKitchenName] = useState<string>("Your Kitchen");
     const [kitchenStatus, setKitchenStatus] = useState<string | null>(null);
     const [kitchenFetchError, setKitchenFetchError] = useState(false);
-    const [pendingOrder, setPendingOrder] = useState<OrderPopupData | null>(null);
-    const popupShownRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {
         const fetchKitchen = async () => {
@@ -45,39 +42,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         fetchKitchen();
     }, [user, getIdToken]);
 
-    const handleNewOrder = useCallback((payload: Record<string, unknown>) => {
-        const orderId = payload.orderId as string;
-        if (popupShownRef.current.has(orderId)) return;
-        
-        // Suppress if on orders page
-        if (pathname === "/dashboard/orders" || pathname.startsWith("/dashboard/orders/")) {
-            return;
-        }
-
-        popupShownRef.current.add(orderId);
-        setPendingOrder({
-            id: orderId,
-            customerName: (payload.customerName as string) ?? "Customer",
-            itemCount: (payload.itemCount as number) ?? 1,
-            totalAmount: (payload.totalAmount as number) ?? 0,
-            kitchenName: kitchenName,
-        });
-    }, [pathname, kitchenName]);
-
-    useKitchenSSE({
-        kitchenId,
-        onNewOrder: handleNewOrder,
-    });
-
-    const handleViewOrder = () => {
-        setPendingOrder(null);
-        router.push("/dashboard/orders");
-    };
-
-    const handleDismiss = () => {
-        setPendingOrder(null);
-    };
-
     return (
         <RoleGuard allowedRoles={["COOK", "ADMIN"]} redirectTo="/account">
             {/* SEO: Prevent search engines from indexing private seller pages */}
@@ -86,16 +50,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <title>Seller Dashboard – Manage Your Tiffin Service & Meal Delivery</title>
             </head>
             <SubscriptionGuard kitchenStatus={kitchenStatus} fetchError={kitchenFetchError}>
-                {children}
+                <IncomingOrderProvider kitchenId={kitchenId}>
+                    {children}
+                </IncomingOrderProvider>
             </SubscriptionGuard>
-
-            {pendingOrder && (
-                <OrderPopup
-                    order={pendingOrder}
-                    onView={handleViewOrder}
-                    onDismiss={handleDismiss}
-                />
-            )}
         </RoleGuard>
     );
 }

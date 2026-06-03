@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useCustomerSSE } from "@/hooks/use-customer-sse";
 import { CountdownTimer } from "./CountdownTimer";
 import WriteKitchenReviewAction from "../reviews/WriteKitchenReviewAction";
+import confetti from "canvas-confetti";
 
 type OrderStatus = "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED";
 
@@ -30,7 +31,16 @@ export function OrderTracker({ customerId, initialOrder }: OrderTrackerProps) {
 
     const handleStatusChange = useCallback((payload: any) => {
         if (payload.orderId === initialOrder.id) {
-            setStatus(payload.newStatus as OrderStatus);
+            setStatus((prev) => {
+                if (prev === "PENDING" && payload.newStatus === "ACCEPTED") {
+                    confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
+                }
+                return payload.newStatus as OrderStatus;
+            });
             if (payload.estimatedMinutes) setEta(payload.estimatedMinutes);
             if (payload.acceptedAt) setAcceptedAt(payload.acceptedAt);
         }
@@ -41,10 +51,10 @@ export function OrderTracker({ customerId, initialOrder }: OrderTrackerProps) {
     // Cancelled State
     if (status === "CANCELLED") {
         return (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center dark:bg-red-900/10 dark:border-red-900/50">
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center dark:bg-red-900/10 dark:border-red-900/50 animate-scale-in">
                 <span className="text-4xl mb-4 block">❌</span>
-                <h3 className="text-xl font-bold text-red-700 dark:text-red-400">Order Cancelled</h3>
-                <p className="mt-2 text-sm text-red-600/80 dark:text-red-400/80">This order was cancelled and will not be prepared.</p>
+                <h3 className="text-xl font-bold text-red-700 dark:text-red-400">Order was declined by the kitchen.</h3>
+                <p className="mt-2 text-sm text-red-600/80 dark:text-red-400/80">Your payment method has not been charged.</p>
             </div>
         );
     }
@@ -54,9 +64,9 @@ export function OrderTracker({ customerId, initialOrder }: OrderTrackerProps) {
     return (
         <div className="space-y-6">
             {/* Live Status indicator */}
-            <div className="flex items-center justify-between rounded-xl bg-white p-4 shadow-sm border border-neutral-100 dark:bg-neutral-800 dark:border-neutral-700">
+            <div className="flex items-center justify-between rounded-xl bg-white p-4 shadow-sm border border-neutral-100 dark:bg-neutral-800 dark:border-neutral-700 animate-fade-in-down">
                 <div className="flex items-center gap-3">
-                    <div className="relative flex h-3 w-3">
+                    <div className={`relative flex h-3 w-3 ${connected && status !== 'COMPLETED' ? 'animate-glow-pulse' : ''}`}>
                         {connected && status !== "COMPLETED" && (
                             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
                         )}
@@ -69,7 +79,7 @@ export function OrderTracker({ customerId, initialOrder }: OrderTrackerProps) {
             </div>
 
             {/* Timeline Tree */}
-            <div className="rounded-2xl border border-neutral-200 bg-white p-6 dark:bg-neutral-800 dark:border-neutral-700">
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6 dark:bg-neutral-800 dark:border-neutral-700 animate-fade-in-up">
                 <div className="relative">
                     {/* Background line */}
                     <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-neutral-100 dark:bg-neutral-700"></div>
@@ -88,7 +98,7 @@ export function OrderTracker({ customerId, initialOrder }: OrderTrackerProps) {
                                 📝
                             </div>
                             <div className="pt-2">
-                                <h4 className="text-lg font-bold text-neutral-900 dark:text-white">Order Placed</h4>
+                                <h4 className="text-lg font-bold text-neutral-900 dark:text-white">Placed</h4>
                                 <p className="text-sm text-neutral-500 dark:text-neutral-400">Waiting for kitchen to accept.</p>
                             </div>
                         </div>
@@ -99,7 +109,7 @@ export function OrderTracker({ customerId, initialOrder }: OrderTrackerProps) {
                                 👨‍🍳
                             </div>
                             <div className="pt-2 w-full">
-                                <h4 className="text-lg font-bold text-neutral-900 dark:text-white">Cooking in Progress</h4>
+                                <h4 className="text-lg font-bold text-neutral-900 dark:text-white">Accepted by Kitchen</h4>
                                 <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">Kitchen has accepted your order.</p>
 
                                 {/* Live Countdown Inject */}
@@ -117,7 +127,7 @@ export function OrderTracker({ customerId, initialOrder }: OrderTrackerProps) {
                                 🎉
                             </div>
                             <div className="pt-2 w-full">
-                                <h4 className="text-lg font-bold text-neutral-900 dark:text-white">Ready / Delivered</h4>
+                                <h4 className="text-lg font-bold text-neutral-900 dark:text-white">Out for Delivery / Ready for Pickup</h4>
                                 <p className="text-sm text-neutral-500 dark:text-neutral-400">Hope you enjoy your meal!</p>
                                 
                                 {/* Auto Review Trigger integration */}

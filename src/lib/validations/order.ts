@@ -19,6 +19,7 @@ export const createOrderSchema = z.object({
     customerAddress: z.string().max(500).optional(),
     customerLat: z.number().min(-90).max(90).optional(),
     customerLng: z.number().min(-180).max(180).optional(),
+    paymentMethod: z.enum(["COD", "STRIPE", "JAZZCASH", "EASYPAISA"]).optional().default("COD"),
 });
 
 export const updateOrderStatusSchema = z.object({

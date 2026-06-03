@@ -6,6 +6,8 @@ import { eq, desc } from "drizzle-orm";
 import { createPotluckSchema } from "@/lib/validations/potluck";
 import { getKitchenPlanAccess } from "@/lib/plans/plan-access";
 import { logger } from "@/lib/utils/logger";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 export async function POST(req: NextRequest) {
     try {
@@ -74,11 +76,29 @@ export async function POST(req: NextRequest) {
     }
 }
 
+const redis = process.env.UPSTASH_REDIS_REST_URL ? Redis.fromEnv() : null;
+const potluckLimiter = redis ? new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(10, "60 s"),
+    analytics: false,
+    prefix: "st:rl:potluck_get",
+}) : null;
+
 export async function GET(req: NextRequest) {
     try {
         const guard = await requireSeller(req);
         if (!guard.ok) return guard.response;
-        const { kitchen } = guard;
+        const { user, kitchen } = guard;
+
+        if (potluckLimiter) {
+            const { success } = await potluckLimiter.limit(user.id);
+            if (!success) {
+                return NextResponse.json(
+                    { error: "Too many requests. Please try again later." },
+                    { status: 429, headers: { "Retry-After": "60" } }
+                );
+            }
+        }
 
         const deals = await db.query.potluckDeals.findMany({
             where: eq(potluckDeals.kitchenId, kitchen.id),

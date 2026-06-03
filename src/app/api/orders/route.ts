@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
             return apiBadRequest("Invalid order data", parsed.error.flatten().fieldErrors);
         }
 
-        const { kitchenId, items, notes, customerAddress, customerLat, customerLng } = parsed.data;
+        const { kitchenId, items, notes, customerAddress, customerLat, customerLng, paymentMethod } = parsed.data;
 
         // Verify valid coordinates
         let validLat = customerLat;
@@ -215,6 +215,7 @@ export async function POST(request: NextRequest) {
                 customerLng: validLng !== undefined ? String(validLng) : null,
                 // Snapshot customer info
                 customerName: user.name ?? null,
+                paymentMethod: paymentMethod || "COD",
             })
             .returning();
 

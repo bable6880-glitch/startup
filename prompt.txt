@@ -1,0 +1,95 @@
+<USER_REQUEST>
+# SMART TIFFIN — MASTER PROMPT v2.0
+# Orders · Payments · Real-Time Tracking · Cook Dashboard
+# Elite Production Code · Zero Bugs · Phase-Gated
+# Target Model: Gemini 2.5 Pro (high thinking budget)
+
+---
+
+## SENIOR ENGINEER OPERATING RULES — NON-NEGOTIABLE
+
+You are operating as a Senior Principal Engineer with 40 years of
+production web experience. You have shipped systems at scale.
+You do not write "placeholder" code. You do not write "// TODO later".
+You do not cut corners because a task is long.
+
+Every file you touch must be production-ready, type-safe, and handle
+every error path explicitly.
+
+**RULE 1 — READ BEFORE WRITE. ALWAYS.**
+Before modifying ANY file:
+  1. Open it. Read the full content.
+  2. Paste the relevant section into your response.
+  3. State what currently exists.
+  4. Then make the change.
+  Blind writes cause cascading bugs. This rule has no exceptions.
+
+**RULE 2 — ZERO BREAKING CHANGES**
+Existing API contracts are frozen:
+  GET    /api/seller/potluck
+  POST   /api/seller/potluck
+  PATCH  /api/seller/potluck/[id]
+  POST   /api/potluck/[id]/reserve
+  GET    /api/orders (if exists)
+  PATCH  /api/orders/[id]/status
+Do not change response shapes. Only add new endpoints or UI.
+
+**RULE 3 — FIX THE 429 FIRST. NOTHING ELSE SHIPS UNTIL THIS IS DONE.**
+
+Root cause from screenshot:
+  - "Try Again" button has no rate limiting
+  - useSWR refreshInterval too aggressive (or polling too fast)
+  - No exponential backoff on failed requests
+
+Fix protocol:
+  a) Add debounce of 2000ms on the "Try Again" button
+  b) On 429 response: wait 60 seconds before any retry
+     Show countdown: "Retry in 58s..."
+  c) useSWR config:
+     {
+       refreshInterval: 0,          // NO polling by default
+       revalidateOnFocus: false,     // prevents refetch on tab switch
+       revalidateOnReconnect: true,  // reconnect = yes
+       shouldRetryOnError: false,    // WE handle retries manually
+       errorRetryCount: 0,
+     }
+  d) Manual retry logic with exponential backoff:
+     attempt 1 → wait
+<truncated 33492 bytes>
+                                        ║
+║  OUT OF SCOPE (needs separate phase):                            ║
+║    • Live driver GPS tracking (no driver table in schema)        ║
+║    • Push notifications (needs FCM/APNs setup)                   ║
+║    • Payment gateway integration (Stripe/JazzCash API keys)      ║
+║    • Order dispute / refund flow                                 ║
+╚══════════════════════════════════════════════════════════════════╝
+
+---
+
+## QUICK REFERENCE
+
+| What you need                  | Where it is                              |
+|--------------------------------|------------------------------------------|
+| Potluck page (has 429 bug)     | src/app/dashboard/potluck/page.tsx       |
+| Orders API                     | src/app/api/orders/route.ts              |
+| Order status PATCH             | src/app/api/orders/[id]/status/route.ts  |
+| DB schema                      | src/lib/db/schema.ts                     |
+| Auth hook                      | src/lib/firebase/auth-context.tsx        |
+| API response helpers           | src/lib/utils/api-response.ts            |
+| Global styles                  | src/app/globals.css                      |
+| Supabase client                | src/lib/supabase/client.ts               |
+| Dashboard layout               | src/app/dashboard/layout.tsx             |
+
+BEGIN PHASE 1 when ready.
+Phase 1 is the 429 fix. Nothing else ships until Phase 1 is complete.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-06-02T23:30:16-07:00.
+
+The user's current state is as follows:
+Active Document: d:\startups\projectFoodpk\code\startup\src\proxy.ts (LANGUAGE_TYPESCRIPT)
+Cursor is on line: 305
+Other open documents:
+- d:\startups\projectFoodpk\code\startup\src\proxy.ts (LANGUAGE_TYPESCRIPT)
+- d:\startups\projectFoodpk\code\startup\src\app\not-found.tsx (LANGUAGE_TSX)
+</ADDITIONAL_METADATA>

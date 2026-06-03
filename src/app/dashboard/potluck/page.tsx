@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BackButton } from "@/components/ui/BackButton";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { usePlanAccess } from "@/hooks/use-plan-access";
+import { useSafeQuery } from "@/hooks/useSafeQuery";
 import { cn } from "@/lib/utils";
 import type { PotluckDeal } from "@/types/potluck";
 
@@ -61,8 +62,6 @@ export default function PotluckDashboardPage() {
     const { getIdToken } = useAuth();
     const { data: planData } = usePlanAccess();
     const [deals, setDeals] = useState<PotluckDeal[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [fetchError, setFetchError] = useState(false);
     const [activeFilter, setActiveFilter] = useState<'All' | 'Live' | 'Scheduled' | 'Ended'>('All');
     const [isInfoDismissed, setIsInfoDismissed] = useState(true); // Default true to prevent hydration mismatch, set to false in useEffect
 
@@ -92,41 +91,42 @@ export default function PotluckDashboardPage() {
         expiresAt: "",
     });
 
+    const fetchDealsFn = async () => {
+        const token = await getIdToken();
+        if (!token) throw new Error("No token");
+        const res = await fetch("/api/seller/potluck", {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.status === 429) {
+            throw res; // pass response to useSafeQuery to handle 429
+        }
+        const data = await res.json();
+        if (!data.success) {
+            throw new Error(data.error || "Failed to fetch deals");
+        }
+        return data.deals as PotluckDeal[];
+    };
+
+    const {
+        data: fetchedDeals,
+        error: fetchError,
+        isLoading: loading,
+        retry: retryFetch,
+        cooldownSeconds
+    } = useSafeQuery<PotluckDeal[]>({
+        key: "/api/seller/potluck",
+        fetcher: fetchDealsFn
+    });
+
+    useEffect(() => {
+        if (fetchedDeals) {
+            setDeals(fetchedDeals);
+        }
+    }, [fetchedDeals]);
+
     useEffect(() => {
         setIsInfoDismissed(localStorage.getItem('potluck-info-dismissed') === 'true');
-        fetchDeals();
-
-        const interval = setInterval(() => {
-            fetchDeals(true);
-        }, 30_000);
-
-        return () => clearInterval(interval);
     }, []);
-
-    const fetchDeals = async (silent = false) => {
-        try {
-            if (!silent) {
-                setLoading(true);
-                setFetchError(false);
-            }
-            const token = await getIdToken();
-            if (!token) return;
-            const res = await fetch("/api/seller/potluck", {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await res.json();
-            if (data.success) {
-                setDeals(data.deals);
-                setFetchError(false);
-            } else {
-                setFetchError(true);
-            }
-        } catch {
-            setFetchError(true);
-        } finally {
-            if (!silent) setLoading(false);
-        }
-    };
 
     const handleDismissInfo = () => {
         localStorage.setItem('potluck-info-dismissed', 'true');
@@ -239,7 +239,7 @@ export default function PotluckDashboardPage() {
                 setIsModalOpen(false);
                 setFormData({ title: "", description: "", totalPlatesAvailable: "", targetOrderCount: "", pricePerPlateRs: "", regularPriceRs: "", expiresAt: "" });
                 setImages([]);
-                fetchDeals();
+                retryFetch();
             } else {
                 if (res.status === 403) {
                     setFormError(
@@ -372,17 +372,29 @@ export default function PotluckDashboardPage() {
                     {[1, 2].map(i => <PotluckSkeleton key={i} />)}
                 </div>
             ) : fetchError ? (
-                <div className="text-center py-20 bg-red-50/50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30">
-                    <p className="text-red-600 dark:text-red-400 mb-4">Something went wrong loading your deals.</p>
-                    <Button variant="outline" onClick={() => fetchDeals()} className="border-red-200 text-red-600 hover:bg-red-50">
-                        Try Again
-                    </Button>
+                <div className="text-center py-12 space-y-4">
+                    <p className="text-red-400 text-sm">
+                        Something went wrong loading your deals.
+                    </p>
+                    {cooldownSeconds > 0 ? (
+                        <p className="text-neutral-500 text-xs tabular-nums">
+                            Retry in {cooldownSeconds}s...
+                        </p>
+                    ) : (
+                        <button
+                            onClick={retryFetch}
+                            disabled={cooldownSeconds > 0}
+                            className="px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Try Again
+                        </button>
+                    )}
                 </div>
             ) : filteredDeals.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredDeals.map((deal, i) => (
                         <div key={deal.id} className="potluck-card-enter" style={{ animationDelay: `${Math.min(i * 80, 400)}ms` }}>
-                            <PotluckCard deal={deal} onRefresh={() => fetchDeals(true)} />
+                            <PotluckCard deal={deal} onRefresh={() => retryFetch()} />
                         </div>
                     ))}
                 </div>

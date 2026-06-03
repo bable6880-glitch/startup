@@ -5,8 +5,8 @@ import { useAuth } from "@/lib/firebase/auth-context";
 import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
-import { OrderSuccessCard } from "./OrderSuccessCard";
 import { useLocation } from "@/lib/location-context";
+import { PaymentMethodSheet } from "@/components/checkout/PaymentMethodSheet";
 
 export function CartPanel() {
     const { items, total, itemCount, kitchenName, kitchenId, updateQuantity, removeItem, clearCart } = useCart();
@@ -17,9 +17,7 @@ export function CartPanel() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isOpen, setIsOpen] = useState(false);
-    
-    // Order Success State
-    const [successData, setSuccessData] = useState<{ id: string } | null>(null);
+    const [showPaymentSheet, setShowPaymentSheet] = useState(false);
 
     // Sellers (COOK role) cannot order — hide the entire cart
     const isCook = user?.role === "COOK" || user?.role === "ADMIN";
@@ -42,66 +40,14 @@ export function CartPanel() {
             return;
         }
 
-        try {
-            const token = await getIdToken();
-            if (!token) {
-                setError("Authentication failed. Please log in again.");
-                setIsSubmitting(false);
-                return;
-            }
-
-            const res = await fetch("/api/orders", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    kitchenId,
-                    items: items.map(i => ({
-                        mealId: i.mealId,
-                        quantity: i.quantity,
-                    })),
-                    // deliveryMode is auto-resolved on the server from kitchen config
-                    notes: "",
-                    customerLat: location.lat,
-                    customerLng: location.lng,
-                }),
-            });
-
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error?.message || "Failed to place order");
-            }
-
-            const responseData = await res.json();
-
-            clearCart();
-            // Show new Smart Modal instead of redirecting instantly
-            setSuccessData({ id: responseData.data.id });
-
-        } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : "Something went wrong");
-        } finally {
-            setIsSubmitting(false);
-        }
+        // Open payment sheet instead of submitting instantly
+        setShowPaymentSheet(true);
+        setIsSubmitting(false);
     };
 
     // Don't render anything if empty, or if the user is a Cook
-    // Except if we are currently showing the success modal!
-    if ((itemCount === 0 && !successData) || isCook) {
+    if (itemCount === 0 || isCook) {
         return null;
-    }
-
-    if (successData && userProfile) {
-        return (
-            <OrderSuccessCard
-                orderId={successData.id}
-                customerName={userProfile.name ?? "Guest"}
-                customerPhone={userProfile.phone ?? ""}
-                onClose={() => setSuccessData(null)}
-            />
-        );
     }
 
     return (
@@ -224,6 +170,24 @@ export function CartPanel() {
                 <div
                     className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
                     onClick={() => setIsOpen(false)}
+                />
+            )}
+
+            {/* Payment Method Sheet */}
+            {showPaymentSheet && (
+                <PaymentMethodSheet
+                    items={items}
+                    total={total}
+                    kitchenId={kitchenId!}
+                    customerLat={'lat' in location ? location.lat : undefined}
+                    customerLng={'lng' in location ? location.lng : undefined}
+                    getToken={getIdToken}
+                    onClose={() => setShowPaymentSheet(false)}
+                    onSuccess={() => {
+                        setShowPaymentSheet(false);
+                        setIsOpen(false);
+                        clearCart();
+                    }}
                 />
             )}
         </>

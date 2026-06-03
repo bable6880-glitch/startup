@@ -8,7 +8,6 @@ import { MapLazy } from "@/components/map/MapLazy";
 import { calculateDistance } from "@/lib/utils/distance";
 import Link from "next/link";
 import { OrderTracker } from "@/components/orders/OrderTracker";
-import { PaymentMethodSelector } from "@/components/orders/PaymentMethodSelector";
 
 interface OrderItem {
     id: string;
@@ -101,11 +100,21 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
         return (
             <div className="mx-auto max-w-4xl px-4 py-8">
                 <div className="animate-pulse space-y-8">
-                    <div className="h-8 w-64 bg-neutral-200 rounded" />
-                    <div className="h-64 w-full bg-neutral-200 rounded-xl" />
-                    <div className="space-y-4">
-                        <div className="h-4 w-full bg-neutral-200 rounded" />
-                        <div className="h-4 w-3/4 bg-neutral-200 rounded" />
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="h-8 w-56 bg-neutral-200 dark:bg-neutral-800 rounded-lg" />
+                            <div className="h-4 w-40 bg-neutral-100 dark:bg-neutral-800 rounded mt-2" />
+                        </div>
+                    </div>
+                    <div className="grid gap-8 lg:grid-cols-3">
+                        <div className="lg:col-span-2 space-y-6">
+                            <div className="h-24 rounded-2xl bg-neutral-100 dark:bg-neutral-800 skeleton-shimmer" />
+                            <div className="h-80 rounded-2xl bg-neutral-100 dark:bg-neutral-800 skeleton-shimmer" />
+                        </div>
+                        <div className="space-y-4">
+                            <div className="h-48 rounded-2xl bg-neutral-100 dark:bg-neutral-800 skeleton-shimmer" />
+                            <div className="h-12 rounded-xl bg-neutral-100 dark:bg-neutral-800" />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -148,8 +157,13 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
         ? [(kitchenLat + Number(order.customerLat)) / 2, (kitchenLng + Number(order.customerLng)) / 2]
         : [kitchenLat, kitchenLng];
 
+    const paymentLabel = order.paymentMethod === "COD" ? "💵 Cash on Delivery" :
+        order.paymentMethod === "STRIPE" ? "💳 Card" :
+        order.paymentMethod === "JAZZCASH" ? "JazzCash" :
+        order.paymentMethod === "EASYPAISA" ? "Easypaisa" : order.paymentMethod;
+
     return (
-        <div className="mx-auto max-w-4xl px-4 py-8 pb-20">
+        <div className="mx-auto max-w-4xl px-4 py-8 pb-20 animate-fade-in-up">
             {/* Header */}
             <div className="mb-8">
                 <div className="flex flex-wrap items-center justify-between gap-4">
@@ -157,7 +171,7 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
                         <h1 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
                             Order #{order.id.slice(0, 8)}
                         </h1>
-                        <p className="text-neutral-500 dark:text-neutral-400">
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
                             Placed on {format(new Date(order.createdAt), "PPP p")}
                         </p>
                     </div>
@@ -267,15 +281,21 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
                         </div>
                     </div>
 
-                    {/* Payment Selector block */}
-                    <PaymentMethodSelector 
-                        orderId={order.id} 
-                        currentMethod={order.paymentMethod} 
-                        paymentStatus={order.paymentStatus} 
-                        totalAmount={order.totalAmount} 
-                    />
+                    {/* Payment Info */}
+                    <div className="rounded-2xl border border-neutral-200 bg-white p-6 dark:bg-neutral-800 dark:border-neutral-700">
+                        <h2 className="font-bold text-sm text-neutral-500 uppercase tracking-wide mb-4 dark:text-neutral-400">Payment</h2>
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-neutral-900 dark:text-neutral-200">{paymentLabel}</span>
+                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                                order.paymentStatus === "PAID" 
+                                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" 
+                                    : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                            }`}>
+                                {order.paymentStatus}
+                            </span>
+                        </div>
+                    </div>
 
-                    {/* Action Buttons */}
                     <div className="space-y-3">
                         <Link
                             href={`/kitchen/${order.kitchen.id}`}
