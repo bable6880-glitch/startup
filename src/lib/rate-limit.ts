@@ -31,7 +31,7 @@ export const rateLimiters = {
     kitchens: createLimiter(60, "1 m"),
     upload: createLimiter(10, "1 m"),
     // ── Monetization engine rate limits ──
-    sellerPotluck: createLimiter(10, "60 m"),       // 10/hour/user
+    sellerPotluck: createLimiter(100, "1 m"),       // 100/min/user (Dashboard reads/updates)
     potluckReserve: createLimiter(5, "1 m"),         // 5/min/user
     aiPricing: createLimiter(20, "60 m"),             // 20/hour/user
     chefAssistant: createLimiter(20, "1440 m"),       // 20/day/user

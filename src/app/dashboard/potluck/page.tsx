@@ -269,7 +269,7 @@ export default function PotluckDashboardPage() {
     };
 
     const filteredDeals = deals.filter(deal => {
-        if (activeFilter === 'Live') return deal.status === 'ACTIVE' || deal.status === 'FILLED';
+        if (activeFilter === 'Live') return deal.status === 'ACTIVE' || deal.status === 'FILLED' || deal.status === 'PAUSED';
         if (activeFilter === 'Scheduled') return deal.status === 'SCHEDULED' || deal.status === 'PENDING' || deal.status === 'DRAFT';
         if (activeFilter === 'Ended') return deal.status === 'EXPIRED' || deal.status === 'CANCELLED';
         return true;

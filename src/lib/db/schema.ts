@@ -104,7 +104,9 @@ export const planConfigEnum = pgEnum("plan_config_enum", [
 export const potluckStatusEnum = pgEnum("potluck_status_enum", [
     "DRAFT",
     "PENDING",
+    "SCHEDULED",
     "ACTIVE",
+    "PAUSED",
     "FILLED",
     "CANCELLED",
     "EXPIRED",

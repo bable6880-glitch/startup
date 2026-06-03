@@ -78,21 +78,23 @@ export function PotluckActions({ deal, onRefresh }: PotluckActionsProps) {
   const renderDangerousButton = (id: string, label: string, targetStatus: DealStatus, Icon: any, className = '') => {
     if (confirmingAction === id) {
       return (
-        <div className="flex gap-2 items-center flex-1 h-9">
-          <span className="text-xs text-gray-500 font-medium px-2 whitespace-nowrap">Are you sure?</span>
-          <button
-            onClick={() => updateStatus(targetStatus)}
-            disabled={isUpdating}
-            className="h-full px-3 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors"
-          >
-            Yes, {label.toLowerCase()}
-          </button>
-          <button
-            onClick={() => setConfirmingAction(null)}
-            className="h-full px-3 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
-          >
-            Cancel
-          </button>
+        <div className="absolute inset-0 z-20 flex gap-2 items-center justify-between h-9 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-sm rounded-xl px-1 animate-fade-in shadow-sm">
+          <span className="text-xs text-gray-700 dark:text-gray-300 font-bold px-2 whitespace-nowrap">End deal?</span>
+          <div className="flex items-center gap-1">
+              <button
+                onClick={() => updateStatus(targetStatus)}
+                disabled={isUpdating}
+                className="h-7 px-3 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors flex items-center justify-center min-w-[70px]"
+              >
+                {isUpdating ? "..." : "Yes, end"}
+              </button>
+              <button
+                onClick={() => setConfirmingAction(null)}
+                className="h-7 px-3 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+              >
+                Cancel
+              </button>
+          </div>
         </div>
       );
     }
@@ -202,7 +204,10 @@ export function PotluckActions({ deal, onRefresh }: PotluckActionsProps) {
             </button>
             {deal.status === 'ACTIVE' && (
               <button
-                onClick={() => setConfirmingAction('end_menu')}
+                onClick={() => {
+                  setConfirmingAction('end');
+                  setIsMenuOpen(false);
+                }}
                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
               >
                 <Trash2 className="w-4 h-4" /> End Early

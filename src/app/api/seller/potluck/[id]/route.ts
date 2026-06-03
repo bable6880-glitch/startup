@@ -21,7 +21,7 @@ export async function PATCH(
         
         // Allowed updates
         const updates: any = {};
-        if (body.status === 'ACTIVE' || body.status === 'CANCELLED') {
+        if (['ACTIVE', 'CANCELLED', 'PAUSED', 'SCHEDULED'].includes(body.status)) {
             updates.status = body.status;
             updates.updatedAt = new Date();
             
