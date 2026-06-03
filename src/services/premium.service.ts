@@ -167,7 +167,7 @@ export async function createSubscriptionCheckout(
 
     // MIGRATION: plan_configs has a single stripePriceId per row.
     // The legacy multi-price mapping (monthly/quarterly/yearly) is no longer needed.
-    if (!plan.stripePriceId || !plan.stripeProductId) {
+    if (!plan.stripePriceId) {
         throw new Error(`Plan ${plan.planId} is missing Stripe configuration. Check plan_configs table.`);
     }
     const stripePriceId = plan.stripePriceId;

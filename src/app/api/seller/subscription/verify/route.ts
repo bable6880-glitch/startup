@@ -5,7 +5,6 @@ import { db } from "@/lib/db";
 import { kitchens, subscriptions } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { forceActivateKitchen } from "@/services/premium.service";
-import { rateLimit } from "@/lib/redis/rate-limit"; // Assuming rate limiter exists, or we use a basic one
 
 export async function GET(request: NextRequest) {
     try {
@@ -63,7 +62,7 @@ export async function GET(request: NextRequest) {
             isVerified: true,
             paymentStatus: session.payment_status,
             kitchenStatus: kitchenRow.status,
-            plan: { tier: subRow?.planId ?? "Unknown", features: subRow?.planConfig?.features ?? [] },
+            plan: { tier: subRow?.planId ?? "Unknown" },
             redirectTo: "/dashboard"
         });
 
