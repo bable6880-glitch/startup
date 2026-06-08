@@ -143,7 +143,7 @@ export function DashboardSidebar({ kitchenName, collapsed, onToggle }: SidebarPr
                         {/* Nav items */}
                         <div style={{ display: "flex", flexDirection: "column" }}>
                             {group.links.map((link) => {
-                                const active = isActive(link.href, link.exact);
+                                const active = isActive(link.href, (link as any).exact);
                                 const Icon = link.icon;
                                 return (
                                     <Link
