@@ -6,6 +6,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter), sans-serif;
+  --font-montserrat: var(--font-montserrat-var), 'Montserrat', sans-serif;
 
   /* Brand */
   --color-primary-50: #fff7ed;
@@ -45,6 +46,25 @@
   --color-surface-hover: #fafafa;
   --color-surface-raised: #ffffff;
   --color-surface-overlay: rgba(0, 0, 0, 0.5);
+
+  /* ─── Frest Dashboard Tokens ─────────────────────────────────── */
+  --color-dash-bg:           #0F1726;
+  --color-dash-sidebar:      #161D31;
+  --color-dash-card:         #283046;
+  --color-dash-card2:        #1E2A3E;
+  --color-dash-border:       rgba(255,255,255,0.06);
+  --color-dash-purple:       #7367F0;
+  --color-dash-purple-light: #9E95F5;
+  --color-dash-success:      #28C76F;
+  --color-dash-warning:      #FF9F43;
+  --color-dash-danger:       #EA5455;
+  --color-dash-info:         #00CFE8;
+  --color-dash-text:         #D0D2D6;
+  --color-dash-muted:        #B4B7BD;
+  --color-dash-hint:         #676D7D;
+  --color-dash-divider:      rgba(255,255,255,0.08);
+  --color-dash-hover:        rgba(255,255,255,0.04);
+  --color-dash-active-nav:   rgba(115,103,240,0.16);
 }
 
 :root {
@@ -701,5 +721,115 @@ body {
     opacity: 1 !important;
     transition: none !important;
   }
+}
+
+
+/* ─── Dashboard (Frest) Global Styles ─────────────────────────────────────── */
+
+/* Dashboard scrollbar override */
+.dash-layout ::-webkit-scrollbar { width: 6px; height: 6px; }
+.dash-layout ::-webkit-scrollbar-track { background: #0F1726; }
+.dash-layout ::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 3px;
+}
+.dash-layout ::-webkit-scrollbar-thumb:hover {
+  background: rgba(115,103,240,0.5);
+}
+
+/* Dashboard text selection */
+.dash-layout ::selection {
+  background: rgba(115,103,240,0.3);
+  color: #D0D2D6;
+}
+
+/* Dashboard focus ring */
+.dash-layout :focus-visible {
+  outline: 2px solid #7367F0;
+  outline-offset: 2px;
+}
+
+/* Badge utility classes */
+.badge-purple { background: rgba(115,103,240,0.16); color: #9E95F5; border-radius: 4px; padding: 2px 10px; font-size: 11px; font-weight: 500; display: inline-block; }
+.badge-success { background: rgba(40,199,111,0.16);  color: #28C76F; border-radius: 4px; padding: 2px 10px; font-size: 11px; font-weight: 500; display: inline-block; }
+.badge-warning { background: rgba(255,159,67,0.16);  color: #FF9F43; border-radius: 4px; padding: 2px 10px; font-size: 11px; font-weight: 500; display: inline-block; }
+.badge-danger  { background: rgba(234,84,85,0.16);   color: #EA5455; border-radius: 4px; padding: 2px 10px; font-size: 11px; font-weight: 500; display: inline-block; }
+.badge-info    { background: rgba(0,207,232,0.16);   color: #00CFE8; border-radius: 4px; padding: 2px 10px; font-size: 11px; font-weight: 500; display: inline-block; }
+
+/* Dashboard card hover — subtle purple glow on border */
+.dash-card {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.dash-card:hover {
+  border-color: rgba(115,103,240,0.35) !important;
+  box-shadow: 0 4px 24px rgba(115,103,240,0.08);
+}
+
+/* Dark skeleton shimmer for dashboard */
+@keyframes dash-skeleton-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.dash-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: dash-skeleton-shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+/* Progress bar components */
+.dash-progress-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.dash-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+/* Sidebar nav item transitions */
+.dash-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  margin: 2px 12px;
+  color: #B4B7BD;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.dash-nav-item:hover {
+  background: rgba(115,103,240,0.12);
+  color: #7367F0;
+}
+.dash-nav-item.active {
+  background: rgba(115,103,240,0.16);
+  color: #7367F0;
+  font-weight: 600;
+}
+.dash-nav-item.active svg {
+  color: #7367F0;
+}
+
+/* Section header labels (OVERVIEW, MANAGEMENT style) */
+.dash-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.8px;
+  color: #676D7D;
+  text-transform: uppercase;
+  padding: 12px 20px 6px;
 }
 

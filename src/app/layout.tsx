@@ -3,8 +3,7 @@ import "./globals.css";
 import "leaflet/dist/leaflet.css";
 import { AuthProvider } from "@/lib/firebase/auth-context";
 import { CartProvider } from "@/lib/cart-context";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+import { RootLayoutClient } from "@/components/layout/RootLayoutClient";
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://smarttiffinfood.vercel.app'),
@@ -24,15 +23,20 @@ export const viewport = {
 };
 
 import { LocationProvider } from "@/lib/location-context";
-import { LocationModal } from "@/components/location/LocationModal";
-import { LocationBanner } from "@/components/location/LocationBanner";
 
-import { Inter } from "next/font/google";
+import { Inter, Montserrat } from "next/font/google";
 
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",
+});
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-montserrat-var",
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export default function RootLayout({
@@ -41,7 +45,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={inter.variable}>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${montserrat.variable}`}>
       <head>
         <meta name="google-site-verification" content="pc-7mt4zNiUbk0CsFxXoqMybykQ9ZbZH-GJpFgevx94" />
       </head>
@@ -49,11 +53,7 @@ export default function RootLayout({
         <AuthProvider>
           <CartProvider>
             <LocationProvider>
-              <Navbar />
-              <main className="flex-1">{children}</main>
-              <Footer />
-              <LocationModal />
-              <LocationBanner />
+              <RootLayoutClient>{children}</RootLayoutClient>
             </LocationProvider>
           </CartProvider>
         </AuthProvider>

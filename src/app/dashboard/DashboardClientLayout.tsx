@@ -2,20 +2,19 @@
 
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { SubscriptionGuard } from "@/components/dashboard/SubscriptionGuard";
-import { type ReactNode, useEffect, useState, useRef, useCallback } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { type ReactNode, useEffect, useState } from "react";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { IncomingOrderProvider } from "@/contexts/IncomingOrderContext";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const { user, getIdToken } = useAuth();
-    const router = useRouter();
-    const pathname = usePathname();
     const [kitchenId, setKitchenId] = useState<string | null>(null);
     const [kitchenName, setKitchenName] = useState<string>("Your Kitchen");
     const [kitchenStatus, setKitchenStatus] = useState<string | null>(null);
     const [kitchenFetchError, setKitchenFetchError] = useState(false);
 
+    // ── Existing kitchen fetch — untouched logic ───────────────────────────────
     useEffect(() => {
         const fetchKitchen = async () => {
             if (!user) return;
@@ -23,8 +22,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 const token = await getIdToken();
                 const res = await fetch("/api/kitchens?ownerId=me", {
                     headers: { Authorization: `Bearer ${token}` },
-                    signal: AbortSignal.timeout(10000), // 10 second max
-                    cache: 'no-store',
+                    signal: AbortSignal.timeout(10000),
+                    cache: "no-store",
                 });
                 if (res.ok) {
                     const data = await res.json();
@@ -42,19 +41,30 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         fetchKitchen();
     }, [user, getIdToken]);
 
+    // Derive display values for the shell (visual only — no logic change)
+    const userName = user?.name?.split(" ")[0] ?? "Chef";
+    const userInitial = user?.name?.[0]?.toUpperCase() ?? "C";
+
     return (
         <RoleGuard allowedRoles={["COOK", "ADMIN"]} redirectTo="/account">
             {/* SEO: Prevent search engines from indexing private seller pages */}
             <head>
                 <meta name="robots" content="noindex,nofollow" />
-                <title>Seller Dashboard – Manage Your Tiffin Service & Meal Delivery</title>
+                <title>Seller Dashboard – Manage Your Tiffin Service &amp; Meal Delivery</title>
             </head>
-            <SubscriptionGuard kitchenStatus={kitchenStatus} fetchError={kitchenFetchError}>
-                <IncomingOrderProvider kitchenId={kitchenId}>
-                    {children}
-                </IncomingOrderProvider>
-            </SubscriptionGuard>
+
+            {/* ── Frest Dark Shell (visual only — wraps existing guards/providers) ── */}
+            <DashboardShell
+                kitchenName={kitchenName}
+                userName={userName}
+                userInitial={userInitial}
+            >
+                <SubscriptionGuard kitchenStatus={kitchenStatus} fetchError={kitchenFetchError}>
+                    <IncomingOrderProvider kitchenId={kitchenId}>
+                        {children}
+                    </IncomingOrderProvider>
+                </SubscriptionGuard>
+            </DashboardShell>
         </RoleGuard>
     );
 }
-
