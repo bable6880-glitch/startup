@@ -7,27 +7,60 @@ import type { Metadata } from "next";
 import ExploreSEO from "./ExploreSEO";
 
 export const metadata: Metadata = {
-    title: "Explore Home Kitchens in Pakistan | Smart Tiffin – Find Home Cooked Meals Near You",
-    description: "Browse verified home kitchens across Pakistan. Find affordable home-cooked meals in Lahore, Karachi, Islamabad & Rawalpindi. Compare menus, pricing, and ratings. Order directly via WhatsApp. No commission.",
-    alternates: {
-        canonical: "https://smarttiffinfood.vercel.app/explore",
+  title: 'Explore Tiffin Services & Homemade Food in Pakistan | Smart Tiffin',
+  description:
+    'Explore homemade food delivery services, daily tiffin services, and affordable lunch box providers across Pakistan. Find trusted home cooks in Lahore, Islamabad, Karachi, and more.',
+  keywords: [
+    'tiffin service near me',
+    'home tiffin service',
+    'daily tiffin service',
+    'tiffin service Lahore',
+    'tiffin service Islamabad',
+    'monthly lunch service',
+    'lunch box delivery',
+    'mess services Pakistan',
+    'ghar ka khana delivery',
+    'homemade food delivery',
+    'student meal plans Pakistan',
+    'office lunch delivery',
+    'affordable tiffin service',
+  ],
+  openGraph: {
+    title: 'Explore Tiffin Services & Homemade Food in Pakistan | Smart Tiffin',
+    description:
+      'Find trusted home cooks offering daily tiffin service, monthly meal plans, and homemade food delivery in Lahore, Islamabad, Karachi, and across Pakistan.',
+    type: 'website',
+    locale: 'en_PK',
+    siteName: 'Smart Tiffin',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Explore Tiffin Services & Homemade Food | Smart Tiffin',
+    description:
+      'Discover daily tiffin services, monthly lunch plans, and homemade food delivery across Pakistan.',
+  },
+  alternates: {
+    canonical: 'https://smarttiffinfood.vercel.app/explore',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
     },
-    openGraph: {
-        title: "Explore Home Kitchens in Pakistan | Smart Tiffin",
-        description: "Browse verified home kitchens across Pakistan. Find affordable home-cooked meals in Lahore, Karachi, Islamabad & Rawalpindi.",
-        type: "website",
-        url: "https://smarttiffinfood.vercel.app/explore",
-    }
+  },
 };
 
 type Props = { searchParams: Promise<Record<string, string | undefined>> };
 
 async function fetchKitchens(params: Record<string, string | undefined>) {
     try {
-        // Build the query object the same way the API route does
         const queryParams: Record<string, string | undefined> = {
             city: params.city,
-            cuisine: params.q || params.cuisine, // map search query to cuisine filter
+            cuisine: params.q || params.cuisine,
             minRating: params.minRating,
             maxPrice: params.maxPrice,
             sort: params.sort,
@@ -35,13 +68,11 @@ async function fetchKitchens(params: Record<string, string | undefined>) {
             limit: "12",
         };
 
-        // Parse & validate with the same schema the API uses
         const parsed = kitchenQuerySchema.safeParse(queryParams);
         if (!parsed.success) {
             return { kitchens: [], total: 0, page: 1, limit: 12 };
         }
 
-        // Call the service directly — no HTTP round-trip
         return await listKitchens(parsed.data);
     } catch (error) {
         console.error("[Explore] Failed to fetch kitchens:", {
@@ -97,7 +128,6 @@ async function KitchenGrid({ searchParams }: { searchParams: Record<string, stri
                 ))}
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
                 <div className="mt-10 flex justify-center gap-2">
                     {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
@@ -139,22 +169,52 @@ export default async function ExplorePage({ searchParams }: Props) {
 
     return (
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-            {/* Header */}
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify({
+                  '@context': 'https://schema.org',
+                  '@type': 'CollectionPage',
+                  name: 'Explore Tiffin Services & Homemade Food in Pakistan',
+                  description:
+                    'Browse and discover homemade food delivery services, daily tiffin services, and affordable meal plans from trusted home cooks across Pakistan.',
+                  url: 'https://smarttiffinfood.vercel.app/explore',
+                  isPartOf: {
+                    '@type': 'WebSite',
+                    name: 'Smart Tiffin',
+                    url: 'https://smarttiffinfood.vercel.app',
+                  },
+                  about: {
+                    '@type': 'Service',
+                    name: 'Tiffin Service Pakistan',
+                    description:
+                      'Daily homemade food delivery and tiffin services across Pakistan including Lahore, Islamabad, Karachi, and Rawalpindi.',
+                    areaServed: [
+                      { '@type': 'City', name: 'Lahore' },
+                      { '@type': 'City', name: 'Islamabad' },
+                      { '@type': 'City', name: 'Rawalpindi' },
+                      { '@type': 'City', name: 'Karachi' },
+                      { '@type': 'City', name: 'Faisalabad' },
+                      { '@type': 'City', name: 'Multan' },
+                      { '@type': 'City', name: 'Peshawar' },
+                    ],
+                  },
+                }),
+              }}
+            />
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-neutral-900 dark:text-neutral-50">
-                    Explore Kitchens
+                    Explore Tiffin Services & Homemade Food in Pakistan
                 </h1>
                 <p className="mt-2 text-neutral-500 dark:text-neutral-400">
                     {params.city ? `Home kitchens in ${params.city}` : "Discover home kitchens across Pakistan"}
                 </p>
             </div>
 
-            {/* Search + Filters */}
             <div className="mb-8 relative z-[60]">
                 <SearchBar initialCity={params.city} initialQuery={params.q} compact />
             </div>
 
-            {/* Filter Pills */}
             <div className="mb-6 flex flex-wrap gap-2">
                 {["Pakistani", "Chinese", "Desi", "BBQ", "Biryani", "Vegetarian"].map((cuisine) => {
                     const isActive = params.cuisine === cuisine;
@@ -176,12 +236,13 @@ export default async function ExplorePage({ searchParams }: Props) {
                 })}
             </div>
 
-            {/* Kitchen Grid */}
+            {/* Kitchen Grid — inside Suspense for streaming; SEO article is outside and always visible */}
             <Suspense fallback={<GridSkeleton />}>
                 <KitchenGrid searchParams={params} />
             </Suspense>
 
-            {/* SEO Article Area */}
+            {/* SEO Article — rendered as static server HTML, NOT inside Suspense.
+                Googlebot sees this immediately in the initial response. */}
             <ExploreSEO />
         </div>
     );

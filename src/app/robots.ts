@@ -4,21 +4,29 @@ import { BASE_URL } from '@/config/site'
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
-      // ══ MAIN RULE ══
+      // ══ GOOGLEBOT & ALL LEGITIMATE CRAWLERS ══
       {
         userAgent: '*',
         allow: [
-          '/',          // homepage
-          '/explore',   // kitchen listing
-          '/kitchen/',  // individual kitchens
-          '/city/',     // city pages
-          '/about',
-          '/become-a-cook',
-          '/terms',
-          '/privacy',
+          '/',             // homepage
+          '/explore',      // kitchen listing
+          '/kitchen/',     // individual kitchen profiles
+          '/city/',        // city pages
+          '/about',        // about page
+          '/become-a-cook',// cook sign-up
+          '/terms',        // legal
+          '/privacy',      // legal
+          '/premium',      // premium plans page
+          // Vanity SEO pages — exact keyword match landing pages
+          '/tiffin-service-lahore',
+          '/tiffin-service-karachi',
+          '/tiffin-service-islamabad',
+          '/tiffin-service-rawalpindi',
+          '/tiffin-service-faisalabad',
+          '/tiffin-service-multan',
         ],
         disallow: [
-          // Auth - no SEO value
+          // Auth — no SEO value
           '/login',
           '/register',
           '/complete-profile',
@@ -36,15 +44,16 @@ export default function robots(): MetadataRoute.Robots {
           // Seller routes
           '/seller',
           '/seller/',
-          // API - never crawl
+          // API — never crawl
           '/api/',
           // Next.js internals
           '/_next/',
         ],
       },
+
       // ══ BLOCK AI TRAINING CRAWLERS ══
-      // Protects your content from being used
-      // to train AI models without permission
+      // These crawlers scrape content to train LLMs — block them
+      // but keep Google, Bing, and other search engines fully allowed.
       {
         userAgent: 'GPTBot',
         disallow: ['/'],

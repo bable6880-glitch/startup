@@ -11,19 +11,21 @@ import Image from "next/image";
 import { HeroBackground } from "@/components/home/LandingBackground";
 
 export const metadata: Metadata = {
-  title: 'Smart Tiffin – Daily Tiffin Service in Lahore, Karachi & Islamabad | From PKR 200',
-  description: 'Find affordable daily tiffin service near you. Fresh ghar ka khana from trusted home cooks in Lahore, Karachi, Islamabad & Rawalpindi. Order via WhatsApp from PKR 200.',
+  title: 'Smart Tiffin – Homemade Food & Daily Tiffin Service in Pakistan',
+  description: 'Find trusted home cooks offering daily tiffin service, monthly lunch plans, and homemade food delivery across Pakistan. Serving students, professionals, and families in Lahore, Islamabad, Karachi, and more.',
   keywords: [
-    'tiffin service lahore',
-    'ghar ka khana karachi',
-    'daily tiffin pakistan',
-    'lunchbox service gulberg',
-    'home cooked meals pakistan',
-    'tiffin service islamabad',
-    'affordable tiffin rawalpindi',
-    'smart tiffin menu',
-    'home food delivery pakistan',
-    'monthly tiffin service lahore',
+    'tiffin service Pakistan',
+    'homemade food delivery',
+    'daily tiffin service',
+    'tiffin service Lahore',
+    'tiffin service Islamabad',
+    'monthly lunch service',
+    'home cooked food delivery',
+    'ghar ka khana',
+    'student tiffin service',
+    'office lunch delivery',
+    'lunch box service',
+    'meal subscription Pakistan',
   ],
   authors: [{ name: 'Smart Tiffin' }],
   creator: 'Smart Tiffin',
@@ -47,8 +49,8 @@ export const metadata: Metadata = {
     locale: 'en_PK',
     url: 'https://smarttiffinfood.vercel.app',
     siteName: 'Smart Tiffin',
-    title: 'Smart Tiffin – Affordable Home Cooked Meals in Pakistan',
-    description: 'Order daily fresh ghar ka khana from home cooks near you. Starting from PKR 200. No app needed.',
+    title: 'Smart Tiffin – Homemade Food & Daily Tiffin Service in Pakistan',
+    description: 'Connect with trusted home cooks for daily tiffin service, monthly meal plans, and homemade food delivery across Pakistan.',
     images: [
       {
         url: 'https://smarttiffinfood.vercel.app/api/og',
@@ -60,23 +62,22 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Smart Tiffin – Daily Tiffin Service from PKR 200',
-    description: 'Fresh ghar ka khana from trusted home cooks in Lahore, Karachi, Islamabad.',
+    title: 'Smart Tiffin – Homemade Food & Daily Tiffin Service in Pakistan',
+    description: 'Find daily tiffin services and homemade food delivery across Pakistan.',
     images: ['https://smarttiffinfood.vercel.app/api/og'],
   },
 }
 
 const howItWorks = [
-  { step: "1", title: "Browse", desc: "Explore kitchens in your city. No login required." },
-  { step: "2", title: "Choose", desc: "Pick your favorite meals from the menu." },
-  { step: "3", title: "Contact", desc: "Connect directly with the cook via WhatsApp." },
-  { step: "4", title: "Enjoy", desc: "Fresh home-cooked meal delivered to your door." },
+  { step: "1", title: "Browse Available Cooks", desc: "Explore home cooks and food providers available in your area." },
+  { step: "2", title: "View Menus and Packages", desc: "Review meal options, pricing, and available packages." },
+  { step: "3", title: "Connect Directly", desc: "Contact cooks directly through WhatsApp for quick communication." },
+  { step: "4", title: "Enjoy Fresh Meals", desc: "Receive freshly prepared homemade food delivered to your location." },
 ];
 
 export const revalidate = 3600;
 
 export default async function HomePage() {
-
   const organizationSchema = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -103,96 +104,24 @@ export default async function HomePage() {
     '@type': 'WebSite',
     name: 'Smart Tiffin',
     url: 'https://smarttiffinfood.vercel.app',
-    description: 'Find daily tiffin service near you in Pakistan',
+    description: 'Smart Tiffin connects customers with home cooks offering daily tiffin services, monthly meal plans, and homemade food delivery across Pakistan.',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate:
-          'https://smarttiffinfood.vercel.app/explore?q={search_term_string}'
+        urlTemplate: 'https://smarttiffinfood.vercel.app/explore?q={search_term_string}'
       },
       'query-input': 'required name=search_term_string'
     }
   };
 
-  const faqSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: 'What is Smart Tiffin?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Smart Tiffin is Pakistan\'s home food marketplace that connects customers with trusted home cooks offering daily fresh meals in Lahore, Karachi, Islamabad and Rawalpindi.'
-        }
-      },
-      {
-        '@type': 'Question',
-        name: 'How much does a tiffin service cost in Lahore?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Most meals on Smart Tiffin range between PKR 200–300 per serving. Full day plans (lunch + dinner) range from PKR 400–600 depending on the cook and menu.'
-        }
-      },
-      {
-        '@type': 'Question',
-        name: 'Do I need an app to order from Smart Tiffin?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'No. You can browse kitchens and order directly via WhatsApp without downloading any app.'
-        }
-      },
-      {
-        '@type': 'Question',
-        name: 'Is the food on Smart Tiffin homemade?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Yes. All meals are prepared in home kitchens by verified local cooks using fresh daily ingredients.'
-        }
-      },
-      {
-        '@type': 'Question',
-        name: 'How do I become a home cook on Smart Tiffin?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Register your kitchen for free at smarttiffinfood.vercel.app/become-a-cook. List your menu, set your prices, and start receiving orders via WhatsApp.'
-        }
-      },
-      {
-        '@type': 'Question',
-        name: 'Which cities does Smart Tiffin operate in?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: 'Smart Tiffin currently operates in Lahore, Karachi, Islamabad, Rawalpindi, Faisalabad, and Multan. More cities coming soon.'
-        }
-      }
-    ]
-  };
-
   return (
     <div className="flex flex-col">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(organizationSchema)
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(websiteSchema)
-        }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(faqSchema)
-        }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
+      
       {/* ── Hero ─────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden">
-        {/* Lightweight SVG + CSS background — replaces heavy blur-3xl blobs */}
         <HeroBackground />
 
         <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-36">
@@ -202,18 +131,15 @@ export default async function HomePage() {
             </span>
 
             <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 sm:text-5xl lg:text-6xl animate-slide-up dark:text-neutral-50 leading-[1.15]">
-              Affordable 😊<br className="hidden sm:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 via-accent-500 to-primary-600 animate-gradient-x bg-[length:200%_auto]">
-                Daily Tiffin Service  in Pakistan
-              </span>{" "}
-
+                Smart Tiffin – Homemade Food & Daily Tiffin Service in Pakistan
+              </span>
             </h1>
 
-            <p className="mt-6 text-lg text-neutral-600 leading-relaxed max-w-2xl mx-auto animate-slide-up dark:text-neutral-300" style={{ animationDelay: "0.1s" }}>
-              Looking for an affordable tiffin service in Pakistan?
-              Smart Tiffin connects you with trusted home cooks offering healthy homemade meals from PKR 200.
-              Browse menus, read reviews, and order directly on WhatsApp — no app, no commission.
-            </p>
+            <div className="mt-6 text-lg text-neutral-600 leading-relaxed max-w-2xl mx-auto animate-slide-up dark:text-neutral-300 space-y-4 text-left sm:text-center" style={{ animationDelay: "0.1s" }}>
+              <p>Finding healthy, affordable, and delicious homemade food every day can be challenging, especially for students, office workers, bachelors, hostellers, and families with busy schedules. Smart Tiffin is designed to solve this problem by connecting people with trusted home cooks who prepare fresh meals and deliver them directly to customers. Whether you are looking for a reliable tiffin service in Lahore, a daily lunch delivery in Islamabad, a monthly meal plan in Karachi, or affordable ghar ka khana anywhere in Pakistan, Smart Tiffin helps you discover homemade food options that suit your lifestyle and budget.</p>
+              <p>Unlike traditional food delivery platforms that focus primarily on restaurants and fast food, Smart Tiffin is dedicated to homemade meals prepared with care in home kitchens. Our goal is to make nutritious, home-cooked food accessible to everyone while empowering talented home chefs to reach more customers.</p>
+            </div>
 
             {/* Search Bar */}
             <div className="mt-10 animate-slide-up relative z-[60]" style={{ animationDelay: "0.2s" }}>
@@ -244,13 +170,13 @@ export default async function HomePage() {
         <FeaturedKitchens />
       </Suspense>
 
-      {/* ── SEO Image 1: Home Cook Preparing Food ─────────────────── */}
+      {/* ── SEO Image 1 ─────────────────── */}
       <SeoImageSection
         src="/images/seo/home-cook-preparing-fresh-ghar-ka-khana.jpg"
-        alt="Home cooked tiffin preparation in Lahore kitchen with fresh roti and curry"
-        title="Home Cook Preparing Fresh Ghar Ka Khana"
-        caption="Fresh home cooked meals prepared daily by trusted home chefs"
-        description="A home cook preparing fresh roti and curry in a clean Pakistani kitchen. Smart Tiffin connects you with trusted home chefs offering daily tiffin services in Lahore, Karachi, and Islamabad. Enjoy healthy, homemade ghar ka khana cooked with fresh ingredients and delivered to your doorstep."
+        alt="Fresh Homemade Food Delivered Daily"
+        title="Fresh Homemade Food Delivered Daily"
+        caption="Our home cooks prepare meals fresh every day using quality ingredients and traditional cooking methods."
+        description="In today's fast-paced world, many people struggle to find time to cook healthy meals. Students living in hostels, professionals working long office hours, and individuals living away from their families often rely on expensive restaurant food or unhealthy fast-food options. Smart Tiffin bridges this gap by providing access to daily homemade meal services. Through our platform, users can browse local cooks, explore meal packages, compare options, and connect directly with food providers."
         priority
       />
 
@@ -259,15 +185,15 @@ export default async function HomePage() {
         <CityCards />
       </Suspense>
 
-      {/* ── How It Works ────────────────────────────────────────── */}
+      {/* ── How It Works -> Simple and Convenient Ordering ────────────────────────────────────────── */}
       <section className="relative bg-neutral-50 dark:bg-neutral-900">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl dark:text-neutral-50">
-              How It Works
+              Simple and Convenient Ordering
             </h2>
             <p className="mt-2 text-neutral-500 dark:text-neutral-400">
-              Getting home-cooked food is simple
+              Ordering homemade food should be easy. Smart Tiffin simplifies the process through a straightforward experience.
             </p>
           </div>
 
@@ -286,38 +212,41 @@ export default async function HomePage() {
               </div>
             ))}
           </div>
+          <div className="mt-8 text-center text-sm text-neutral-500 dark:text-neutral-400 max-w-3xl mx-auto">
+            This direct communication model allows customers and cooks to coordinate efficiently and build long-term relationships.
+          </div>
         </div>
       </section>
 
-      {/* ── SEO Image 2: Tiffin Delivery Service ──────────────────── */}
+      {/* ── SEO Image 2 ──────────────────── */}
       <SeoImageSection
         src="/images/seo/professional-tiffin-delivery.png"
-        alt="Tiffin delivery service in Lahore with homemade food lunchbox"
-        title="Affordable Tiffin Delivery in Lahore"
-        caption="Affordable lunchbox delivery from home cooks near you"
-        description="A customer receiving a homemade tiffin lunchbox from a local delivery partner in Lahore. Smart Tiffin makes it easy to order affordable lunchbox services in Gulberg and across Pakistan, connecting users directly with home cooks for fresh daily meals."
+        alt="Affordable Lunch Delivery for Office Workers"
+        title="Affordable Lunch Delivery for Office Workers"
+        caption="Busy professionals often struggle to prepare meals before work or find healthy lunch options during office hours."
+        description="Smart Tiffin helps office workers connect with local cooks offering daily lunch delivery services. Whether you work in a corporate office, government institution, educational organization, or private company, finding a dependable lunch provider can improve your daily routine. Instead of skipping meals or relying on fast food, users can enjoy fresh homemade lunches delivered directly to their workplace."
         reverse
       />
 
-      {/* ── SEO Section 1: Why Switch ─────────────────────────────── */}
+      {/* ── SEO Section 1: Why Homemade Food Is Better Than Fast Food ─────────────────────────────── */}
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center mb-12">
           <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl dark:text-neutral-50">
-            Why Choose Home Cooked Tiffin Instead of Restaurant Food?
+            Why Homemade Food Is Better Than Fast Food
           </h2>
           <p className="mt-4 text-neutral-600 dark:text-neutral-400">
-            Switching to a daily tiffin service offers health and financial benefits.
+            Many people are becoming more conscious of their health and dietary habits. Restaurant meals and fast-food options often contain excessive oil, salt, preservatives, and calories.
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           <div className="bg-white dark:bg-neutral-800 p-8 rounded-2xl shadow-sm border border-neutral-200/60 dark:border-neutral-700">
             <ul className="space-y-4">
               {[
-                "100% pure ingredients with no artificial food colors",
-                "Cooked in hygienic home kitchens, not commercial setups",
-                "Affordable daily pricing (Starting from PKR 200)",
-                "Less oil and balanced spices for everyday eating",
-                "Direct connection with local home chefs in your area"
+                "Better Ingredients: Home cooks often use fresh ingredients and prepare food in smaller batches, resulting in higher-quality meals.",
+                "Balanced Nutrition: Traditional homemade meals usually include balanced portions of protein, vegetables, carbohydrates, and healthy fats.",
+                "Affordable Pricing: Homemade food is often more economical than ordering from restaurants every day.",
+                "Familiar Taste: Many customers prefer homemade meals because they resemble the food prepared by their families.",
+                "Healthier Lifestyle: Regular consumption of home-cooked meals can contribute to healthier eating habits and better overall wellness."
               ].map((item, idx) => (
                 <li key={idx} className="flex items-start gap-3">
                   <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 dark:bg-primary-900/30 dark:text-primary-400">✓</span>
@@ -327,32 +256,30 @@ export default async function HomePage() {
             </ul>
           </div>
           <div className="hidden md:block rounded-2xl overflow-hidden shadow-lg">
-            <Image src="/images/seo/professional-tiffin-lunchbox.png" alt="Home cooked tiffin delivery benefits" width={800} height={450} className="w-full h-full object-cover aspect-video" />
+            <Image src="/images/seo/professional-tiffin-lunchbox.png" alt="Why Homemade Food Is Better Than Fast Food" width={800} height={450} className="w-full h-full object-cover aspect-video" />
           </div>
         </div>
       </section>
 
-      {/* ── SEO Section 2: Daily Menu ─────────────────────────────── */}
+      {/* ── SEO Section 2: Perfect for Every Lifestyle ─────────────────────────────── */}
       <section className="relative bg-neutral-50 dark:bg-neutral-900 py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl dark:text-neutral-50">
-              Typical Daily Tiffin Menu
+              Perfect for Every Lifestyle
             </h2>
             <p className="mt-2 text-neutral-500 dark:text-neutral-400">
-              Fresh ghar ka khana delivered to your office or home in Gulberg & Lahore.
+              Smart Tiffin serves a wide range of customers.
             </p>
           </div>
-          <ul className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-center">
             {[
-              "Chicken Karahi & Roti",
-              "Daal Chawal & Salad",
-              "Aloo Gosht",
-              "Mix Sabzi",
-              "Biryani & Raita",
-              "Kari Pakora",
-              "Qeema Karelay",
-              "White Chana"
+              "Students: Affordable meal plans for university and college students.",
+              "Professionals: Convenient lunch and dinner delivery for busy office workers.",
+              "Families: Reliable meal solutions for households needing occasional or regular support.",
+              "Bachelors: Home-style meals for individuals living away from family.",
+              "Seniors: Nutritious homemade food for older adults seeking convenient meal options.",
+              "Remote Workers: Fresh meals delivered directly to your home workspace."
             ].map((dish, idx) => (
               <li key={idx} className="bg-white dark:bg-neutral-800 p-4 rounded-xl border border-neutral-200/50 dark:border-neutral-700 shadow-sm text-neutral-700 dark:text-neutral-300 font-medium">
                 {dish}
@@ -362,67 +289,77 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── SEO Section 3: Pricing Table ──────────────────────────── */}
+      {/* ── SEO Section 3: Find a Tiffin Service Near You ──────────────────────────── */}
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
           <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl dark:text-neutral-50">
-            Affordable Tiffin Pricing Plans
+            Find a Tiffin Service Near You
           </h2>
           <p className="mt-2 text-neutral-500 dark:text-neutral-400">
-            Transparent pricing directly from cooks. No hidden fees.
+            Many people search online for terms like:
           </p>
         </div>
-        <div className="overflow-x-auto rounded-2xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-neutral-50 dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700">
-                <th className="p-4 font-semibold text-neutral-900 dark:text-neutral-100">Plan Type</th>
-                <th className="p-4 font-semibold text-neutral-900 dark:text-neutral-100">Description</th>
-                <th className="p-4 font-semibold text-neutral-900 dark:text-neutral-100">Estimated Price</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
-              <tr className="bg-white dark:bg-neutral-900">
-                <td className="p-4 font-medium text-neutral-900 dark:text-neutral-100">Single Meal</td>
-                <td className="p-4 text-neutral-600 dark:text-neutral-400">One-time lunch or dinner box</td>
-                <td className="p-4 text-primary-600 font-semibold dark:text-primary-400">PKR 200 - 350</td>
-              </tr>
-              <tr className="bg-white dark:bg-neutral-900">
-                <td className="p-4 font-medium text-neutral-900 dark:text-neutral-100">Daily Lunch Plan</td>
-                <td className="p-4 text-neutral-600 dark:text-neutral-400">Monthly lunch delivery to office</td>
-                <td className="p-4 text-primary-600 font-semibold dark:text-primary-400">PKR 5,000 - 8,000/mo</td>
-              </tr>
-              <tr className="bg-white dark:bg-neutral-900">
-                <td className="p-4 font-medium text-neutral-900 dark:text-neutral-100">Full Day Tiffin</td>
-                <td className="p-4 text-neutral-600 dark:text-neutral-400">Lunch and Dinner combined</td>
-                <td className="p-4 text-primary-600 font-semibold dark:text-primary-400">PKR 10,000 - 15,000/mo</td>
-              </tr>
-              <tr className="bg-white dark:bg-neutral-900">
-                <td className="p-4 font-medium text-neutral-900 dark:text-neutral-100">Diet/Healthy Plan</td>
-                <td className="p-4 text-neutral-600 dark:text-neutral-400">Customized low-calorie meals</td>
-                <td className="p-4 text-primary-600 font-semibold dark:text-primary-400">Varies by Kitchen</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="flex flex-wrap justify-center gap-3 mb-8">
+            {[
+              "Tiffin service near me",
+              "Home tiffin service",
+              "Food tiffin delivery",
+              "Daily lunch delivery",
+              "Lunch box service",
+              "Monthly lunch service",
+              "Daily tiffin service",
+              "Homemade food delivery",
+              "Mess services",
+              "Ghar ka khana"
+            ].map((term, idx) => (
+              <span key={idx} className="bg-white dark:bg-neutral-800 p-3 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm text-neutral-700 dark:text-neutral-300 font-medium text-sm">
+                {term}
+              </span>
+            ))}
         </div>
+        <p className="text-center text-neutral-600 dark:text-neutral-400 max-w-3xl mx-auto">
+          Smart Tiffin helps connect these users with local food providers offering reliable homemade meal solutions. As more cooks join our platform, customers gain access to a wider variety of cuisines, meal plans, and delivery options.
+        </p>
       </section>
 
-      {/* ── SEO Section 4: FAQ ────────────────────────────────────── */}
+      {/* ── SEO Section 4: Remaining Content via FAQ-style layout ────────────────────────────────────── */}
       <section className="relative bg-neutral-50 dark:bg-neutral-900 py-16">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl dark:text-neutral-50">
-              Frequently Asked Questions
+              Discover More About Smart Tiffin
             </h2>
           </div>
           <div className="space-y-4">
             {[
-              { q: "What is Smart Tiffin?", a: "Smart Tiffin is Pakistan's home food marketplace that connects customers with trusted home cooks offering daily fresh meals in Lahore, Karachi, Islamabad and Rawalpindi." },
-              { q: "How much does a tiffin service cost in Lahore?", a: "Most meals on Smart Tiffin range between PKR 200–300 per serving. Full day plans (lunch + dinner) range from PKR 400–600 depending on the cook and menu." },
-              { q: "Do I need an app to order from Smart Tiffin?", a: "No. You can browse kitchens and order directly via WhatsApp without downloading any app." },
-              { q: "Is the food on Smart Tiffin homemade?", a: "Yes. All meals are prepared in home kitchens by verified local cooks using fresh daily ingredients." },
-              { q: "How do I become a home cook on Smart Tiffin?", a: "Register your kitchen for free at smarttiffinfood.vercel.app/become-a-cook. List your menu, set your prices, and start receiving orders via WhatsApp." },
-              { q: "Which cities does Smart Tiffin operate in?", a: "Smart Tiffin currently operates in Lahore, Karachi, Islamabad, Rawalpindi, Faisalabad, and Multan. More cities coming soon." }
+              { 
+                q: "Daily Tiffin Service for Students", 
+                a: "Thousands of students across Pakistan move away from home every year to attend universities and colleges. One of the biggest challenges they face is finding affordable and healthy food on a daily basis. Smart Tiffin helps students discover budget-friendly tiffin services that provide homemade meals throughout the month. Instead of spending money on expensive restaurant food, students can subscribe to affordable meal plans prepared by experienced home cooks.\n\nLiving situations: University hostels, Private hostels, Shared apartments, Rented accommodations, Student residences.\n\nServices: Daily lunch delivery, Daily dinner delivery, Weekly meal plans, Monthly food subscriptions, Affordable meal packages, Traditional homemade dishes.\n\nBy choosing homemade food, students can enjoy meals that are healthier, more affordable, and more similar to the food they enjoy at home." 
+              },
+              { 
+                q: "Monthly Lunch Service and Meal Plans", 
+                a: "One of the most popular options among our users is the monthly lunch service. Monthly meal subscriptions eliminate the need to place food orders every day and help customers maintain a consistent meal schedule.\n\nAdvantages: Cost-effective pricing, Reliable daily delivery, Consistent food quality, Time savings, Convenient scheduling, Personalized meal preferences.\n\nWhether you need lunch, dinner, or complete daily meal coverage, Smart Tiffin helps you find providers offering flexible subscription plans. Many customers prefer monthly plans because they simplify meal management and reduce daily decision-making." 
+              },
+              { 
+                q: "Tiffin Service in Lahore", 
+                a: "Lahore is one of Pakistan's largest cities and has a growing demand for homemade food delivery services. Students, professionals, and families frequently search for dependable tiffin services that provide fresh meals at affordable prices.\n\nServices: Daily tiffin service in Lahore, Monthly lunch service in Lahore, Homemade food delivery in Lahore, Office lunch delivery, Student meal plans, Family meal packages.\n\nAreas served: Gulberg, Johar Town, DHA, Model Town, Wapda Town, Bahria Town, and nearby areas.\n\nSmart Tiffin aims to connect you with reliable homemade food providers wherever you are in Lahore." 
+              },
+              { 
+                q: "Tiffin Service in Islamabad", 
+                a: "Islamabad has a large population of students, government employees, and professionals seeking healthy meal options. Many residents prefer homemade food over restaurant meals due to quality, hygiene, and affordability.\n\nServices: Tiffin service in Islamabad, Daily lunch delivery, Homemade food delivery, Monthly food subscriptions, Student meal plans, Office meal services.\n\nAreas served: G-13, G-11, G-10, F-11, F-10, E-11, H-13, Bahria Town, and surrounding areas." 
+              },
+              { 
+                q: "Homemade Food Delivery Across Pakistan", 
+                a: "Smart Tiffin is not limited to one city. Our vision is to make homemade food delivery accessible across Pakistan.\n\nCities: Lahore, Islamabad, Rawalpindi, Karachi, Faisalabad, Multan, Peshawar, Sialkot, Gujranwala, Abbottabad.\n\nAs our community continues to grow, more home cooks and food providers join the platform to serve customers in different regions." 
+              },
+              { 
+                q: "Support Local Home Cooks", 
+                a: "Smart Tiffin is more than a food platform. It is a community that supports talented home cooks and small food businesses. Many individuals possess exceptional cooking skills but struggle to reach customers. Our platform helps them showcase their menus, connect with customers, and grow their businesses.\n\nImpact: Support local entrepreneurs, Empower women-led businesses, Promote home-based kitchens, Strengthen local communities, Create economic opportunities.\n\nThis creates a win-win situation for both food providers and customers." 
+              },
+              { 
+                q: "Our Mission", 
+                a: "Our mission is simple: make homemade food accessible, affordable, and convenient for everyone in Pakistan. We believe that everyone deserves access to healthy, home-cooked meals regardless of their schedule, location, or lifestyle. By connecting customers with trusted home cooks, Smart Tiffin creates opportunities for both food lovers and culinary entrepreneurs." 
+              }
             ].map((faq, idx) => (
               <details key={idx} className="group bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 open:shadow-sm">
                 <summary className="flex cursor-pointer items-center justify-between p-6 font-semibold text-neutral-900 dark:text-neutral-100 marker:content-none">
@@ -433,8 +370,8 @@ export default async function HomePage() {
                     </svg>
                   </span>
                 </summary>
-                <div className="px-6 pb-6 text-neutral-600 dark:text-neutral-400">
-                  <p>{faq.a}</p>
+                <div className="px-6 pb-6 text-neutral-600 dark:text-neutral-400 whitespace-pre-line">
+                  {faq.a}
                 </div>
               </details>
             ))}
@@ -449,11 +386,14 @@ export default async function HomePage() {
       <section className="bg-gradient-to-r from-primary-500 to-primary-600">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl font-bold text-white sm:text-3xl">
-            Start Ordering Fresh Ghar Ka Khana Today
+            Start Exploring Today
           </h2>
-          <p className="mt-3 text-primary-100 max-w-lg mx-auto">
-            Find the best local home cooks near you and enjoy affordable, healthy daily meals.
+          <p className="mt-4 text-primary-100 max-w-2xl mx-auto leading-relaxed">
+            Whether you are searching for a daily tiffin service, monthly lunch plan, homemade food delivery, lunch box service, or affordable ghar ka khana, Smart Tiffin helps you discover meal options that fit your needs. Browse available home cooks, explore meal packages, and connect directly with providers to enjoy fresh homemade food every day.
           </p>
+          <div className="mt-6 text-sm text-white/80 font-medium tracking-wide">
+            Smart Tiffin is your trusted platform for homemade food delivery, daily lunch service, monthly meal plans, and affordable tiffin services across Pakistan.
+          </div>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link
               href="/explore"

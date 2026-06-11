@@ -6,36 +6,231 @@ export default function ExploreSEO() {
         <article className="mt-20 pt-16 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 rounded-t-[3rem]">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 space-y-20">
                 
-                {/* Intro Section */}
+                {/* 1. Intro Section */}
                 <section className="text-center space-y-6">
                     <span className="inline-block rounded-full bg-primary-50 dark:bg-primary-900/30 px-3 py-1 text-sm font-semibold text-primary-600 dark:text-primary-400">
-                        Pakistan&apos;s Largest Food Directory
+                        Smart Tiffin Explorer
                     </span>
                     <h2 className="text-3xl md:text-5xl font-extrabold text-neutral-900 dark:text-white tracking-tight leading-tight">
-                        Explore Home Kitchens Across Pakistan <br className="hidden md:block" />
-                        <span className="text-primary-500">Fresh Tiffin Service in Every City</span>
+                        Welcome to Smart Tiffin Explorer
                     </h2>
                     <p className="text-lg text-neutral-600 dark:text-neutral-400 leading-relaxed max-w-2xl mx-auto">
-                        Discover the best home cooks offering fresh tiffin service in your city. Compare menus, pricing, and real customer ratings before placing your order. Smart Tiffin connects you with trusted home kitchens in Lahore, Karachi, Islamabad, and Rawalpindi &mdash; all just a WhatsApp message away.
+                        Welcome to Smart Tiffin Explorer — your trusted place to discover homemade food delivery services, daily tiffin services, and affordable lunch box providers across Pakistan.
                     </p>
                     <p className="text-lg font-medium text-neutral-800 dark:text-neutral-200">
-                        Whether you want daily lunch, weekly dinner, or a one-time family meal, our directory helps you find the perfect home cook near you. <span className="underline decoration-primary-300 decoration-2 underline-offset-4">No apps. No registration. No middleman fees.</span>
+                        If you are searching for a reliable tiffin service in Lahore, Islamabad, Karachi, Rawalpindi, or any nearby area, this page helps you quickly find home cooks offering fresh, hygienic, and budget-friendly meals delivered daily to your home, office, or hostel.
+                    </p>
+                    <p className="text-lg font-medium text-neutral-800 dark:text-neutral-200">
+                        Instead of spending time searching randomly for food options, Smart Tiffin Explorer brings all home tiffin services, monthly meal plans, and daily lunch delivery providers into one place so you can compare and choose easily.
                     </p>
                 </section>
 
-                {/* How It Works */}
+                {/* 2. Find Trusted Home Tiffin Services Near You */}
+                <section>
+                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Find Trusted Home Tiffin Services Near You</h3>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">Many people search online for phrases like:</p>
+                    <ul className="space-y-2 mb-6 ml-4 list-disc list-outside text-neutral-700 dark:text-neutral-300">
+                        <li>tiffin service near me</li>
+                        <li>home tiffin service</li>
+                        <li>daily tiffin service</li>
+                        <li>lunch box delivery</li>
+                        <li>mess services near me</li>
+                        <li>ghar ka khana delivery</li>
+                        <li>affordable lunch service</li>
+                    </ul>
+                    <p className="text-neutral-600 dark:text-neutral-400 mb-4">Smart Tiffin helps you connect with verified home cooks who prepare fresh meals daily and deliver them directly to customers.</p>
+                    <p className="text-neutral-600 dark:text-neutral-400">Whether you are a student, office worker, or someone living away from home, you can easily find a home tiffin service near your location and enjoy healthy meals without the stress of cooking.</p>
+                </section>
+
+                {/* 3. Daily Lunch Delivery Services */}
+                <section>
+                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Daily Lunch Delivery Services</h3>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">If you are tired of fast food and unhealthy restaurant meals, explore our daily lunch delivery services designed for convenience and nutrition.</p>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">Home cooks listed on Smart Tiffin prepare fresh meals every day, offering:</p>
+                    <ul className="space-y-2 mb-6">
+                        {[
+                            "Fresh homemade lunch delivery",
+                            "Traditional Pakistani meals",
+                            "Balanced daily meal options",
+                            "Affordable per-day pricing",
+                            "Custom meal preferences",
+                            "Hygienic kitchen preparation"
+                        ].map((item, i) => (
+                            <li key={i} className="flex items-center gap-2 text-neutral-700 dark:text-neutral-200">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500" /> {item}
+                            </li>
+                        ))}
+                    </ul>
+                    <p className="mb-4 font-medium text-neutral-800 dark:text-neutral-200">Ideal for: Office employees, University students, Hostel residents, Freelancers and remote workers, Busy families.</p>
+                    <p className="text-neutral-600 dark:text-neutral-400">Instead of wasting time on cooking or waiting for restaurant food, you can enjoy fresh homemade lunch delivered to your doorstep or workplace.</p>
+                </section>
+
+                {/* 4. Monthly Lunch Service & Meal Plans */}
+                <section>
+                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Monthly Lunch Service & Meal Plans</h3>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">One of the most popular choices among users is the monthly lunch service.</p>
+                    <p className="mb-6 text-neutral-600 dark:text-neutral-400">Monthly tiffin plans allow you to subscribe to a full month of homemade meals without ordering every day. This is the best option for people who want consistency, affordability, and convenience.</p>
+                    
+                    <h4 className="text-lg font-bold text-primary-600 mb-3 ml-2 border-l-4 border-primary-500 pl-3">Benefits of Monthly Meal Plans</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                        {[
+                            "Fixed monthly cost", "No daily ordering hassle", "Guaranteed meal delivery", 
+                            "Custom meal schedules", "Reliable home cook service", "Budget-friendly pricing"
+                        ].map((item, i) => (
+                            <div key={i} className="flex items-center gap-2 text-neutral-700 dark:text-neutral-200">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500" /> {item}
+                            </div>
+                        ))}
+                    </div>
+
+                    <h4 className="text-lg font-bold text-primary-600 mb-3 ml-2 border-l-4 border-primary-500 pl-3">Popular packages</h4>
+                    <ul className="space-y-2 mb-6 ml-4 list-disc list-outside text-neutral-700 dark:text-neutral-300">
+                        <li>20-day lunch plans</li>
+                        <li>26-day meal subscriptions</li>
+                        <li>Lunch + dinner packages</li>
+                        <li>Student meal bundles</li>
+                        <li>Office lunch subscriptions</li>
+                    </ul>
+                    <p className="text-neutral-600 dark:text-neutral-400">If you are searching for monthly lunch service in Lahore or Islamabad, this platform helps you compare options easily.</p>
+                </section>
+
+                {/* 5. Tiffin Service in Lahore */}
+                <section>
+                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Tiffin Service in Lahore</h3>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">Lahore has one of the highest demands for homemade food and tiffin services in Pakistan. Students, bachelors, and office workers frequently search for tiffin service Lahore and daily fresh tiffin service Lahore to find affordable and reliable meals.</p>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">On Smart Tiffin, you can explore home cooks offering services in areas such as:</p>
+                    <ul className="grid grid-cols-2 gap-2 mb-6 text-neutral-700 dark:text-neutral-300">
+                        {["DHA Lahore", "Gulberg", "Johar Town", "Model Town", "Bahria Town Lahore", "Wapda Town", "Township", "Allama Iqbal Town"].map((area, i) => (
+                            <li key={i} className="flex items-center gap-2"><MapPin className="w-4 h-4 text-primary-500" /> {area}</li>
+                        ))}
+                    </ul>
+                    <h4 className="text-lg font-bold text-primary-600 mb-3 ml-2 border-l-4 border-primary-500 pl-3">Services available</h4>
+                    <ul className="space-y-2 mb-6 ml-4 list-disc list-outside text-neutral-700 dark:text-neutral-300">
+                        <li>Daily tiffin service Lahore</li>
+                        <li>Monthly lunch service Lahore</li>
+                        <li>Affordable home tiffin Lahore</li>
+                        <li>Lunch box delivery Lahore</li>
+                        <li>Student mess services Lahore</li>
+                        <li>Ghar ka khana delivery Lahore</li>
+                    </ul>
+                    <p className="text-neutral-600 dark:text-neutral-400">Whether you are searching for &quot;tiffin service in Lahore&quot; or &quot;best homemade food service in Lahore&quot;, Smart Tiffin helps you discover trusted home cooks nearby.</p>
+                </section>
+
+                {/* 6. Tiffin Service in Islamabad & Rawalpindi */}
+                <section>
+                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Tiffin Service in Islamabad & Rawalpindi</h3>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">Islamabad and Rawalpindi also have a large number of students and working professionals who depend on daily homemade food delivery services.</p>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">Smart Tiffin helps you find:</p>
+                    <ul className="space-y-2 mb-6 ml-4 list-disc list-outside text-neutral-700 dark:text-neutral-300">
+                        <li>Tiffin service Islamabad</li>
+                        <li>Daily lunch delivery Islamabad</li>
+                        <li>Home tiffin Rawalpindi</li>
+                        <li>Monthly food plans Islamabad</li>
+                        <li>Affordable ghar ka khana Islamabad</li>
+                    </ul>
+                    <h4 className="text-lg font-bold text-primary-600 mb-3 ml-2 border-l-4 border-primary-500 pl-3">Popular areas</h4>
+                    <ul className="grid grid-cols-2 gap-2 mb-6 text-neutral-700 dark:text-neutral-300">
+                        {["G-13, G-11, G-10", "F-10, F-11, F-7", "I-8, I-10, I-14", "Bahria Town", "DHA Islamabad"].map((area, i) => (
+                            <li key={i} className="flex items-center gap-2"><MapPin className="w-4 h-4 text-primary-500" /> {area}</li>
+                        ))}
+                    </ul>
+                    <p className="text-neutral-600 dark:text-neutral-400">If you are searching for a tiffin service near me in Islamabad, Smart Tiffin connects you with local home cooks offering fresh and hygienic meals every day.</p>
+                </section>
+
+                {/* 7. Affordable Homemade Food for Students */}
+                <section>
+                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Affordable Homemade Food for Students</h3>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">Students are one of the biggest users of tiffin services in Pakistan. Living away from home often makes it difficult to maintain a healthy diet.</p>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">Smart Tiffin provides access to budget-friendly student meal plans that include:</p>
+                    <ul className="space-y-2 mb-6 ml-4 list-disc list-outside text-neutral-700 dark:text-neutral-300">
+                        <li>Daily lunch and dinner</li>
+                        <li>Monthly student packages</li>
+                        <li>Cheap homemade food options</li>
+                        <li>Hostel meal delivery</li>
+                        <li>Mess-style services</li>
+                    </ul>
+                    <p className="text-neutral-600 dark:text-neutral-400">Instead of eating fast food or skipping meals, students can enjoy affordable ghar ka khana delivered daily.</p>
+                </section>
+
+                {/* 8. Why Choose Homemade Tiffin Services? */}
+                <section>
+                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Why Choose Homemade Tiffin Services?</h3>
+                    <p className="mb-6 text-neutral-600 dark:text-neutral-400">Homemade food is becoming more popular because it is healthier, affordable, and more satisfying than restaurant food.</p>
+                    
+                    <h4 className="text-lg font-bold text-primary-600 mb-3 ml-2 border-l-4 border-primary-500 pl-3">Advantages of homemade tiffin services</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                        {[
+                            "Freshly cooked meals every day",
+                            "Better hygiene and quality control",
+                            "Traditional Pakistani taste",
+                            "Lower cost compared to restaurants",
+                            "Healthier cooking methods",
+                            "Customizable meal options"
+                        ].map((item, i) => (
+                            <div key={i} className="flex items-center gap-2 text-neutral-700 dark:text-neutral-200">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500" /> {item}
+                            </div>
+                        ))}
+                    </div>
+                    <p className="text-neutral-600 dark:text-neutral-400">Smart Tiffin ensures you can easily access trusted home cooks who prepare quality meals with care.</p>
+                </section>
+
+                {/* 9. Mess Services & Home Cooks */}
+                <section>
+                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Mess Services & Home Cooks</h3>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">Many users also search for mess services in Pakistan. Smart Tiffin works as a modern digital alternative to traditional mess systems by connecting users with home-based food providers.</p>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">You can find:</p>
+                    <ul className="space-y-2 mb-6 ml-4 list-disc list-outside text-neutral-700 dark:text-neutral-300">
+                        <li>Home mess services</li>
+                        <li>Student mess food providers</li>
+                        <li>Office lunch mess options</li>
+                        <li>Daily meal subscription cooks</li>
+                        <li>Small home kitchen businesses</li>
+                    </ul>
+                    <p className="text-neutral-600 dark:text-neutral-400">This helps support local home cooks while giving customers more flexible and affordable food options.</p>
+                </section>
+
+                {/* 10. Lunch Box & Food Delivery Services */}
+                <section>
+                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Lunch Box & Food Delivery Services</h3>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">If you are specifically looking for lunch box service or tiffin box delivery, Smart Tiffin provides multiple options from local home kitchens.</p>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">You can explore:</p>
+                    <ul className="space-y-2 mb-6 ml-4 list-disc list-outside text-neutral-700 dark:text-neutral-300">
+                        <li>Packed lunch box delivery</li>
+                        <li>Office lunch boxes</li>
+                        <li>Homemade food containers</li>
+                        <li>Weekly lunch box plans</li>
+                        <li>Fresh daily meal boxes</li>
+                    </ul>
+                    <p className="text-neutral-600 dark:text-neutral-400">These services are ideal for people who want ready-to-eat meals without cooking or waiting.</p>
+                </section>
+
+                {/* 11. Find Tiffin Service Near You */}
+                <section>
+                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Find Tiffin Service Near You</h3>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">Users often search:</p>
+                    <ul className="space-y-2 mb-6 ml-4 list-disc list-outside text-neutral-700 dark:text-neutral-300">
+                        <li>tiffin service near me</li>
+                        <li>home tiffin near me</li>
+                        <li>food delivery near me</li>
+                        <li>lunch service near me</li>
+                        <li>daily meal delivery near me</li>
+                    </ul>
+                    <p className="text-neutral-600 dark:text-neutral-400">Smart Tiffin helps you discover nearby home cooks based on your location so you can easily connect and order fresh homemade food.</p>
+                </section>
+
+                {/* 12. How Smart Tiffin Works */}
                 <section>
                     <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-8 flex items-center gap-3">
-                        <Sparkles className="w-6 h-6 text-primary-500" /> Find the Best Home Food Near You &mdash; How It Works
+                        <Sparkles className="w-6 h-6 text-primary-500" /> How Smart Tiffin Works
                     </h3>
-                    <p className="mb-8 text-neutral-600 dark:text-neutral-400">Smart Tiffin makes it easy to find home cooked meal delivery near you in under 2 minutes.</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <p className="mb-8 text-neutral-600 dark:text-neutral-400">Using Smart Tiffin is simple:</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {[
-                            { step: "1", title: "Select Your City", desc: "Choose from Lahore, Karachi, Islamabad, or Rawalpindi. Each city page shows home cooks organized by neighborhood (e.g., DHA, Gulberg, Clifton).", icon: MapPin },
-                            { step: "2", title: "Compare Kitchens", desc: "Browse profiles showing daily menus, prices, ratings, delivery areas, verified kitchen photos, and WhatsApp response times.", icon: Search },
-                            { step: "3", title: "Read Real Reviews", desc: "See what other customers say about food quality and hygiene. Smart Tiffin requires proof of order before allowing a review.", icon: Star },
-                            { step: "4", title: "Order via WhatsApp", desc: "Click the WhatsApp button to chat directly. Tell them your meal choice, delivery address, time, and custom dietary needs.", icon: MessageCircle },
-                            { step: "5", title: "Enjoy Fresh Food", desc: "The cook prepares your meal fresh at home. Pay directly via Cash on Delivery or EasyPaisa/JazzCash.", icon: Utensils }
+                            { step: "1", title: "Browse Home Cooks", desc: "Explore available cooks and food providers in your city.", icon: Search },
+                            { step: "2", title: "Compare Meal Plans", desc: "Check menus, pricing, and delivery options.", icon: Utensils },
+                            { step: "3", title: "Contact via WhatsApp", desc: "Directly message the cook to place your order.", icon: MessageCircle },
+                            { step: "4", title: "Enjoy Fresh Food", desc: "Receive fresh homemade meals at your doorstep.", icon: Star }
                         ].map((s, i) => (
                             <div key={i} className="relative bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 p-6 rounded-2xl hover:border-primary-200 transition-colors">
                                 <div className="absolute -top-4 -left-4 w-8 h-8 rounded-full bg-primary-500 text-white flex items-center justify-center font-bold shadow-md">
@@ -47,308 +242,57 @@ export default function ExploreSEO() {
                             </div>
                         ))}
                     </div>
+                    <p className="mt-8 text-neutral-600 dark:text-neutral-400">This direct system ensures fast communication, no middle charges, and better customer-cook relationships.</p>
                 </section>
 
-                {/* Comparison Table */}
+                {/* 13. Our Mission */}
                 <section>
-                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Why Choose Home-Cooked Food Over Restaurants?</h3>
-                    <p className="mb-6 text-neutral-600 dark:text-neutral-400">More Pakistanis are switching from restaurants to home kitchens every month. Here is why:</p>
-                    <div className="overflow-x-auto rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-sm">
-                        <table className="w-full text-left text-sm text-neutral-600 dark:text-neutral-300">
-                            <thead className="bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200">
-                                <tr>
-                                    <th className="p-4 font-semibold w-1/4">Aspect</th>
-                                    <th className="p-4 font-bold text-primary-600 dark:text-primary-400 w-2/4">Home-Cooked Food (Smart Tiffin)</th>
-                                    <th className="p-4 font-semibold text-neutral-500 w-1/4">Restaurant Food</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800 bg-white dark:bg-neutral-950">
-                                {[
-                                    ["Health", "Less oil, no MSG, fresh ingredients", "Often oily, processed, high sodium"],
-                                    ["Price", "PKR 200-400 per meal", "PKR 600-1500+ per meal"],
-                                    ["Portion size", "Generous (home style)", "Often small or standardized"],
-                                    ["Customization", "Full control (tell cook directly)", "Limited to menu options"],
-                                    ["Authenticity", "Real family recipes", "Commercial recipes"],
-                                    ["Leftovers", "You can order extra for next day", "Expensive to order extra"],
-                                    ["Support local", "Money goes to a home cook (often a mother or small earner)", "Money goes to a corporation"]
-                                ].map((row, i) => (
-                                    <tr key={i} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
-                                        <td className="p-4 font-medium text-neutral-900 dark:text-neutral-100">{row[0]}</td>
-                                        <td className="p-4 text-primary-700 dark:text-primary-300 bg-primary-50/30 dark:bg-primary-900/5">{row[1]}</td>
-                                        <td className="p-4 text-neutral-500 italic">{row[2]}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div className="mt-4 p-4 rounded-lg bg-orange-50 dark:bg-orange-950 border border-orange-100 dark:border-orange-900">
-                        <p className="text-orange-800 dark:text-orange-200 font-medium">
-                            <strong>The bottom line:</strong> Home-cooked food is 40-60% cheaper and significantly healthier than restaurant food. You also get to support local home cooks in your community.
-                        </p>
-                    </div>
-                </section>
-
-                {/* Verified Badge Details */}
-                <section className="bg-neutral-50 dark:bg-neutral-900 p-8 rounded-3xl border border-neutral-200 dark:border-neutral-800">
-                    <div className="flex items-start gap-4">
-                        <BadgeCheck className="w-12 h-12 text-blue-500 shrink-0" />
-                        <div>
-                            <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-3">Verified Home Kitchens &mdash; What Does &quot;Verified&quot; Mean?</h3>
-                            <p className="text-neutral-600 dark:text-neutral-300 mb-4">Smart Tiffin offers a Verified badge on select cook profiles. A verified home kitchen has completed:</p>
-                            <ul className="space-y-2 mb-6">
-                                {[
-                                    { text: "CNIC verification – cook shares valid Pakistani ID" },
-                                    { text: "Kitchen inspection – photos or video call showing clean cooking area" },
-                                    { text: "Menu validation – prices and dishes match what is delivered" },
-                                    { text: "Customer feedback check – no major complaints in first 10 orders" }
-                                ].map((item, i) => (
-                                    <li key={i} className="flex items-center gap-2 text-neutral-700 dark:text-neutral-200">
-                                        <CheckCircle2 className="w-4 h-4 text-emerald-500" /> {item.text}
-                                    </li>
-                                ))}
-                            </ul>
-                            <div className="text-sm text-neutral-500 dark:text-neutral-400 bg-white dark:bg-neutral-800 p-3 rounded border border-neutral-100 dark:border-neutral-700">
-                                <strong>Important:</strong> Verification is a one-time trust signal, not an ongoing food safety certification. Always use your judgment and order a trial meal first. All cooks – verified or not – have customer feedback visible.
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Types of Kitchens */}
-                <section>
-                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6 flex items-center gap-2">
-                        <Utensils className="w-6 h-6 text-primary-500" /> Types of Home Kitchens You Will Find
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Our Mission</h3>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">Our mission is to make homemade food accessible and affordable across Pakistan.</p>
+                    <p className="mb-4 text-neutral-600 dark:text-neutral-400">We aim to:</p>
+                    <ul className="space-y-2 mb-6">
                         {[
-                            {
-                                num: "1", title: "Daily Tiffin Services",
-                                offer: "Lunch, dinner, or both, Mon-Fri",
-                                best: "Working professionals, students",
-                                price: "PKR 200-350 per meal",
-                                menu: "Roti, daal, sabzi, rice, salad"
-                            },
-                            {
-                                num: "2", title: "Specialty Home Cooks",
-                                offer: "Specific cuisine (BBQ, biryani, karahi)",
-                                best: "Weekend family dinners, guests",
-                                price: "PKR 500-1000 per dish",
-                                menu: "Full mutton karahi with naan, raita, salad"
-                            },
-                            {
-                                num: "3", title: "Diet / Health-Focused",
-                                offer: "Low oil, low salt, keto, diabetic-friendly",
-                                best: "Weight loss, medical conditions",
-                                price: "PKR 300-500 per meal",
-                                menu: "Grilled chicken, brown rice, steamed veg"
-                            },
-                            {
-                                num: "4", title: "Occasional / Party Catering",
-                                offer: "Large quantities for events (20-50 people)",
-                                best: "Birthdays, office lunches",
-                                price: "PKR 150-250 per person",
-                                menu: "Biryani, haleem, kheer, salad"
-                            }
-                        ].map((t, i) => (
-                            <div key={i} className="border border-neutral-200 dark:border-neutral-800 p-6 rounded-2xl bg-white dark:bg-neutral-900 shadow-sm hover:shadow-md transition-shadow">
-                                <div className="text-primary-500 font-bold mb-1">Type {t.num}</div>
-                                <h4 className="text-xl font-bold text-neutral-900 dark:text-white mb-4">{t.title}</h4>
-                                <ul className="space-y-3 text-sm">
-                                    <li className="flex flex-col"><span className="text-neutral-400 uppercase text-xs font-bold tracking-wider">What they offer</span> <span className="font-medium text-neutral-700 dark:text-neutral-200 mt-0.5">{t.offer}</span></li>
-                                    <li className="flex flex-col"><span className="text-neutral-400 uppercase text-xs font-bold tracking-wider">Best for</span> <span className="font-medium text-neutral-700 dark:text-neutral-200 mt-0.5">{t.best}</span></li>
-                                    <li className="flex flex-col"><span className="text-neutral-400 uppercase text-xs font-bold tracking-wider">Pricing</span> <span className="font-bold text-primary-600 dark:text-primary-400 mt-0.5">{t.price}</span></li>
-                                    <li className="flex flex-col"><span className="text-neutral-400 uppercase text-xs font-bold tracking-wider">Example Menu</span> <span className="italic text-neutral-600 dark:text-neutral-400 mt-0.5">{t.menu}</span></li>
-                                </ul>
-                            </div>
+                            "Support local home cooks",
+                            "Promote healthy eating habits",
+                            "Provide affordable meal options",
+                            "Connect customers with trusted kitchens",
+                            "Simplify food discovery through technology"
+                        ].map((item, i) => (
+                            <li key={i} className="flex items-center gap-2 text-neutral-700 dark:text-neutral-200">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500" /> {item}
+                            </li>
                         ))}
-                    </div>
+                    </ul>
                 </section>
 
-                {/* Pricing By City */}
-                <section>
-                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-4">Home Cooked Food Prices by City</h3>
-                    <p className="mb-6 text-neutral-600 dark:text-neutral-400">Smart Tiffin helps you compare prices across Pakistan. Below are real ranges from active home kitchens on our platform.</p>
-
-                    <div className="space-y-8">
-                        <div>
-                            <h4 className="text-lg font-bold text-primary-600 mb-3 ml-2 border-l-4 border-primary-500 pl-3">Lahore – Home Cooked Tiffin Prices</h4>
-                            <div className="overflow-x-auto border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                                <table className="w-full text-sm text-left text-neutral-600 dark:text-neutral-300">
-                                    <thead className="bg-neutral-50 dark:bg-neutral-900 font-medium">
-                                        <tr>
-                                            <th className="p-3">Meal Type</th>
-                                            <th className="p-3">DHA</th>
-                                            <th className="p-3">Gulberg</th>
-                                            <th className="p-3">Johar Town</th>
-                                            <th className="p-3">Model Town</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                                        <tr><td className="p-3 font-medium">Single meal</td><td className="p-3">PKR 220-280</td><td className="p-3">PKR 250-300</td><td className="p-3">PKR 200-260</td><td className="p-3">PKR 220-280</td></tr>
-                                        <tr><td className="p-3 font-medium">Full day</td><td className="p-3">PKR 400-500</td><td className="p-3">PKR 450-550</td><td className="p-3">PKR 380-480</td><td className="p-3">PKR 400-500</td></tr>
-                                        <tr><td className="p-3 font-medium">Weekly lunch</td><td className="p-3">PKR 1000-1200</td><td className="p-3">PKR 1100-1300</td><td className="p-3">PKR 900-1100</td><td className="p-3">PKR 1000-1200</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div>
-                            <h4 className="text-lg font-bold text-primary-600 mb-3 ml-2 border-l-4 border-primary-500 pl-3">Karachi – Home Cooked Meal Delivery</h4>
-                            <div className="overflow-x-auto border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                                <table className="w-full text-sm text-left text-neutral-600 dark:text-neutral-300">
-                                    <thead className="bg-neutral-50 dark:bg-neutral-900 font-medium">
-                                        <tr>
-                                            <th className="p-3">Meal Type</th>
-                                            <th className="p-3">Clifton</th>
-                                            <th className="p-3">DHA</th>
-                                            <th className="p-3">Gulshan</th>
-                                            <th className="p-3">North Nazimabad</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                                        <tr><td className="p-3 font-medium">Single meal</td><td className="p-3">PKR 250-300</td><td className="p-3">PKR 260-320</td><td className="p-3">PKR 220-280</td><td className="p-3">PKR 220-280</td></tr>
-                                        <tr><td className="p-3 font-medium">Full day</td><td className="p-3">PKR 450-550</td><td className="p-3">PKR 480-580</td><td className="p-3">PKR 400-500</td><td className="p-3">PKR 400-500</td></tr>
-                                        <tr><td className="p-3 font-medium">Weekly lunch</td><td className="p-3">PKR 1100-1300</td><td className="p-3">PKR 1200-1400</td><td className="p-3">PKR 1000-1200</td><td className="p-3">PKR 1000-1200</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div>
-                            <h4 className="text-lg font-bold text-primary-600 mb-3 ml-2 border-l-4 border-primary-500 pl-3">Islamabad – Home Food Delivery</h4>
-                            <div className="overflow-x-auto border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                                <table className="w-full text-sm text-left text-neutral-600 dark:text-neutral-300">
-                                    <thead className="bg-neutral-50 dark:bg-neutral-900 font-medium">
-                                        <tr>
-                                            <th className="p-3">Meal Type</th>
-                                            <th className="p-3">F-10</th>
-                                            <th className="p-3">G-11</th>
-                                            <th className="p-3">I-8</th>
-                                            <th className="p-3">E-7</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                                        <tr><td className="p-3 font-medium">Single meal</td><td className="p-3">PKR 280-350</td><td className="p-3">PKR 260-320</td><td className="p-3">PKR 250-300</td><td className="p-3">PKR 300-380</td></tr>
-                                        <tr><td className="p-3 font-medium">Full day</td><td className="p-3">PKR 500-600</td><td className="p-3">PKR 480-580</td><td className="p-3">PKR 450-550</td><td className="p-3">PKR 550-650</td></tr>
-                                        <tr><td className="p-3 font-medium">Weekly lunch</td><td className="p-3">PKR 1200-1500</td><td className="p-3">PKR 1100-1400</td><td className="p-3">PKR 1100-1300</td><td className="p-3">PKR 1300-1600</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div>
-                            <h4 className="text-lg font-bold text-primary-600 mb-3 ml-2 border-l-4 border-primary-500 pl-3">Rawalpindi – Tiffin Service</h4>
-                            <div className="overflow-x-auto border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                                <table className="w-full text-sm text-left text-neutral-600 dark:text-neutral-300">
-                                    <thead className="bg-neutral-50 dark:bg-neutral-900 font-medium">
-                                        <tr>
-                                            <th className="p-3">Meal Type</th>
-                                            <th className="p-3">Saddar</th>
-                                            <th className="p-3">Westridge</th>
-                                            <th className="p-3">Bahria Town</th>
-                                            <th className="p-3">Gulrez</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                                        <tr><td className="p-3 font-medium">Single meal</td><td className="p-3">PKR 200-260</td><td className="p-3">PKR 220-280</td><td className="p-3">PKR 250-320</td><td className="p-3">PKR 200-260</td></tr>
-                                        <tr><td className="p-3 font-medium">Full day</td><td className="p-3">PKR 380-480</td><td className="p-3">PKR 400-500</td><td className="p-3">PKR 450-550</td><td className="p-3">PKR 380-480</td></tr>
-                                        <tr><td className="p-3 font-medium">Weekly lunch</td><td className="p-3">PKR 900-1100</td><td className="p-3">PKR 950-1200</td><td className="p-3">PKR 1100-1300</td><td className="p-3">PKR 900-1100</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    <p className="text-xs text-neutral-500 mt-4 italic text-center">Note: Prices may vary based on ingredients (chicken vs mutton), delivery distance, and seasonal availability. Always confirm final price on WhatsApp before ordering.</p>
-                </section>
-
-                {/* Popular Dishes */}
-                <section>
-                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Popular Dishes Available from Home Kitchens</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="bg-neutral-50 dark:bg-neutral-900 p-5 rounded-2xl">
-                            <h4 className="font-bold text-neutral-900 dark:text-neutral-100 mb-3 border-b border-neutral-200 dark:border-neutral-800 pb-2">Daily Curries</h4>
-                            <ul className="text-sm space-y-2 text-neutral-600 dark:text-neutral-400">
-                                <li>🍲 Chicken Curry</li>
-                                <li>🍲 Mutton Karahi</li>
-                                <li>🍲 Aloo Keema</li>
-                                <li>🍲 Daal Masoor / Chana</li>
-                                <li>🍲 Bhindi / Palak</li>
-                                <li>🍲 Karela / Baingan</li>
-                            </ul>
-                        </div>
-                        <div className="bg-neutral-50 dark:bg-neutral-900 p-5 rounded-2xl">
-                            <h4 className="font-bold text-neutral-900 dark:text-neutral-100 mb-3 border-b border-neutral-200 dark:border-neutral-800 pb-2">Rice Dishes</h4>
-                            <ul className="text-sm space-y-2 text-neutral-600 dark:text-neutral-400">
-                                <li>🍛 Chicken Biryani</li>
-                                <li>🍛 Mutton Pulao</li>
-                                <li>🍛 Vegetable Tehri</li>
-                                <li>🍛 Kabuli Pulao</li>
-                                <li>🍚 Steamed Rice</li>
-                            </ul>
-                        </div>
-                        <div className="bg-neutral-50 dark:bg-neutral-900 p-5 rounded-2xl">
-                            <h4 className="font-bold text-neutral-900 dark:text-neutral-100 mb-3 border-b border-neutral-200 dark:border-neutral-800 pb-2">Breads & Sides</h4>
-                            <ul className="text-sm space-y-2 text-neutral-600 dark:text-neutral-400">
-                                <li>🫓 Roti / Phulka</li>
-                                <li>🫓 Tawa Paratha</li>
-                                <li>🫓 Naan</li>
-                                <li>🥗 Raita & Salad</li>
-                                <li>🥭 Mixed Achar</li>
-                            </ul>
-                        </div>
-                        <div className="bg-neutral-50 dark:bg-neutral-900 p-5 rounded-2xl">
-                            <h4 className="font-bold text-neutral-900 dark:text-neutral-100 mb-3 border-b border-neutral-200 dark:border-neutral-800 pb-2">Weekend Specials</h4>
-                            <ul className="text-sm space-y-2 text-neutral-600 dark:text-neutral-400">
-                                <li>🍖 Haleem (Friday)</li>
-                                <li>🍖 Nihari (Sunday)</li>
-                                <li>🍖 Paye (Saturday)</li>
-                                <li>🍖 Sajji (Roasted)</li>
-                                <li>🍮 Zarda / Kunafa</li>
-                            </ul>
-                        </div>
-                    </div>
-                </section>
-
-                {/* FAQ */}
-                <section>
-                    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-6">Frequently Asked Questions</h3>
-                    <div className="space-y-4">
-                        {[
-                            { q: "Are all cooks verified on Smart Tiffin?", a: "Not all cooks are verified, but all listings include customer feedback. Verified cooks have completed CNIC and kitchen inspection. We recommend ordering a trial meal perfectly from any new cook – verified or not – before committing to a weekly subscription." },
-                            { q: "How do I order from a home kitchen?", a: "Simply click the WhatsApp button on any cook's profile. You will chat directly with the cook. Tell them your meal choice, delivery address, and time. They will confirm availability and price." },
-                            { q: "Is home cooked food really cheaper than restaurants?", a: "Yes. A restaurant meal in Pakistan costs PKR 600-1500+. A home cooked meal on Smart Tiffin costs PKR 200-400 – that is 50-70% cheaper. You save money and eat healthier." },
-                            { q: "Can I order for a full week (Monday to Friday)?", a: "Yes. Most home cooks offer weekly tiffin subscriptions. Contact the cook on WhatsApp and ask for their weekly plan. Subscriptions are usually 10-15% cheaper than daily orders." },
-                            { q: "What if I have food allergies or strict dietary needs?", a: "Because you contact the cook directly on WhatsApp, you can easily customize your meal. For example: 'No onion or garlic', 'Less salt', or 'Gluten free'. Most home cooks are happy to adjust." },
-                            { q: "How do I leave a review for a home cook?", a: "After receiving your order, visit the cook's profile. Click 'Leave a Review'. You will need to upload a screenshot of your WhatsApp chat with the cook as proof of order. This prevents fake reviews." },
-                            { q: "What if the food is bad or the cook is unresponsive?", a: "First, message the cook on WhatsApp to resolve the issue. If the cook ignores you or repeatedly delivers poor quality, please email us at support@smarttiffin.pk with evidence. We will investigate and potentially remove them." },
-                            { q: "Can I become a home cook on Smart Tiffin?", a: "Yes. Visit our Start Cooking Today page. Listing is free. You will need your kitchen location, sample menu with prices, photos, and CNIC copy for verification." },
-                            { q: "Does Smart Tiffin charge commission?", a: "No. Smart Tiffin is a completely free directory. We never take a percentage of your order. You pay the cook directly to keep prices low." },
-                            { q: "How fresh is the food?", a: "All home cooks prepare meals on the same day of delivery. Lunch orders are cooked in the morning. Dinner orders are cooked in the afternoon. No frozen or reheated food." },
-                            { q: "How long does delivery take?", a: "Most home cooks deliver within 1-2 hours for lunch (12PM-2PM) and 1-2 hours for dinner (7PM-9PM window). Exact timing varies by cook." }
-                        ].map((faq, i) => (
-                            <details key={i} className="group bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden [&_summary::-webkit-details-marker]:hidden">
-                                <summary className="flex items-center justify-between p-5 cursor-pointer text-lg font-medium text-neutral-900 dark:text-white group-hover:text-primary-600 transition-colors">
-                                    {faq.q}
-                                    <span className="transition duration-300 group-open:-rotate-180">
-                                        <svg fill="none" height="24" shapeRendering="geometricPrecision" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 24 24" width="24"><path d="M6 9l6 6 6-6"></path></svg>
-                                    </span>
-                                </summary>
-                                <div className="p-5 pt-0 text-neutral-600 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-800/20 leading-relaxed border-t border-neutral-100 dark:border-neutral-800">
-                                    {faq.a}
-                                </div>
-                            </details>
-                        ))}
-                    </div>
-                </section>
-
-                {/* Final CTA */}
+                {/* 14. Start Exploring Homemade Food Today (CTA) */}
                 <section className="bg-gradient-to-br from-primary-600 to-primary-800 rounded-3xl p-10 text-center text-white shadow-xl">
-                    <h3 className="text-3xl font-extrabold mb-4">Ready to Explore Home Kitchens Near You?</h3>
+                    <h3 className="text-3xl font-extrabold mb-4">Start Exploring Homemade Food Today</h3>
                     <p className="text-primary-100 max-w-2xl mx-auto mb-8 text-lg">
-                        Finding fresh, affordable, home-cooked food in Pakistan has never been easier. No apps. No registration. No middleman fees. Just good food made with love.
+                        Whether you are searching for:
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-3 mb-8">
+                        {[
+                            "Tiffin service in Lahore",
+                            "Tiffin service in Islamabad",
+                            "Daily lunch delivery",
+                            "Monthly meal plans",
+                            "Home tiffin service",
+                            "Affordable ghar ka khana",
+                            "Lunch box delivery",
+                            "Mess services"
+                        ].map((item, i) => (
+                            <span key={i} className="bg-white/10 border border-white/20 rounded-full px-4 py-2 text-sm font-medium">{item}</span>
+                        ))}
+                    </div>
+                    <p className="text-primary-100 max-w-2xl mx-auto mb-8 text-lg">
+                        Smart Tiffin Explorer helps you find everything in one place. Browse available cooks now and enjoy fresh homemade food delivered daily anywhere in Pakistan.
                     </p>
                     <div className="flex flex-wrap justify-center gap-4">
-                        <Link href="/explore?city=Lahore" className="bg-white/10 hover:bg-white/20 border border-white/30 transition-colors px-6 py-3 rounded-xl font-semibold">Lahore 🍲</Link>
-                        <Link href="/explore?city=Karachi" className="bg-white/10 hover:bg-white/20 border border-white/30 transition-colors px-6 py-3 rounded-xl font-semibold">Karachi 🍲</Link>
-                        <Link href="/explore?city=Islamabad" className="bg-white/10 hover:bg-white/20 border border-white/30 transition-colors px-6 py-3 rounded-xl font-semibold">Islamabad 🍲</Link>
-                        <Link href="/explore?city=Rawalpindi" className="bg-white/10 hover:bg-white/20 border border-white/30 transition-colors px-6 py-3 rounded-xl font-semibold">Rawalpindi 🍲</Link>
+                        <Link href="/explore?city=Lahore" className="bg-white hover:bg-neutral-50 text-primary-700 transition-colors px-6 py-3 rounded-xl font-bold shadow-lg">Lahore</Link>
+                        <Link href="/explore?city=Karachi" className="bg-white hover:bg-neutral-50 text-primary-700 transition-colors px-6 py-3 rounded-xl font-bold shadow-lg">Karachi</Link>
+                        <Link href="/explore?city=Islamabad" className="bg-white hover:bg-neutral-50 text-primary-700 transition-colors px-6 py-3 rounded-xl font-bold shadow-lg">Islamabad</Link>
+                        <Link href="/explore?city=Rawalpindi" className="bg-white hover:bg-neutral-50 text-primary-700 transition-colors px-6 py-3 rounded-xl font-bold shadow-lg">Rawalpindi</Link>
                     </div>
                 </section>
 

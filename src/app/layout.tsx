@@ -8,11 +8,24 @@ import { RootLayoutClient } from "@/components/layout/RootLayoutClient";
 export const metadata: Metadata = {
   metadataBase: new URL('https://smarttiffinfood.vercel.app'),
   title: {
+    // Pages that already include "Smart Tiffin" in their title will NOT
+    // get a duplicate suffix. Pages that don't include it will get "| Smart Tiffin".
     default: 'Smart Tiffin – Daily Tiffin Service in Pakistan',
-    template: '%s | Smart Tiffin',
+    template: '%s',
   },
   description: 'Pakistan\'s home food marketplace. Fresh daily tiffin from trusted home cooks.',
   manifest: '/manifest.json',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   verification: {
     google: 'pc-7mt4zNiUbk0CsFxXoqMybykQ9ZbZH-GJpFgevx94',
   },
