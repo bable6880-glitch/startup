@@ -81,6 +81,7 @@ export default function PotluckDashboardPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Form state
+    const [editingDealId, setEditingDealId] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         title: "",
         description: "",
@@ -90,6 +91,51 @@ export default function PotluckDashboardPage() {
         regularPriceRs: "",
         expiresAt: "",
     });
+
+    const handleEdit = (deal: PotluckDeal) => {
+        setEditingDealId(deal.id);
+        setFormData({
+            title: deal.title,
+            description: deal.description || "",
+            totalPlatesAvailable: deal.totalPlatesAvailable.toString(),
+            targetOrderCount: deal.targetOrderCount.toString(),
+            pricePerPlateRs: deal.pricePerPlateRs.toString(),
+            regularPriceRs: deal.regularPriceRs.toString(),
+            expiresAt: new Date(deal.expiresAt).toISOString().slice(0, 16),
+        });
+        setImages(deal.images ? deal.images.map((url: string) => ({ file: null, preview: url })) : []);
+        setFormError(null);
+        setIsModalOpen(true);
+    };
+
+    const handleRestart = (deal: PotluckDeal) => {
+        setEditingDealId(null);
+        setFormData({
+            title: deal.title,
+            description: deal.description || "",
+            totalPlatesAvailable: deal.totalPlatesAvailable.toString(),
+            targetOrderCount: deal.targetOrderCount.toString(),
+            pricePerPlateRs: deal.pricePerPlateRs.toString(),
+            regularPriceRs: deal.regularPriceRs.toString(),
+            expiresAt: "",
+        });
+        setImages(deal.images ? deal.images.map((url: string) => ({ file: null, preview: url })) : []);
+        setFormError(null);
+        setIsModalOpen(true);
+    };
+
+    const handleSaveTemplate = async (deal: PotluckDeal) => {
+        try {
+            const token = await getIdToken();
+            await fetch(`/api/seller/potluck/${deal.id}/template`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            retryFetch();
+        } catch (err) {
+            console.error("Failed to save template", err);
+        }
+    };
 
     const fetchDealsFn = async () => {
         const token = await getIdToken();
@@ -171,7 +217,10 @@ export default function PotluckDashboardPage() {
     const uploadImages = async (token: string): Promise<string[]> => {
         const urls: string[] = [];
         for (const img of images) {
-            if (!img.file) continue;
+            if (!img.file) {
+                if (img.preview.startsWith('http')) urls.push(img.preview);
+                continue;
+            }
             const compressed = await compressImage(img.file, 1800);
             const fd = new FormData();
             fd.append("file", compressed);
@@ -214,8 +263,11 @@ export default function PotluckDashboardPage() {
                 return;
             }
 
-            const res = await fetch("/api/seller/potluck", {
-                method: "POST",
+            const method = editingDealId ? "PATCH" : "POST";
+            const endpoint = editingDealId ? `/api/seller/potluck/${editingDealId}` : "/api/seller/potluck";
+
+            const res = await fetch(endpoint, {
+                method,
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`
@@ -394,7 +446,7 @@ export default function PotluckDashboardPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredDeals.map((deal, i) => (
                         <div key={deal.id} className="potluck-card-enter" style={{ animationDelay: `${Math.min(i * 80, 400)}ms` }}>
-                            <PotluckCard deal={deal} onRefresh={() => retryFetch()} />
+                            <PotluckCard deal={deal} onRefresh={() => retryFetch()} onEdit={handleEdit} onRestart={handleRestart} onSaveTemplate={handleSaveTemplate} />
                         </div>
                     ))}
                 </div>

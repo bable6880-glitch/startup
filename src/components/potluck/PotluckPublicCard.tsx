@@ -49,21 +49,36 @@ export function PotluckPublicCard({ deal, kitchenName }: PotluckPublicCardProps)
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
     : 0;
 
-  const handleReserve = async () => {
+  const handleOrder = async () => {
     setReserving(true);
-    // Real implementation would open auth/cart or call /api/potluck/reserve
-    // We are requested to KEEP the existing logic if it existed, but since this is a new component
-    // we'll simulate it, or trigger standard cart flow.
-    // The prompt says: "Includes the Reserve button. (If the current UI redirects to cart or calls an API, KEEP that logic. I just want the new design)."
-    // The old PotluckCard had `onReserve` prop. We'll use a standard alert for now, 
-    // or trigger a toast if it were a real app.
-    
-    // For now, simulate reserving
-    setTimeout(() => {
+    try {
+      const res = await fetch(`/api/potluck/${deal.id}/reserve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity: 1 })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 401) {
+          window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+          return;
+        }
+        throw new Error(data.error || 'Failed to order');
+      }
+      
       setHasReserved(true);
-      setCurrentCount(prev => prev + 1);
+      if (data.deal) {
+        setCurrentCount(data.deal.currentOrderCount);
+        setDealStatus(data.deal.status);
+      }
+      // Emit event so the layout can show a toast or we just alert for now
+      alert("Order placed successfully! Check your dashboard.");
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
       setReserving(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -125,7 +140,7 @@ export function PotluckPublicCard({ deal, kitchenName }: PotluckPublicCardProps)
           <div className="mt-5">
             {dealStatus === 'ACTIVE' && currentCount < deal.totalPlatesAvailable ? (
               <button
-                onClick={handleReserve}
+                onClick={handleOrder}
                 disabled={reserving || hasReserved}
                 className={`
                   w-full py-3.5 rounded-xl text-sm font-bold transition-all shadow-lg
@@ -136,10 +151,10 @@ export function PotluckPublicCard({ deal, kitchenName }: PotluckPublicCardProps)
                 `}
               >
                 {hasReserved
-                  ? '✓ Reserved'
+                  ? '✓ Ordered'
                   : reserving
-                  ? 'Reserving...'
-                  : `Reserve Now — Rs.${price.toLocaleString('en-PK')}`
+                  ? 'Ordering...'
+                  : `Order Now — Rs.${price.toLocaleString('en-PK')}`
                 }
               </button>
             ) : (

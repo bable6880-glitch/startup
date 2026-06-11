@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSeller } from "@/lib/auth/seller-guard";
 import { db } from "@/lib/db";
-import { potluckDeals } from "@/lib/db/schema";
+import { potluckDeals, meals } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { logger } from "@/lib/utils/logger";
 import { redis } from "@/lib/redis/index";
@@ -19,11 +19,22 @@ export async function PATCH(
         const dealId = id;
         const body = await req.json();
         
-        // Allowed updates
-        const updates: any = {};
-        if (['ACTIVE', 'CANCELLED', 'PAUSED', 'SCHEDULED'].includes(body.status)) {
+        const existingDeal = await db.query.potluckDeals.findFirst({
+            where: and(
+                eq(potluckDeals.id, dealId),
+                eq(potluckDeals.kitchenId, kitchen.id)
+            )
+        });
+
+        if (!existingDeal) {
+            return NextResponse.json({ error: "Deal not found or unauthorized" }, { status: 404 });
+        }
+
+        const updates: any = { updatedAt: new Date() };
+
+        // Status updates
+        if (body.status && ['ACTIVE', 'CANCELLED', 'PAUSED', 'SCHEDULED'].includes(body.status)) {
             updates.status = body.status;
-            updates.updatedAt = new Date();
             
             if (body.status === 'ACTIVE') {
                 updates.activatedAt = new Date();
@@ -33,20 +44,46 @@ export async function PATCH(
             }
         }
 
+        // Deal detail updates (Edit form)
+        if (body.title) updates.title = body.title;
+        if (body.description !== undefined) updates.description = body.description;
+        if (body.expiresAt) updates.expiresAt = new Date(body.expiresAt);
+        if (body.imageUrl) updates.imageUrl = body.imageUrl;
+        
+        // Critical updates that affect pricing and limits (only allowed if no one has ordered yet)
+        if (existingDeal.currentOrderCount === 0 || existingDeal.currentOrderCount === null) {
+            if (body.totalPlatesAvailable) updates.totalPlatesAvailable = Number(body.totalPlatesAvailable);
+            if (body.targetOrderCount) updates.targetOrderCount = Number(body.targetOrderCount);
+            if (body.pricePerPlateRs) updates.pricePerPlateRs = body.pricePerPlateRs.toString();
+            if (body.regularPriceRs) updates.regularPriceRs = body.regularPriceRs.toString();
+        } else if (
+            body.totalPlatesAvailable || body.targetOrderCount || body.pricePerPlateRs || body.regularPriceRs
+        ) {
+            // Log that we ignored critical field updates, but allow the rest of the payload to process
+            logger.warn("Attempted to modify critical potluck fields after orders placed", { dealId });
+        }
+
         const [updatedDeal] = await db.update(potluckDeals)
             .set(updates)
-            .where(
-                and(
-                    eq(potluckDeals.id, dealId),
-                    eq(potluckDeals.kitchenId, kitchen.id)
-                )
-            )
+            .where(eq(potluckDeals.id, dealId))
             .returning();
 
-        if (!updatedDeal) {
-            return NextResponse.json({ error: "Deal not found or unauthorized" }, { status: 404 });
+        // Sync updates to the hidden meal if it exists
+        if (updatedDeal.mealId) {
+            const mealUpdates: any = {};
+            if (updates.title) mealUpdates.name = `[Potluck] ${updates.title}`;
+            if (updates.description !== undefined) mealUpdates.description = updates.description;
+            if (updates.pricePerPlateRs) mealUpdates.price = Number(updates.pricePerPlateRs);
+            if (updates.imageUrl) mealUpdates.imageUrl = updates.imageUrl;
+            
+            if (Object.keys(mealUpdates).length > 0) {
+                mealUpdates.updatedAt = new Date();
+                await db.update(meals)
+                    .set(mealUpdates)
+                    .where(eq(meals.id, updatedDeal.mealId));
+            }
         }
-        
+
         // Publish SSE update
         if (redis && updatedDeal.status === 'ACTIVE') {
             await redis.publish('potluck_updates', JSON.stringify({

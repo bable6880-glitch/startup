@@ -34,6 +34,7 @@ export interface PotluckDeal {
   city?: string | null;
   citySlug?: string | null;
   imageUrl?: string | null;
+  images?: string[] | null;
   createdAt: string;
   updatedAt?: string | null;
   emoji?: string | null;

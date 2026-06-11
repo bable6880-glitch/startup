@@ -8,11 +8,12 @@ import { MoreVertical, Play, Pause, Edit, Share, XCircle, Trash2, RotateCcw, Bar
 interface PotluckActionsProps {
   deal: PotluckDeal;
   onRefresh: () => void;
+  onEdit?: (deal: PotluckDeal) => void;
+  onRestart?: (deal: PotluckDeal) => void;
+  onSaveTemplate?: (deal: PotluckDeal) => void;
 }
 
-type ActionVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'icon-only';
-
-export function PotluckActions({ deal, onRefresh }: PotluckActionsProps) {
+export function PotluckActions({ deal, onRefresh, onEdit, onRestart, onSaveTemplate }: PotluckActionsProps) {
   const { getIdToken } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [confirmingAction, setConfirmingAction] = useState<string | null>(null);
@@ -168,7 +169,7 @@ export function PotluckActions({ deal, onRefresh }: PotluckActionsProps) {
         // ENDED | EXPIRED | CANCELLED
         <>
           <button
-            onClick={() => {}}
+            onClick={() => onRestart && onRestart(deal)}
             className="flex-1 h-9 bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:hover:bg-orange-900/50 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
           >
             <RotateCcw className="w-4 h-4" /> Restart
@@ -193,10 +194,10 @@ export function PotluckActions({ deal, onRefresh }: PotluckActionsProps) {
         
         {isMenuOpen && (
           <div className="absolute right-0 bottom-full mb-2 w-48 bg-white dark:bg-neutral-900 border border-gray-100 dark:border-neutral-800 rounded-xl shadow-lg py-1 z-50 animate-fade-in origin-bottom-right">
-            <button className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-800 flex items-center gap-2">
+            <button onClick={() => { setIsMenuOpen(false); onEdit && onEdit(deal); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-800 flex items-center gap-2">
               <Edit className="w-4 h-4" /> Edit
             </button>
-            <button className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-800 flex items-center gap-2">
+            <button onClick={() => { setIsMenuOpen(false); onSaveTemplate && onSaveTemplate(deal); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-800 flex items-center gap-2">
               <Save className="w-4 h-4" /> Save Template
             </button>
             <button onClick={handleCopyLink} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-800 flex items-center gap-2">

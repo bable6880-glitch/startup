@@ -1,7 +1,7 @@
 import { getKitchenPlanAccess, getMinimumPlanForFeature, PlanFeature } from "./plan-access";
 import { db } from "@/lib/db";
 import { meals, planUsageLog } from "@/lib/db/schema";
-import { and, eq, isNull, count } from "drizzle-orm";
+import { and, eq, isNull, count, ne, or } from "drizzle-orm";
 import { AppError } from "@/lib/utils/errors";
 
 // ─── Plan Error Classes (extend AppError) ───────────────────────────────────
@@ -61,7 +61,8 @@ export async function guardMenuItemLimit(kitchenId: string): Promise<void> {
         .where(
             and(
                 eq(meals.kitchenId, kitchenId),
-                isNull(meals.deletedAt)
+                isNull(meals.deletedAt),
+                or(ne(meals.category, 'Potluck Special'), isNull(meals.category))
             )
         );
 

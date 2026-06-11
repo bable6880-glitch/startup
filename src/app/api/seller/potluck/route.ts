@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSeller } from "@/lib/auth/seller-guard";
 import { db } from "@/lib/db";
-import { potluckDeals } from "@/lib/db/schema";
+import { potluckDeals, meals } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { createPotluckSchema } from "@/lib/validations/potluck";
 import { getKitchenPlanAccess } from "@/lib/plans/plan-access";
@@ -43,6 +43,18 @@ export async function POST(req: NextRequest) {
              return NextResponse.json({ error: "Active subscription required" }, { status: 403 });
         }
 
+        // Create hidden meal
+        const [newMeal] = await db.insert(meals).values({
+            kitchenId: kitchen.id,
+            name: `[Potluck] ${data.title}`,
+            description: data.description || null,
+            price: Number(data.pricePerPlateRs),
+            currency: "PKR",
+            imageUrl: null,
+            isAvailable: false,
+            category: "Potluck Special",
+        }).returning({ id: meals.id });
+
         // Create deal
         const [deal] = await db.insert(potluckDeals).values({
             kitchenId: kitchen.id,
@@ -50,7 +62,7 @@ export async function POST(req: NextRequest) {
             subscriptionId: access.subscription.id,
             title: data.title,
             description: data.description || null,
-            mealId: data.mealId || null,
+            mealId: newMeal.id,
             totalPlatesAvailable: data.totalPlatesAvailable,
             targetOrderCount: data.targetOrderCount,
             pricePerPlateRs: data.pricePerPlateRs.toString(),

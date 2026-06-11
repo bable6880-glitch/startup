@@ -76,9 +76,12 @@ interface PotluckCardProps {
   deal: PotluckDeal;
   onRefresh?: () => void;
   isSellerView?: boolean;
+  onEdit?: (deal: PotluckDeal) => void;
+  onRestart?: (deal: PotluckDeal) => void;
+  onSaveTemplate?: (deal: PotluckDeal) => void;
 }
 
-export function PotluckCard({ deal, onRefresh = () => {} }: PotluckCardProps) {
+export function PotluckCard({ deal, onRefresh = () => {}, isSellerView, onEdit, onRestart, onSaveTemplate }: PotluckCardProps) {
   const config = STATUS_CONFIG[deal.status] || STATUS_CONFIG.PENDING;
   
   const originalPrice = Number(deal.regularPriceRs);
@@ -149,7 +152,7 @@ export function PotluckCard({ deal, onRefresh = () => {} }: PotluckCardProps) {
 
         {/* Actions */}
         <div className="pt-2 mt-auto border-t border-gray-100 dark:border-neutral-800/50">
-          <PotluckActions deal={deal} onRefresh={onRefresh} />
+          <PotluckActions deal={deal} onRefresh={onRefresh} onEdit={onEdit} onRestart={onRestart} onSaveTemplate={onSaveTemplate} />
         </div>
       </div>
     </div>
