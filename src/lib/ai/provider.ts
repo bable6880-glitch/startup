@@ -128,3 +128,55 @@ export class AnthropicProvider implements AIProvider {
         }
     }
 }
+
+export class OpenRouterProvider implements AIProvider {
+    name = 'openrouter';
+
+    async chat(messages: { role: string; content: string }[], systemPrompt?: string): Promise<string> {
+        const apiKey = process.env.OPENROUTER_API_KEY;
+        if (!apiKey) throw new Error("Missing OPENROUTER_API_KEY");
+
+        const formattedMessages = [];
+        if (systemPrompt) {
+            formattedMessages.push({ role: "system", content: systemPrompt });
+        }
+        formattedMessages.push(...messages);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        try {
+            const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${apiKey}`,
+                    "HTTP-Referer": "https://smarttiffinfood.vercel.app",
+                    "X-Title": "Smart Tiffin Chef Assistant"
+                },
+                body: JSON.stringify({
+                    model: "deepseek/deepseek-chat",
+                    messages: formattedMessages,
+                    max_tokens: 1000,
+                    temperature: 0.7
+                }),
+                signal: controller.signal
+            });
+
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(`OpenRouter API Error ${res.status}: ${errorText}`);
+            }
+
+            const data = await res.json();
+            
+            if (!data.choices?.[0]?.message?.content) {
+                throw new Error(`OpenRouter returned unexpected response shape: ${JSON.stringify(data)}`);
+            }
+
+            return data.choices[0].message.content;
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    }
+}
