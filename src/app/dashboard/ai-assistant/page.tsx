@@ -5,6 +5,8 @@ import { Send, Sparkles, RotateCcw, Copy, Check, Lock, ChevronRight } from "luci
 import { usePlanAccess } from "@/hooks/use-plan-access";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { BackButton } from "@/components/ui/BackButton";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type MessageRole = "user" | "assistant";
 
@@ -28,6 +30,7 @@ export default function AIAssistantPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
+    const [loadingText, setLoadingText] = useState("Thinking...");
     const [usageCount, setUsageCount] = useState<number | null>(null);
     const [copied, setCopied] = useState<string | null>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
@@ -59,6 +62,12 @@ export default function AIAssistantPage() {
         setMessages(prev => [...prev, userMessage]);
         setInput("");
         setLoading(true);
+        setLoadingText("Thinking...");
+
+        // Dynamic loading text
+        const loadingInterval = setInterval(() => {
+            setLoadingText(prev => prev === "Thinking..." ? "Analyzing..." : prev === "Analyzing..." ? "Generating Advice..." : "Thinking...");
+        }, 1500);
 
         // Reset textarea height
         if (inputRef.current) {
@@ -108,6 +117,7 @@ export default function AIAssistantPage() {
             };
             setMessages(prev => [...prev, errorMessage]);
         } finally {
+            clearInterval(loadingInterval);
             setLoading(false);
             inputRef.current?.focus();
         }
@@ -266,17 +276,14 @@ export default function AIAssistantPage() {
 
                         {/* Bubble */}
                         <div className={`max-w-[75%] group flex flex-col gap-1 ${message.role === "user" ? "items-end" : "items-start"}`}>
-                            <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                            <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none ${
                                 message.role === "user"
-                                    ? "bg-amber-500 text-white rounded-tr-sm"
+                                    ? "bg-amber-500 text-white rounded-tr-sm prose-p:text-white prose-strong:text-white"
                                     : "bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-tl-sm"
                             }`}>
-                                {message.content.split("\n").map((line, i) => (
-                                    <span key={i}>
-                                        {line}
-                                        {i < message.content.split("\n").length - 1 && <br />}
-                                    </span>
-                                ))}
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {message.content}
+                                </ReactMarkdown>
                             </div>
 
                             {message.role === "assistant" && (
@@ -313,6 +320,7 @@ export default function AIAssistantPage() {
                                         style={{ animationDelay: `${i * 150}ms` }}
                                     />
                                 ))}
+                                <span className="ml-2 text-xs text-neutral-500 font-medium">{loadingText}</span>
                             </div>
                         </div>
                     </div>

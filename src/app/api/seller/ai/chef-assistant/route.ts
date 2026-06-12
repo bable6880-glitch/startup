@@ -74,51 +74,77 @@ export async function POST(req: NextRequest) {
             remainingToday = 20 - used;
         }
 
-        try {
-            if (!process.env.ANTHROPIC_API_KEY) {
-                throw new Error("Missing Anthropic API Key");
-            }
+        const systemPrompt = `You are an expert culinary and business advisor for Pakistani home kitchens.
+Provide practical, concise, and highly actionable advice. Match the language of the user (English or Roman Urdu).
+Focus strictly on: cost optimization, ingredient substitutions, local Pakistani palate, menu engineering, and customer retention.
+Format your responses using clean Markdown (e.g., bullet points, bold text for emphasis).
+Keep responses concise and under 200 words. Be encouraging and business-focused.`;
 
-            const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-api-key": process.env.ANTHROPIC_API_KEY,
-                    "anthropic-version": "2023-06-01"
-                },
-                body: JSON.stringify({
-                    model: 'claude-haiku-4-5-20251001',
-                    max_tokens: 200,
-                    system: `You are a helpful cooking assistant for Pakistani home cooks. Give practical, concise cooking advice. Match the language of the user (English or Urdu/Roman Urdu). Focus on: ingredients, quantities, timing, techniques, and troubleshooting. Keep responses under 120 words. Be encouraging and friendly.`,
-                    messages: [
-                        { role: "user", content: ctx ? `Context: ${ctx}\n\nQuestion: ${q}` : q }
-                    ]
-                })
-            });
+        const messages = [
+            { role: "user", content: ctx ? `Context:\n${ctx}\n\nQuestion:\n${q}` : q }
+        ];
 
-            if (!anthropicRes.ok) {
-                throw new Error(`Anthropic API Error: ${anthropicRes.status}`);
-            }
+        // Provider Fallback Chain
+        const { getConfiguredProviders } = await import("@/lib/ai");
+        const providers = getConfiguredProviders();
 
-            const aiData = await anthropicRes.json();
-            const responseText = aiData.content[0].text;
-
-            return NextResponse.json({ 
-                success: true, 
-                response: responseText,
-                remainingToday,
-                fallback: false
-            });
-
-        } catch (error) {
-            logger.warn("Chef assistant fallback triggered", { error });
-            return NextResponse.json({
-                success: true,
-                response: "Sorry, chef assistant is temporarily unavailable. Please try again in a moment.",
-                remainingToday,
-                fallback: true
-            });
+        if (providers.length === 0) {
+            logger.error("No AI providers configured", { kitchenId: guard.kitchen.id });
+            return NextResponse.json({ error: "AI service is not configured on the server." }, { status: 503 });
         }
+
+        const requestId = crypto.randomUUID();
+        let lastError: Error | null = null;
+        let attempt = 0;
+
+        for (const provider of providers) {
+            attempt++;
+            const startTime = Date.now();
+            try {
+                const responseText = await provider.chat(messages, systemPrompt);
+                
+                logger.info("Chef Assistant request successful", {
+                    requestId,
+                    kitchenId: guard.kitchen.id,
+                    provider: provider.name,
+                    latency_ms: Date.now() - startTime,
+                    attempt
+                });
+
+                return NextResponse.json({ 
+                    success: true, 
+                    response: responseText,
+                    remainingToday,
+                    fallback: attempt > 1
+                });
+            } catch (error: any) {
+                lastError = error;
+                logger.warn("AI Provider failed, trying fallback", {
+                    requestId,
+                    kitchenId: guard.kitchen.id,
+                    failedProvider: provider.name,
+                    latency_ms: Date.now() - startTime,
+                    errorMessage: error.message,
+                    attempt
+                });
+                // Continue to the next provider in the loop
+            }
+        }
+
+        // If all providers fail
+        logger.error("All AI providers failed", {
+            requestId,
+            kitchenId: guard.kitchen.id,
+            totalAttempts: attempt,
+            lastErrorMessage: lastError?.message
+        });
+
+        return NextResponse.json({
+            success: false,
+            error: "We couldn't process your request right now. Our AI services are experiencing high load.",
+            remainingToday,
+            fallback: true
+        }, { status: 503 });
 
     } catch (error) {
         logger.error("Failed to process chef assistant request", { error });
