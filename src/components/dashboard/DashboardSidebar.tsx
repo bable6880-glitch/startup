@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/firebase/auth-context";
 import {
     LayoutDashboard,
     ShoppingBag,
@@ -17,6 +18,7 @@ import {
     Crown,
     ChevronLeft,
     ChevronRight,
+    LogOut,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -62,10 +64,17 @@ const navGroups = [
 
 export function DashboardSidebar({ kitchenName, collapsed, onToggle }: SidebarProps) {
     const pathname = usePathname();
+    const router = useRouter();
+    const { signOutUser } = useAuth();
 
     const isActive = (href: string, exact?: boolean) => {
         if (exact) return pathname === href;
         return pathname === href || pathname.startsWith(href + "/");
+    };
+
+    const handleLogout = async () => {
+        await signOutUser();
+        router.push("/");
     };
 
     return (
@@ -197,15 +206,50 @@ export function DashboardSidebar({ kitchenName, collapsed, onToggle }: SidebarPr
                 )}
             </nav>
 
-            {/* Collapse toggle */}
+            {/* Collapse toggle and Logout */}
             <div
                 style={{
                     padding: "12px",
                     borderTop: "1px solid rgba(255,255,255,0.06)",
                     display: "flex",
-                    justifyContent: collapsed ? "center" : "flex-end",
+                    justifyContent: collapsed ? "center" : "space-between",
+                    alignItems: "center",
+                    gap: "8px",
                 }}
             >
+                <button
+                    onClick={handleLogout}
+                    title="Logout"
+                    style={{
+                        width: collapsed ? 32 : "auto",
+                        flex: collapsed ? "none" : 1,
+                        height: 32,
+                        borderRadius: 6,
+                        background: "rgba(239,68,68,0.1)",
+                        border: "1px solid rgba(239,68,68,0.2)",
+                        color: "#ef4444",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                        padding: collapsed ? 0 : "0 12px",
+                        fontWeight: 600,
+                        fontSize: 12,
+                    }}
+                    onMouseOver={(e) => {
+                        e.currentTarget.style.background = "rgba(239,68,68,0.2)";
+                    }}
+                    onMouseOut={(e) => {
+                        e.currentTarget.style.background = "rgba(239,68,68,0.1)";
+                    }}
+                    aria-label="Logout"
+                >
+                    <LogOut size={16} />
+                    {!collapsed && <span>Logout</span>}
+                </button>
+
                 <button
                     onClick={onToggle}
                     style={{
@@ -220,6 +264,7 @@ export function DashboardSidebar({ kitchenName, collapsed, onToggle }: SidebarPr
                         justifyContent: "center",
                         cursor: "pointer",
                         transition: "all 0.2s",
+                        flexShrink: 0,
                     }}
                     onMouseOver={(e) => {
                         e.currentTarget.style.background = "rgba(115,103,240,0.12)";
