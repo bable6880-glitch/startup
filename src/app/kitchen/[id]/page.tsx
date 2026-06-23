@@ -217,13 +217,7 @@ async function getActivePotluck(kitchenId: string) {
 // ─── Kitchen Content ────────────────────────────────────────────────────────
 
 async function KitchenContent({ id }: { id: string }) {
-    const [kitchen, menu, reviewData, reviewStats, activePotluck] = await Promise.all([
-        getKitchen(id),
-        getMenu(id),
-        getReviews(id),
-        getKitchenReviewStats(id),
-        getActivePotluck(id),
-    ]);
+    const kitchen = await getKitchen(id);
 
     if (!kitchen) {
         return (
@@ -242,6 +236,13 @@ async function KitchenContent({ id }: { id: string }) {
     if (uuidRegex.test(id) && kitchen.slug) {
         redirect(`/kitchen/${kitchen.slug}`);
     }
+
+    const [menu, reviewData, reviewStats, activePotluck] = await Promise.all([
+        getMenu(kitchen.id),
+        getReviews(kitchen.id),
+        getKitchenReviewStats(kitchen.id),
+        getActivePotluck(kitchen.id),
+    ]);
 
     return (
         <div className="animate-fade-in pb-20 md:pb-0">
