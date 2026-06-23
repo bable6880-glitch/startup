@@ -12,6 +12,7 @@ type Review = {
     createdAt: string;
     kitchen: {
         id: string;
+        slug?: string | null;
         name: string;
     };
 };
@@ -257,7 +258,7 @@ export default function MyReviewsPage() {
                                         </div>
                                         <div className="min-w-0">
                                             <Link
-                                                href={`/kitchen/${review.kitchen.id}`}
+                                                href={`/kitchen/${review.kitchen.slug ?? review.kitchen.id}`}
                                                 className="block font-semibold text-neutral-900 hover:text-primary-600 transition-colors dark:text-neutral-100 dark:hover:text-primary-400 truncate"
                                             >
                                                 {review.kitchen.name}

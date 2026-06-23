@@ -21,6 +21,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsToolti
 
 type Kitchen = {
     id: string;
+    slug?: string | null;
     name: string;
     city: string;
     area: string;
@@ -341,7 +342,7 @@ function DashboardContent() {
                 </div>
                 {kitchen && (
                     <Link
-                        href={`/kitchen/${kitchen.id}`}
+                        href={`/kitchen/${kitchen.slug ?? kitchen.id}`}
                         className="hidden sm:inline-flex items-center gap-2 rounded-lg bg-[rgba(115,103,240,0.12)] px-4 py-2 text-[13px] font-semibold text-[#7367F0] hover:bg-[rgba(115,103,240,0.2)] transition-colors"
                     >
                         View Public Profile <ChevronRight size={14} />

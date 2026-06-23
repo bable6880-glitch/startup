@@ -6,6 +6,9 @@ import { ReportButton } from "@/components/kitchen/ReportButton";
 import { KitchenHeader } from "@/components/kitchen/KitchenHeader";
 import { ClientOrderBanner } from "@/components/kitchen/ClientOrderBanner";
 import { getKitchenById, getKitchenBySlug } from "@/services/kitchen.service";
+import { redirect } from "next/navigation";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { buildKitchenSchema, buildBreadcrumbSchema } from "@/lib/seo/schemas";
 import { getMealsByKitchen } from "@/services/menu.service";
 import { getKitchenReviews, getKitchenReviewStats } from "@/services/review.service";
 import { reviewQuerySchema } from "@/lib/validations/review";
@@ -63,14 +66,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
                 kitchen.name,
             ].filter(Boolean),
             alternates: {
-                canonical: `https://smarttiffinfood.vercel.app/kitchen/${id}`,
+                canonical: `https://smarttiffinfood.vercel.app/kitchen/${kitchen.slug ?? id}`,
             },
             openGraph: {
                 title,
                 description,
                 type: "website",
                 siteName: "Smart Tiffin",
-                url: `https://smarttiffinfood.vercel.app/kitchen/${id}`,
+                url: `https://smarttiffinfood.vercel.app/kitchen/${kitchen.slug ?? id}`,
                 ...(kitchen.coverImageUrl ? { images: [{ url: kitchen.coverImageUrl }] } : {}),
             },
         };
@@ -234,34 +237,31 @@ async function KitchenContent({ id }: { id: string }) {
         );
     }
 
+    // 301 Redirect to slug if accessed via UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(id) && kitchen.slug) {
+        redirect(`/kitchen/${kitchen.slug}`);
+    }
+
     return (
         <div className="animate-fade-in pb-20 md:pb-0">
             {/* JSON-LD Structured Data for SEO */}
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{
-                    __html: JSON.stringify({
-                        "@context": "https://schema.org",
-                        "@type": "Restaurant",
-                        name: kitchen.name,
-                        description: kitchen.description || "Tiffin service and home cooked food meal delivery provider.",
-                        servesCuisine: kitchen.cuisineTypes?.length ? kitchen.cuisineTypes.join(", ") : "Home Style",
-                        areaServed: kitchen.city || "Pakistan",
-                        ...(kitchen.addressLine ? { address: { "@type": "PostalAddress", streetAddress: kitchen.addressLine, addressLocality: kitchen.city || "" } } : {}),
-                        ...(kitchen.coverImageUrl ? { image: kitchen.coverImageUrl } : {}),
-                        ...(Number(kitchen.reviewCount) > 0 && Number(kitchen.avgRating) > 0
-                            ? {
-                                aggregateRating: {
-                                    "@type": "AggregateRating",
-                                    ratingValue: Number(kitchen.avgRating).toFixed(1),
-                                    reviewCount: String(kitchen.reviewCount),
-                                },
-                            }
-                            : {}),
-                        priceRange: "₨200 - ₨600"
-                    }),
-                }}
-            />
+            <JsonLd schema={buildKitchenSchema({
+                id: kitchen.id,
+                name: kitchen.name,
+                description: kitchen.description,
+                city: kitchen.city || 'Pakistan',
+                cuisines: kitchen.cuisineTypes || [],
+                avgRating: Number(kitchen.avgRating),
+                reviewCount: Number(kitchen.reviewCount),
+                images: kitchen.images || (kitchen.coverImageUrl ? [kitchen.coverImageUrl] : []),
+                slug: kitchen.slug
+            })} />
+            <JsonLd schema={buildBreadcrumbSchema([
+                { name: 'Home', url: 'https://smarttiffinfood.vercel.app/' },
+                { name: 'Explore', url: 'https://smarttiffinfood.vercel.app/explore' },
+                { name: kitchen.name, url: `https://smarttiffinfood.vercel.app/kitchen/${kitchen.slug ?? kitchen.id}` }
+            ])} />
 
             <div className="flex flex-col md:flex-row gap-8 items-start">
 

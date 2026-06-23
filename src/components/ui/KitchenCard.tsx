@@ -3,6 +3,7 @@ import { PlanBadge } from "@/components/plans/PlanBadge";
 
 type KitchenCardProps = {
     id: string;
+    slug?: string | null;
     name: string;
     city: string;
     area?: string | null;
@@ -19,6 +20,7 @@ type KitchenCardProps = {
 
 export default function KitchenCard({
     id,
+    slug,
     name,
     city,
     area,
@@ -34,7 +36,7 @@ export default function KitchenCard({
 }: KitchenCardProps) {
     return (
         <Link
-            href={`/kitchen/${id}`}
+            href={`/kitchen/${slug ?? id}`}
             className="group block rounded-2xl bg-white border border-neutral-200/60 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 dark:bg-neutral-800 dark:border-neutral-700"
         >
             {/* Image */}

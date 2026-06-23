@@ -51,6 +51,7 @@ const kitchenGreyIcon = L.divIcon({
 
 type KitchenMarker = {
     id: string;
+    slug?: string | null;
     name: string;
     lat: number;
     lng: number;
@@ -166,7 +167,7 @@ export default function Map({ center, zoom = 13, markers = [], route = [], kitch
                                     <div className="text-xs text-neutral-500 mb-2">
                                         {kitchen.distanceKm != null ? `${kitchen.distanceKm} km away` : 'Distance unknown'}
                                     </div>
-                                    <Link className="text-xs bg-primary-500 text-white px-3 py-1 rounded w-full inline-block" href={`/kitchen/${kitchen.id}`}>
+                                    <Link className="text-xs bg-primary-500 text-white px-3 py-1 rounded w-full inline-block" href={`/kitchen/${kitchen.slug ?? kitchen.id}`}>
                                         View Menu
                                     </Link>
                                 </div>

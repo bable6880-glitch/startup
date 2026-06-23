@@ -7,6 +7,7 @@ import { PlanBadge } from "@/components/plans/PlanBadge";
 type KitchenHeaderProps = {
     kitchen: {
         id: string;
+        slug?: string | null;
         name: string;
         area?: string | null;
         city?: string | null;
@@ -48,7 +49,7 @@ export function KitchenHeader({ kitchen }: KitchenHeaderProps) {
         if (!user) {
             // Can't favorite without login
             // Using modern window.location for redirect to login
-            window.location.href = `/login?redirect=/kitchen/${kitchen.id}`;
+            window.location.href = `/login?redirect=/kitchen/${kitchen.slug ?? kitchen.id}`;
             return;
         }
 

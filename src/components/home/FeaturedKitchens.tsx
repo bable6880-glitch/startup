@@ -7,6 +7,7 @@ import { useLocation } from "@/lib/location-context";
 
 type Kitchen = {
     id: string;
+    slug?: string | null;
     name: string;
     city: string | null;
     area: string | null;
@@ -102,7 +103,7 @@ export function FeaturedKitchens() {
                 {kitchens.map((kitchen) => (
                     <Link
                         key={kitchen.id}
-                        href={`/kitchen/${kitchen.id}`}
+                        href={`/kitchen/${kitchen.slug ?? kitchen.id}`}
                         className="group rounded-2xl border border-neutral-200/60 bg-white shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden dark:bg-neutral-800 dark:border-neutral-700"
                     >
                         {/* Cover Image */}

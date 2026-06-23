@@ -23,6 +23,7 @@ const nextConfig: NextConfig = {
 
   // Replace deprecated `domains` with `remotePatterns`
   images: {
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       {
         protocol: "https",

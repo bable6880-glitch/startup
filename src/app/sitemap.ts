@@ -69,14 +69,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ══ VANITY KEYWORD PAGES ══
   // Dedicated landing pages targeting exact-match searches like "tiffin service lahore"
   const vanityPages: MetadataRoute.Sitemap = [
-    'lahore',
-    'karachi',
-    'islamabad',
-    'rawalpindi',
-    'faisalabad',
-    'multan',
-  ].map(city => ({
-    url: `${BASE_URL}/tiffin-service-${city}`,
+    '/tiffin-service-lahore',
+    '/tiffin-service-karachi',
+    '/tiffin-service-islamabad',
+    '/tiffin-service-rawalpindi',
+    '/tiffin-service-faisalabad',
+    '/tiffin-service-multan',
+    '/tiffin-service-peshawar',
+    '/tiffin-service-gujranwala',
+    '/tiffin-service-sialkot',
+    '/homemade-food-delivery-lahore',
+    '/daily-lunch-delivery-lahore',
+    '/lunch-box-service-lahore',
+  ].map(path => ({
+    url: `${BASE_URL}${path}`,
     lastModified: new Date('2025-06-01'),
     changeFrequency: 'monthly' as const,
     priority: 0.9, // High priority — exact keyword match pages
@@ -90,6 +96,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const activeKitchens = await db
       .select({
         id: kitchens.id,
+        slug: kitchens.slug,
         updatedAt: kitchens.updatedAt,
       })
       .from(kitchens)
@@ -98,7 +105,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     kitchenPages = activeKitchens
       .filter(k => k.id)
       .map(k => ({
-        url: `${BASE_URL}/kitchen/${k.id}`,
+        url: `${BASE_URL}/kitchen/${k.slug ?? k.id}`,
         lastModified: k.updatedAt ?? new Date(),
         changeFrequency: 'daily' as const,
         priority: 0.7,

@@ -24,6 +24,7 @@ interface OrderItem {
 
 interface OrderKitchen {
     id: string;
+    slug?: string | null;
     name: string;
     ownerId: string;
     latitude: string | null;
@@ -254,7 +255,7 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
                         <div className="space-y-4">
                             <div>
                                 <p className="text-xs text-neutral-500 dark:text-neutral-400">Kitchen</p>
-                                <Link href={`/kitchen/${order.kitchen.id}`} className="font-medium text-primary-600 hover:underline">
+                                <Link href={`/kitchen/${order.kitchen.slug ?? order.kitchen.id}`} className="font-medium text-primary-600 hover:underline">
                                     {order.kitchen.name}
                                 </Link>
                             </div>
@@ -298,7 +299,7 @@ export default function OrderDetailsPage(props: { params: Promise<{ id: string }
 
                     <div className="space-y-3">
                         <Link
-                            href={`/kitchen/${order.kitchen.id}`}
+                            href={`/kitchen/${order.kitchen.slug ?? order.kitchen.id}`}
                             className="flex items-center justify-center gap-2 w-full rounded-xl bg-primary-600 px-4 py-3 text-sm font-bold text-white hover:bg-primary-700 transition-colors shadow-sm"
                         >
                             <span>🍳</span>

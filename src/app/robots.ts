@@ -24,6 +24,9 @@ export default function robots(): MetadataRoute.Robots {
           '/tiffin-service-rawalpindi',
           '/tiffin-service-faisalabad',
           '/tiffin-service-multan',
+          '/homemade-food-delivery-lahore',
+          '/daily-lunch-delivery-lahore',
+          '/lunch-box-service-lahore',
         ],
         disallow: [
           // Auth — no SEO value

@@ -9,6 +9,8 @@ import CityCards from "@/components/home/CityCards";
 import SeoImageSection from "@/components/home/SeoImageSection";
 import Image from "next/image";
 import { HeroBackground } from "@/components/home/LandingBackground";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { buildFAQSchema } from "@/lib/seo/schemas";
 
 export const metadata: Metadata = {
   title: 'Smart Tiffin – Homemade Food & Daily Tiffin Service in Pakistan',
@@ -75,6 +77,37 @@ const howItWorks = [
   { step: "4", title: "Enjoy Fresh Meals", desc: "Receive freshly prepared homemade food delivered to your location." },
 ];
 
+const HOME_FAQS = [
+  { 
+    q: "Daily Tiffin Service for Students", 
+    a: "Thousands of students across Pakistan move away from home every year to attend universities and colleges. One of the biggest challenges they face is finding affordable and healthy food on a daily basis. Smart Tiffin helps students discover budget-friendly tiffin services that provide homemade meals throughout the month. Instead of spending money on expensive restaurant food, students can subscribe to affordable meal plans prepared by experienced home cooks.\n\nLiving situations: University hostels, Private hostels, Shared apartments, Rented accommodations, Student residences.\n\nServices: Daily lunch delivery, Daily dinner delivery, Weekly meal plans, Monthly food subscriptions, Affordable meal packages, Traditional homemade dishes.\n\nBy choosing homemade food, students can enjoy meals that are healthier, more affordable, and more similar to the food they enjoy at home." 
+  },
+  { 
+    q: "Monthly Lunch Service and Meal Plans", 
+    a: "One of the most popular options among our users is the monthly lunch service. Monthly meal subscriptions eliminate the need to place food orders every day and help customers maintain a consistent meal schedule.\n\nAdvantages: Cost-effective pricing, Reliable daily delivery, Consistent food quality, Time savings, Convenient scheduling, Personalized meal preferences.\n\nWhether you need lunch, dinner, or complete daily meal coverage, Smart Tiffin helps you find providers offering flexible subscription plans. Many customers prefer monthly plans because they simplify meal management and reduce daily decision-making." 
+  },
+  { 
+    q: "Tiffin Service in Lahore", 
+    a: "Lahore is one of Pakistan's largest cities and has a growing demand for homemade food delivery services. Students, professionals, and families frequently search for dependable tiffin services that provide fresh meals at affordable prices.\n\nServices: Daily tiffin service in Lahore, Monthly lunch service in Lahore, Homemade food delivery in Lahore, Office lunch delivery, Student meal plans, Family meal packages.\n\nAreas served: Gulberg, Johar Town, DHA, Model Town, Wapda Town, Bahria Town, and nearby areas.\n\nSmart Tiffin aims to connect you with reliable homemade food providers wherever you are in Lahore." 
+  },
+  { 
+    q: "Tiffin Service in Islamabad", 
+    a: "Islamabad has a large population of students, government employees, and professionals seeking healthy meal options. Many residents prefer homemade food over restaurant meals due to quality, hygiene, and affordability.\n\nServices: Tiffin service in Islamabad, Daily lunch delivery, Homemade food delivery, Monthly food subscriptions, Student meal plans, Office meal services.\n\nAreas served: G-13, G-11, G-10, F-11, F-10, E-11, H-13, Bahria Town, and surrounding areas." 
+  },
+  { 
+    q: "Homemade Food Delivery Across Pakistan", 
+    a: "Smart Tiffin is not limited to one city. Our vision is to make homemade food delivery accessible across Pakistan.\n\nCities: Lahore, Islamabad, Rawalpindi, Karachi, Faisalabad, Multan, Peshawar, Sialkot, Gujranwala, Abbottabad.\n\nAs our community continues to grow, more home cooks and food providers join the platform to serve customers in different regions." 
+  },
+  { 
+    q: "Support Local Home Cooks", 
+    a: "Smart Tiffin is more than a food platform. It is a community that supports talented home cooks and small food businesses. Many individuals possess exceptional cooking skills but struggle to reach customers. Our platform helps them showcase their menus, connect with customers, and grow their businesses.\n\nImpact: Support local entrepreneurs, Empower women-led businesses, Promote home-based kitchens, Strengthen local communities, Create economic opportunities.\n\nThis creates a win-win situation for both food providers and customers." 
+  },
+  { 
+    q: "Our Mission", 
+    a: "Our mission is simple: make homemade food accessible, affordable, and convenient for everyone in Pakistan. We believe that everyone deserves access to healthy, home-cooked meals regardless of their schedule, location, or lifestyle. By connecting customers with trusted home cooks, Smart Tiffin creates opportunities for both food lovers and culinary entrepreneurs." 
+  }
+];
+
 export const revalidate = 3600;
 
 export default async function HomePage() {
@@ -119,6 +152,7 @@ export default async function HomePage() {
     <div className="flex flex-col">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
+      <JsonLd schema={buildFAQSchema(HOME_FAQS.map(f => ({ question: f.q, answer: f.a })))} />
       
       {/* ── Hero ─────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden">
@@ -331,36 +365,7 @@ export default async function HomePage() {
             </h2>
           </div>
           <div className="space-y-4">
-            {[
-              { 
-                q: "Daily Tiffin Service for Students", 
-                a: "Thousands of students across Pakistan move away from home every year to attend universities and colleges. One of the biggest challenges they face is finding affordable and healthy food on a daily basis. Smart Tiffin helps students discover budget-friendly tiffin services that provide homemade meals throughout the month. Instead of spending money on expensive restaurant food, students can subscribe to affordable meal plans prepared by experienced home cooks.\n\nLiving situations: University hostels, Private hostels, Shared apartments, Rented accommodations, Student residences.\n\nServices: Daily lunch delivery, Daily dinner delivery, Weekly meal plans, Monthly food subscriptions, Affordable meal packages, Traditional homemade dishes.\n\nBy choosing homemade food, students can enjoy meals that are healthier, more affordable, and more similar to the food they enjoy at home." 
-              },
-              { 
-                q: "Monthly Lunch Service and Meal Plans", 
-                a: "One of the most popular options among our users is the monthly lunch service. Monthly meal subscriptions eliminate the need to place food orders every day and help customers maintain a consistent meal schedule.\n\nAdvantages: Cost-effective pricing, Reliable daily delivery, Consistent food quality, Time savings, Convenient scheduling, Personalized meal preferences.\n\nWhether you need lunch, dinner, or complete daily meal coverage, Smart Tiffin helps you find providers offering flexible subscription plans. Many customers prefer monthly plans because they simplify meal management and reduce daily decision-making." 
-              },
-              { 
-                q: "Tiffin Service in Lahore", 
-                a: "Lahore is one of Pakistan's largest cities and has a growing demand for homemade food delivery services. Students, professionals, and families frequently search for dependable tiffin services that provide fresh meals at affordable prices.\n\nServices: Daily tiffin service in Lahore, Monthly lunch service in Lahore, Homemade food delivery in Lahore, Office lunch delivery, Student meal plans, Family meal packages.\n\nAreas served: Gulberg, Johar Town, DHA, Model Town, Wapda Town, Bahria Town, and nearby areas.\n\nSmart Tiffin aims to connect you with reliable homemade food providers wherever you are in Lahore." 
-              },
-              { 
-                q: "Tiffin Service in Islamabad", 
-                a: "Islamabad has a large population of students, government employees, and professionals seeking healthy meal options. Many residents prefer homemade food over restaurant meals due to quality, hygiene, and affordability.\n\nServices: Tiffin service in Islamabad, Daily lunch delivery, Homemade food delivery, Monthly food subscriptions, Student meal plans, Office meal services.\n\nAreas served: G-13, G-11, G-10, F-11, F-10, E-11, H-13, Bahria Town, and surrounding areas." 
-              },
-              { 
-                q: "Homemade Food Delivery Across Pakistan", 
-                a: "Smart Tiffin is not limited to one city. Our vision is to make homemade food delivery accessible across Pakistan.\n\nCities: Lahore, Islamabad, Rawalpindi, Karachi, Faisalabad, Multan, Peshawar, Sialkot, Gujranwala, Abbottabad.\n\nAs our community continues to grow, more home cooks and food providers join the platform to serve customers in different regions." 
-              },
-              { 
-                q: "Support Local Home Cooks", 
-                a: "Smart Tiffin is more than a food platform. It is a community that supports talented home cooks and small food businesses. Many individuals possess exceptional cooking skills but struggle to reach customers. Our platform helps them showcase their menus, connect with customers, and grow their businesses.\n\nImpact: Support local entrepreneurs, Empower women-led businesses, Promote home-based kitchens, Strengthen local communities, Create economic opportunities.\n\nThis creates a win-win situation for both food providers and customers." 
-              },
-              { 
-                q: "Our Mission", 
-                a: "Our mission is simple: make homemade food accessible, affordable, and convenient for everyone in Pakistan. We believe that everyone deserves access to healthy, home-cooked meals regardless of their schedule, location, or lifestyle. By connecting customers with trusted home cooks, Smart Tiffin creates opportunities for both food lovers and culinary entrepreneurs." 
-              }
-            ].map((faq, idx) => (
+            {HOME_FAQS.map((faq, idx) => (
               <details key={idx} className="group bg-white dark:bg-neutral-800 rounded-xl border border-neutral-200 dark:border-neutral-700 open:shadow-sm">
                 <summary className="flex cursor-pointer items-center justify-between p-6 font-semibold text-neutral-900 dark:text-neutral-100 marker:content-none">
                   {faq.q}

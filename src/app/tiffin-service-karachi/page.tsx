@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BASE_URL } from "@/config/site";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { buildFAQSchema, buildBreadcrumbSchema } from "@/lib/seo/schemas";
 
 export const metadata: Metadata = {
     title: "Tiffin Service in Karachi – Fresh Home Cooked Meals from PKR 220 | Smart Tiffin",
@@ -71,6 +73,12 @@ export default function TiffinServiceKarachiPage() {
     return (
         <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+            <JsonLd schema={buildFAQSchema(KARACHI_FAQ.map(f => ({ question: f.q, answer: f.a })))} />
+            <JsonLd schema={buildBreadcrumbSchema([
+                { name: 'Home', url: BASE_URL },
+                { name: 'Karachi', url: `${BASE_URL}/city/karachi` },
+                { name: 'Tiffin Service Karachi', url: `${BASE_URL}/tiffin-service-karachi` }
+            ])} />
 
             {/* Breadcrumb */}
             <nav className="mb-6 text-sm text-neutral-500 dark:text-neutral-400">
