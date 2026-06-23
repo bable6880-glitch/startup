@@ -14,7 +14,7 @@ export const FEATURES = {
     AI_INSIGHTS: 'ai_insights_analytics',
     AI_PRICING: 'ai_pricing',
     AI_SUGGESTIONS: 'ai_suggestions',
-    COOK_HELPER: 'cook_helper_ai',
+
     AUTO_WHATSAPP: 'auto_whatsapp',
     DEDICATED_MANAGER: 'dedicated_manager',
     DIGITAL_KHATA: 'digital_khata',

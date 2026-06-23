@@ -17,7 +17,7 @@ export type PlanFeature =
     | 'ai_insights_analytics'
     | 'ai_pricing'
     | 'ai_suggestions'
-    | 'cook_helper_ai'
+
     | 'auto_whatsapp'
     | 'dedicated_manager'
     | 'digital_khata'
@@ -323,8 +323,7 @@ function resolveFeature(config: PlanConfigRow, feature: PlanFeature): boolean {
             return config.aiPricing ?? false;
         case 'ai_suggestions':
             return !!config.aiSuggestions && config.aiSuggestions !== 'none';
-        case 'cook_helper_ai':
-            return config.cookHelperAi ?? false;
+
         case 'auto_whatsapp':
             return config.autoWhatsApp ?? false;
         case 'dedicated_manager':
@@ -430,7 +429,7 @@ export function getMinimumPlanForFeature(feature: PlanFeature): PlanId {
         'ai_insights_analytics': 'elite',
         'ai_pricing': 'elite',
         'ai_suggestions': 'starter',
-        'cook_helper_ai': 'growth',
+
         'auto_whatsapp': 'elite',
         'dedicated_manager': 'elite',
         'digital_khata': 'pro',

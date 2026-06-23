@@ -49,13 +49,7 @@ export default function MenuManagementPage() {
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // AI Chef Assistant modal state (must be declared before any conditional returns)
-    const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-    const [aiCuisine, setAiCuisine] = useState("");
-    const [aiLoading, setAiLoading] = useState(false);
-    const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
-    const [aiTips, setAiTips] = useState<string | null>(null);
-    const [aiError, setAiError] = useState<string | null>(null);
+
 
     // AI Pricing panel state
     const [aiPricingMeal, setAiPricingMeal] = useState<Meal | null>(null);
@@ -290,47 +284,7 @@ export default function MenuManagementPage() {
 
 
 
-    const generateAiIdeas = async () => {
-        if (!aiCuisine.trim()) return;
-        setAiLoading(true);
-        setAiError(null);
-        try {
-            const token = await getIdToken();
-            const res = await fetch("/api/seller/ai/chef-assistant", {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ cuisine: aiCuisine })
-            });
-            const data = await res.json();
-            if (res.ok) {
-                setAiSuggestions(data.ideas || []);
-                setAiTips(data.tips || null);
-            } else {
-                setAiError(data.error || "Failed to generate ideas. Ensure you have the Elite plan.");
-            }
-        } catch (err) {
-            setAiError("Network error.");
-        } finally {
-            setAiLoading(false);
-        }
-    };
 
-    const useAiIdea = (idea: any) => {
-        setIsAiModalOpen(false);
-        setEditingMeal(null);
-        reset({
-            name: idea.name,
-            description: idea.description,
-            price: idea.suggestedPriceRs,
-            category: "other",
-            isAvailable: true,
-            dietaryTags: [],
-            images: [],
-        });
-        setImagePreviews([]);
-        setFormError(null);
-        setIsModalOpen(true);
-    };
 
     return (
         <div className="mx-auto max-w-5xl px-4 py-8 bg-neutral-50/50 min-h-[calc(100vh-80px)] dark:bg-neutral-900 border border-transparent">
@@ -346,29 +300,7 @@ export default function MenuManagementPage() {
                     <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Add, edit, or remove your delicious offerings.</p>
                 </div>
                 <div className="flex gap-3">
-                    <FeatureGate
-                        feature="cook_helper_ai"
-                        currentPlanId={planData?.planId ?? null}
-                        requiredPlan="growth"
-                        fallback={
-                            <button disabled className="flex items-center gap-2 rounded-xl bg-gray-100 px-5 py-2.5 text-sm font-bold text-gray-400 shadow-sm transition-all cursor-not-allowed">
-                                🔒 AI Chef (Growth+)
-                            </button>
-                        }
-                    >
-                        <button
-                            onClick={() => {
-                                setAiCuisine("");
-                                setAiSuggestions([]);
-                                setAiTips(null);
-                                setAiError(null);
-                                setIsAiModalOpen(true);
-                            }}
-                            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm shadow-purple-500/30 hover:shadow-md transition-all active:scale-95"
-                        >
-                            <span className="text-lg">✨</span> AI Chef Assistant
-                        </button>
-                    </FeatureGate>
+
                     <button
                         onClick={() => openModal()}
                         className="flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm shadow-primary-500/30 hover:bg-primary-700 transition-all active:scale-95"
@@ -516,94 +448,7 @@ export default function MenuManagementPage() {
                 </>
             )}
 
-            {/* AI Assistant Modal */}
-            {isAiModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 sm:px-0">
-                    <div className="absolute inset-0 bg-neutral-900/60 backdrop-blur-sm transition-opacity" onClick={() => setIsAiModalOpen(false)} />
-                    
-                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] overflow-hidden flex flex-col dark:bg-neutral-900 animate-in fade-in slide-in-from-bottom-8 border border-purple-500/20">
-                        <div className="flex items-center justify-between p-6 border-b border-neutral-100 dark:border-neutral-800 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/10 dark:to-indigo-900/10">
-                            <div className="flex items-center gap-3">
-                                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-inner">
-                                    ✨
-                                </span>
-                                <div>
-                                    <h2 className="text-lg font-bold text-neutral-900 dark:text-white">AI Chef Assistant</h2>
-                                    <p className="text-xs text-neutral-500 dark:text-neutral-400">Powered by advanced culinary models</p>
-                                </div>
-                            </div>
-                            <button onClick={() => setIsAiModalOpen(false)} className="text-neutral-400 hover:text-neutral-600 hover:bg-neutral-200/50 p-2 rounded-full transition-colors dark:hover:bg-neutral-800">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        
-                        <div className="p-6 overflow-y-auto flex-1">
-                            <div className="mb-6">
-                                <label className="block text-sm font-bold text-neutral-700 mb-1.5 dark:text-neutral-300">What cuisine or dish are you thinking of?</label>
-                                <div className="flex gap-2">
-                                    <input 
-                                        type="text" 
-                                        value={aiCuisine}
-                                        onChange={(e) => setAiCuisine(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && generateAiIdeas()}
-                                        placeholder="e.g. Authentic Lahori, Healthy Salads, Italian..." 
-                                        className="flex-1 rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all dark:bg-neutral-950 dark:border-neutral-700 dark:text-white" 
-                                    />
-                                    <button 
-                                        onClick={generateAiIdeas}
-                                        disabled={aiLoading || !aiCuisine.trim()}
-                                        className="rounded-xl bg-neutral-900 px-6 py-3 text-sm font-bold text-white shadow-sm hover:bg-neutral-800 disabled:opacity-50 transition-all dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
-                                    >
-                                        {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Generate"}
-                                    </button>
-                                </div>
-                                {aiError && <p className="mt-2 text-xs font-medium text-red-500">{aiError}</p>}
-                            </div>
 
-                            {aiSuggestions.length > 0 && (
-                                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-                                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                                        💡 Menu Suggestions
-                                    </h3>
-                                    {aiSuggestions.map((idea, idx) => (
-                                        <div key={idx} className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm hover:border-purple-300 hover:shadow-md transition-all dark:bg-neutral-800 dark:border-neutral-700">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <h4 className="font-bold text-neutral-900 dark:text-white text-lg">{idea.name}</h4>
-                                                <span className="text-sm font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg dark:bg-green-900/30 dark:text-green-400">
-                                                    Rs. {idea.suggestedPriceRs}
-                                                </span>
-                                            </div>
-                                            <p className="text-sm text-neutral-600 mb-4 dark:text-neutral-400 leading-relaxed">{idea.description}</p>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex gap-3 text-xs text-neutral-500 dark:text-neutral-400 font-medium">
-                                                    <span>Cost: Rs. {idea.estimatedCostRs}</span>
-                                                    <span>•</span>
-                                                    <span>Difficulty: {idea.difficulty}</span>
-                                                </div>
-                                                <button 
-                                                    onClick={() => useAiIdea(idea)}
-                                                    className="text-xs font-bold text-purple-600 bg-purple-50 px-4 py-2 rounded-lg hover:bg-purple-100 transition-colors dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50"
-                                                >
-                                                    Use this idea →
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    {aiTips && (
-                                        <div className="mt-6 rounded-xl bg-amber-50 border border-amber-200 p-4 flex gap-3 dark:bg-amber-900/20 dark:border-amber-900/50">
-                                            <span className="text-amber-600">💡</span>
-                                            <p className="text-sm text-amber-800 dark:text-amber-400 leading-relaxed font-medium">
-                                                {aiTips}
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Slide-out / Modal Form */}
             {isModalOpen && (

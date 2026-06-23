@@ -55,7 +55,6 @@ const navGroups = [
     {
         label: "Tools",
         links: [
-            { name: "AI Chef",   href: "/dashboard/ai-assistant",  icon: Bot },
             { name: "Settings",  href: "/dashboard/settings",      icon: Settings },
             { name: "Browse",    href: "/explore",                  icon: Search },
         ],

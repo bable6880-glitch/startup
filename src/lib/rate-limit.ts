@@ -34,7 +34,7 @@ export const rateLimiters = {
     sellerPotluck: createLimiter(100, "1 m"),       // 100/min/user (Dashboard reads/updates)
     potluckReserve: createLimiter(5, "1 m"),         // 5/min/user
     aiPricing: createLimiter(20, "60 m"),             // 20/hour/user
-    chefAssistant: createLimiter(20, "1440 m"),       // 20/day/user
+
     subscriptionCheckout: createLimiter(30, "60 m"),  // 30/hour/user
     khata: createLimiter(60, "1 m"),                  // 60/min/user
     // ── Admin Portal ──
@@ -57,7 +57,7 @@ export function getLimiterKey(pathname: string): RateLimiterKey {
     if (pathname.startsWith("/api/seller/subscription/checkout")) return "subscriptionCheckout";
     if (pathname.startsWith("/api/seller/subscription")) return "premium";
     if (pathname.startsWith("/api/seller/ai/pricing")) return "aiPricing";
-    if (pathname.startsWith("/api/seller/ai/chef-assistant")) return "chefAssistant";
+
     if (pathname.startsWith("/api/seller/potluck")) return "sellerPotluck";
     if (pathname.startsWith("/api/seller/khata")) return "khata";
     if (pathname.startsWith("/api/potluck") && pathname.includes("/reserve")) return "potluckReserve";
