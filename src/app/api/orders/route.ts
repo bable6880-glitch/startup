@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { apiSuccess, apiUnauthorized, apiBadRequest, apiInternalError } from "@/lib/utils/api-response";
 import { getAuthUser } from "@/lib/auth/get-auth-user";
 import { db } from "@/lib/db";
-import { orders, orderItems, meals, kitchens } from "@/lib/db/schema";
+import { orders, orderItems, meals, kitchens, potluckDeals, potluckOrders } from "@/lib/db/schema";
 import { createOrderSchema } from "@/lib/validations/order";
-import { eq, inArray, desc } from "drizzle-orm";
+import { eq, inArray, desc, sql } from "drizzle-orm";
 import { sanitizeText } from "@/lib/utils/sanitize";
+import { isKitchenTrialLocked } from "@/lib/utils/trial-lock";
 
 /**
  * GET /api/orders
@@ -139,6 +140,20 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Trial lock enforcement: read-time check — no cron dependency
+        if (isKitchenTrialLocked(kitchen)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: {
+                        code: "TRIAL_EXPIRED",
+                        message: "This kitchen's free trial has ended. The cook needs to upgrade to a paid plan.",
+                    },
+                },
+                { status: 423 }
+            );
+        }
+
         // Plan enforcement: check cook's monthly order limit
         const { guardOrderLimit } = await import("@/lib/plans/plan-guards");
         try {
@@ -227,6 +242,68 @@ export async function POST(request: NextRequest) {
                 priceAtOrder: item.price,
                 notes: item.notes,
             });
+        }
+
+        // ── Potluck inline processing ──
+        // If any item references a potluckDealId, atomically claim slots and
+        // create the potluck_orders link row.
+        const potluckItems = items.filter((i: any) => i.potluckDealId);
+        for (const pItem of potluckItems) {
+            const dealId = (pItem as any).potluckDealId;
+            const qty = pItem.quantity;
+
+            // Atomic slot claim — prevents overselling without transactions
+            const claimResult = await db.update(potluckDeals)
+                .set({
+                    currentOrderCount: sql`${potluckDeals.currentOrderCount} + ${qty}`,
+                    status: sql`CASE
+                        WHEN ${potluckDeals.currentOrderCount} + ${qty} >= ${potluckDeals.targetOrderCount}
+                        THEN 'FILLED'::potluck_status_enum
+                        ELSE ${potluckDeals.status}
+                    END`,
+                    updatedAt: new Date(),
+                })
+                .where(
+                    sql`${potluckDeals.id} = ${dealId}
+                        AND ${potluckDeals.currentOrderCount} + ${qty} <= ${potluckDeals.totalPlatesAvailable}
+                        AND ${potluckDeals.status} = 'ACTIVE'
+                        AND ${potluckDeals.expiresAt} > NOW()`
+                )
+                .returning();
+
+            if (claimResult.length === 0) {
+                // Deal is full/expired — order was already created so we log the conflict
+                // but don't fail the entire order (items from the menu still stand)
+                console.warn(`[Order] Potluck deal ${dealId} claim failed (full/expired) for order ${newOrder.id}`);
+                continue;
+            }
+
+            // Create potluck_orders link
+            const matchedPrepItem = prepareItems.find(p => p.mealId === pItem.mealId);
+            await db.insert(potluckOrders).values({
+                potluckDealId: dealId,
+                customerId: user.id,
+                orderId: newOrder.id,
+                quantity: qty,
+                totalAmountRs: String((matchedPrepItem?.price ?? 0) * qty),
+                status: 'RESERVED',
+            });
+
+            // Publish potluck update event
+            try {
+                const { publishEvent, CHANNELS } = await import("@/lib/redis/pubsub");
+                await publishEvent(CHANNELS.kitchenOrders(kitchen.id), {
+                    type: 'POTLUCK_UPDATE',
+                    payload: {
+                        dealId,
+                        currentCount: claimResult[0].currentOrderCount,
+                        targetCount: claimResult[0].targetOrderCount,
+                        status: claimResult[0].status,
+                    },
+                });
+            } catch (e) {
+                console.error("Failed to publish potluck event", e);
+            }
         }
 
         // N2: Send notification to the cook

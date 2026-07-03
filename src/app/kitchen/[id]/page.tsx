@@ -16,6 +16,7 @@ import ReviewCard from "@/components/reviews/ReviewCard";
 import ReviewList from "@/components/reviews/ReviewList";
 import RatingBreakdown from "@/components/reviews/RatingBreakdown";
 import WriteKitchenReviewAction from "@/components/reviews/WriteKitchenReviewAction";
+import { isKitchenEffectivelyLocked } from "@/lib/utils/trial-lock";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -345,41 +346,48 @@ async function KitchenContent({ id }: { id: string }) {
 
                     {/* Menu */}
                     <section className="mt-12">
-                        <ClientOrderBanner kitchenName={kitchen.name} />
-
-                        {activePotluck && (
-                            <div className="mb-10">
-                                <h2 className="text-xl font-bold text-neutral-900 mb-6 dark:text-neutral-50 flex items-center gap-2">
-                                    <span className="text-2xl">🔥</span> 
-                                    Community Potluck Deal
-                                </h2>
-                                <PotluckPublicCard deal={activePotluck} />
-                            </div>
-                        )}
-
-                        {/* Customer-facing lock message — generic, no internal lockReason exposed */}
-                        {(kitchen as any).isLocked && (
-                            <div className="mb-6 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950 p-4 flex items-center gap-3">
-                                <span className="text-xl flex-shrink-0">⚠️</span>
-                                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                                    This kitchen is not accepting new orders right now.
+                        {isKitchenEffectivelyLocked(kitchen) ? (
+                            <div className="text-center py-16 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+                                <span className="text-4xl block mb-3">🔒</span>
+                                <h3 className="text-lg font-bold text-neutral-900 dark:text-neutral-100">Currently Not Accepting Orders</h3>
+                                <p className="text-neutral-500 mt-2 text-sm max-w-sm mx-auto">
+                                    This kitchen is temporarily closed or undergoing maintenance. Please check back later or explore other home cooks in {kitchen.city}.
                                 </p>
                             </div>
-                        )}
-
-                        <h2 className="text-xl font-bold text-neutral-900 mb-6 dark:text-neutral-50">
-                            Menu ({menu.length} items)
-                        </h2>
-                        {menu.length > 0 ? (
-                            <div className={`grid grid-cols-1 gap-4 lg:grid-cols-2 ${(kitchen as any).isLocked ? 'opacity-50 pointer-events-none' : ''}`}>
-                                {menu.map((m: MealData) => (
-                                    <MealItem key={m.id} meal={m} kitchenId={kitchen.id} kitchenName={kitchen.name} />
-                                ))}
-                            </div>
                         ) : (
-                            <div className="rounded-xl border border-dashed border-neutral-300 p-8 text-center dark:border-neutral-700">
-                                <p className="text-neutral-500 dark:text-neutral-400">No menu items added yet.</p>
-                            </div>
+                            <>
+                                <ClientOrderBanner kitchenName={kitchen.name} />
+
+                                {activePotluck && (
+                                    <div className="mb-10">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <h2 className="text-2xl font-black text-gray-900 dark:text-neutral-100 tracking-tight">
+                                                Community Potluck
+                                            </h2>
+                                            <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-0.5 rounded-full dark:bg-orange-900/30 dark:text-orange-400">
+                                                Active Now
+                                            </span>
+                                        </div>
+                                        <PotluckPublicCard deal={activePotluck} kitchenName={kitchen.name} />
+                                    </div>
+                                )}
+
+                                <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-xl font-bold text-neutral-900 dark:text-neutral-50">Menu ({menu.length} items)</h2>
+                                </div>
+
+                                {menu.length === 0 ? (
+                                    <div className="text-center py-12 text-neutral-500 bg-neutral-50 rounded-xl dark:bg-neutral-800 dark:text-neutral-400">
+                                        No menu items available yet.
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {menu.map((meal: MealData) => (
+                                            <MealItem key={meal.id} meal={meal} kitchenId={kitchen.id} kitchenName={kitchen.name} />
+                                        ))}
+                                    </div>
+                                )}
+                            </>
                         )}
                     </section>
 

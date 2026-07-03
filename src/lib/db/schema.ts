@@ -61,6 +61,7 @@ export const subscriptionPlanTypeEnum = pgEnum("subscription_plan_type", [
     "BASE_MONTHLY",
     "BASE_2MONTH",
     "BASE_4MONTH",
+    "TRIAL",
 ]);
 
 export const menuAvailabilityEnum = pgEnum("menu_availability", [
@@ -99,6 +100,7 @@ export const planConfigEnum = pgEnum("plan_config_enum", [
     "growth",
     "pro",
     "elite",
+    "trial",
 ]);
 
 export const potluckStatusEnum = pgEnum("potluck_status_enum", [
@@ -206,6 +208,7 @@ export const kitchens = pgTable(
             .notNull(),
 
         // Trial & subscription tracking
+        trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
 
         // Aggregated ratings (denormalized for performance)
         avgRating: decimal("avg_rating", { precision: 3, scale: 2 }).default("0"),
@@ -1044,5 +1047,24 @@ export const stripeProcessedEvents = pgTable(
     (table) => [
         index("idx_stripe_event_status").on(table.status),
         index("idx_stripe_event_created").on(table.createdAt),
+    ]
+);
+
+// ─── Cities (Cook-Added) ────────────────────────────────────────────────────
+
+export const cities = pgTable(
+    "cities",
+    {
+        id: uuid("id").defaultRandom().primaryKey(),
+        name: varchar("name", { length: 100 }).notNull(),
+        slug: varchar("slug", { length: 100 }).notNull(),
+        createdByKitchenId: uuid("created_by_kitchen_id").references(() => kitchens.id, { onDelete: "set null" }),
+        createdAt: timestamp("created_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+    },
+    (table) => [
+        uniqueIndex("cities_slug_idx").on(table.slug),
+        index("cities_created_idx").on(table.createdAt),
     ]
 );

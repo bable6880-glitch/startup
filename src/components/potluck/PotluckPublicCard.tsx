@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import type { PotluckDeal } from '@/types/potluck';
 import { PotluckCountdown } from './PotluckCountdown';
 import { PotluckProgress } from './PotluckProgress';
+import { useCart } from '@/lib/cart-context';
 
 interface PotluckPublicCardProps {
   deal: PotluckDeal;
@@ -13,8 +14,8 @@ interface PotluckPublicCardProps {
 export function PotluckPublicCard({ deal, kitchenName }: PotluckPublicCardProps) {
   const [currentCount, setCurrentCount] = useState(deal.currentOrderCount);
   const [dealStatus, setDealStatus] = useState(deal.status);
-  const [reserving, setReserving] = useState(false);
-  const [hasReserved, setHasReserved] = useState(false); // Can be linked to actual API later
+  const [addedToCart, setAddedToCart] = useState(false);
+  const { addItem } = useCart();
 
   // Polling for real-time updates on public card
   useEffect(() => {
@@ -49,35 +50,25 @@ export function PotluckPublicCard({ deal, kitchenName }: PotluckPublicCardProps)
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
     : 0;
 
-  const handleOrder = async () => {
-    setReserving(true);
-    try {
-      const res = await fetch(`/api/potluck/${deal.id}/reserve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity: 1 })
-      });
-      
-      const data = await res.json();
-      if (!res.ok) {
-        if (res.status === 401) {
-          window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
-          return;
-        }
-        throw new Error(data.error || 'Failed to order');
-      }
-      
-      setHasReserved(true);
-      if (data.deal) {
-        setCurrentCount(data.deal.currentOrderCount);
-        setDealStatus(data.deal.status);
-      }
-      // Emit event so the layout can show a toast or we just alert for now
-      alert("Order placed successfully! Check your dashboard.");
-    } catch (err: any) {
-      alert(err.message);
-    } finally {
-      setReserving(false);
+  const handleAddToCart = () => {
+    if (!deal.mealId) {
+      alert('This deal is not properly configured. Please try again later.');
+      return;
+    }
+
+    const result = addItem(deal.kitchenId, kitchenName || 'Kitchen', {
+      mealId: deal.mealId,
+      name: deal.title,
+      price: originalPrice, // Regular price for display
+      imageUrl: deal.imageUrl || null,
+      potluckDealId: deal.id,
+      potluckPrice: price, // Discounted potluck price used for totals
+    });
+
+    if (result.ok) {
+      setAddedToCart(true);
+    } else if (result.error === 'MIXED_KITCHEN') {
+      alert('Your cart has items from another kitchen. Please clear your cart first.');
     }
   };
 
@@ -140,20 +131,18 @@ export function PotluckPublicCard({ deal, kitchenName }: PotluckPublicCardProps)
           <div className="mt-5">
             {dealStatus === 'ACTIVE' && currentCount < deal.totalPlatesAvailable ? (
               <button
-                onClick={handleOrder}
-                disabled={reserving || hasReserved}
+                onClick={handleAddToCart}
+                disabled={addedToCart}
                 className={`
                   w-full py-3.5 rounded-xl text-sm font-bold transition-all shadow-lg
-                  ${hasReserved
+                  ${addedToCart
                     ? 'bg-green-50 text-green-600 border border-green-200 shadow-none'
                     : 'bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:shadow-orange-500/25 hover:from-orange-600 hover:to-amber-600 disabled:opacity-60 disabled:hover:shadow-none potluck-shimmer'
                   }
                 `}
               >
-                {hasReserved
-                  ? '✓ Ordered'
-                  : reserving
-                  ? 'Ordering...'
+                {addedToCart
+                  ? '✓ Added to Cart'
                   : `Order Now — Rs.${price.toLocaleString('en-PK')}`
                 }
               </button>

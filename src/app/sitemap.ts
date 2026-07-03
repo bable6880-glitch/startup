@@ -1,8 +1,8 @@
 import { MetadataRoute } from 'next'
 import { db } from '@/lib/db'
 import { kitchens } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
-import { BASE_URL, SITEMAP_CITIES } from '@/config/site'
+import { eq, and, or, gt, isNull, ne } from 'drizzle-orm'
+import { BASE_URL } from '@/config/site'
 
 // ISR — regenerate sitemap every hour. Do NOT use force-dynamic
 // (force-dynamic disables ISR and forces a full re-render on every Googlebot hit,
@@ -71,7 +71,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         updatedAt: kitchens.updatedAt,
       })
       .from(kitchens)
-      .where(eq(kitchens.status, 'ACTIVE'))
+      .where(
+        and(
+          eq(kitchens.status, 'ACTIVE'),
+          or(
+            isNull(kitchens.planId),
+            ne(kitchens.planId, 'trial'),
+            gt(kitchens.trialEndsAt, new Date())
+          )
+        )
+      )
 
     activeKitchens.forEach(k => {
       if (k.city) activeCitiesSet.add(k.city.toLowerCase());
@@ -90,14 +99,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Sitemap still valid without kitchen pages
   }
 
-  const cityPages: MetadataRoute.Sitemap = SITEMAP_CITIES
-    .filter(city => activeCitiesSet.has(city.toLowerCase()))
-    .map(city => ({
-      url: `${BASE_URL}/city/${city}`,
+  const cityPages: MetadataRoute.Sitemap = Array.from(activeCitiesSet).map(city => ({
+      url: `${BASE_URL}/city/${encodeURIComponent(city)}`,
       lastModified: new Date(),
       changeFrequency: 'daily' as const,
       priority: 0.85,
-    }))
+  }))
 
   // ══ VANITY KEYWORD PAGES ══
   // Removed to prevent cannibalization and doorway pages.

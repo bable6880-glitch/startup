@@ -9,15 +9,8 @@ import {
     createKitchenSchema,
     type CreateKitchenInput,
 } from "@/lib/validations/kitchen";
+import { CityCombobox } from "./CityCombobox";
 
-const cities = [
-    "Lahore",
-    "Karachi",
-    "Islamabad",
-    "Rawalpindi",
-    "Faisalabad",
-    "Multan",
-];
 const cuisineOptions = [
     "Pakistani",
     "Chinese",
@@ -325,22 +318,13 @@ export default function BecomeACookPage() {
                                 <label className="block text-sm font-medium text-neutral-700 mb-1 dark:text-neutral-300">
                                     City <span className="text-red-500">*</span>
                                 </label>
-                                <select
-                                    {...register("city")}
-                                    className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 outline-none transition-all dark:bg-neutral-700 dark:border-neutral-600 dark:text-neutral-200"
-                                >
-                                    <option value="">Select city</option>
-                                    {cities.map((c) => (
-                                        <option key={c} value={c}>
-                                            {c}
-                                        </option>
-                                    ))}
-                                </select>
-                                {errors.city && (
-                                    <p className="mt-1 text-xs text-red-500">
-                                        {errors.city.message}
-                                    </p>
-                                )}
+                                <CityCombobox
+                                    value={watchedCity}
+                                    onChange={(val) => {
+                                        setValue("city", val, { shouldValidate: true });
+                                    }}
+                                    error={errors.city?.message}
+                                />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-neutral-700 mb-1 dark:text-neutral-300">

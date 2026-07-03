@@ -19,9 +19,11 @@ function RefreshAfterDelay({ delayMs, onRefresh }: { delayMs: number; onRefresh?
     return null;
 }
 
+import { isKitchenTrialLocked, trialDaysRemaining } from "@/lib/utils/trial-lock";
+
 interface SubscriptionGuardProps {
     children: ReactNode;
-    kitchenStatus: string | null;
+    kitchen: any;
     fetchError?: boolean;
 }
 
@@ -34,7 +36,7 @@ interface SubscriptionGuardProps {
  *
  * This prevents unpaid kitchens from accessing seller tools.
  */
-export function SubscriptionGuard({ children, kitchenStatus, fetchError }: SubscriptionGuardProps) {
+export function SubscriptionGuard({ children, kitchen, fetchError }: SubscriptionGuardProps) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -44,10 +46,12 @@ export function SubscriptionGuard({ children, kitchenStatus, fetchError }: Subsc
     const justSubscribed = searchParams.get('subscribed') === 'true';
 
     useEffect(() => {
-        // If kitchen status is not loaded yet, wait
-        if (kitchenStatus === null) {
+        // If kitchen is not loaded yet, wait
+        if (kitchen === null) {
             return;
         }
+
+        const kitchenStatus = kitchen.status;
 
         // Allow access to subscription page always (so they can pay)
         const isSubscriptionPage = pathname === "/dashboard/subscription" ||
@@ -75,11 +79,11 @@ export function SubscriptionGuard({ children, kitchenStatus, fetchError }: Subsc
 
         // Kitchen is ACTIVE or SUSPENDED (SUSPENDED has its own lockout logic)
         setIsAllowed(true);
-    }, [kitchenStatus, pathname, router, justSubscribed]);
+    }, [kitchen, pathname, router, justSubscribed]);
 
     // Still loading kitchen status
     if (isAllowed === null) {
-        if (kitchenStatus === null && fetchError === true) {
+        if (kitchen === null && fetchError === true) {
             return (
                 <div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-950">
                     <div className="text-center space-y-3 p-6 bg-white dark:bg-neutral-900 rounded-xl shadow-lg">
@@ -113,7 +117,7 @@ export function SubscriptionGuard({ children, kitchenStatus, fetchError }: Subsc
     }
 
     // Pending activation
-    if (!isAllowed && kitchenStatus === "INACTIVE" && justSubscribed) {
+    if (!isAllowed && kitchen?.status === "INACTIVE" && justSubscribed) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-950">
                 <div className="text-center space-y-4 p-8 bg-white dark:bg-neutral-900 rounded-2xl shadow-lg max-w-md w-full mx-4">
@@ -168,5 +172,39 @@ export function SubscriptionGuard({ children, kitchenStatus, fetchError }: Subsc
         );
     }
 
-    return <>{children}</>;
+    return (
+        <>
+            {/* Trial Banner */}
+            {kitchen && kitchen.planId === 'trial' && (
+                <div className={`px-6 py-3 border-b text-sm font-medium flex items-center justify-between ${
+                    isKitchenTrialLocked(kitchen) 
+                        ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/50' 
+                        : 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800/50'
+                }`}>
+                    <div>
+                        {isKitchenTrialLocked(kitchen) ? (
+                            <>
+                                <span className="font-bold">⚠️ Trial Expired:</span> Your kitchen is hidden and cannot receive orders.
+                            </>
+                        ) : (
+                            <>
+                                <span className="font-bold">Free Trial:</span> You have {trialDaysRemaining(kitchen)} days left in your free trial.
+                            </>
+                        )}
+                    </div>
+                    <button 
+                        onClick={() => router.push('/dashboard/subscription')}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-colors ${
+                            isKitchenTrialLocked(kitchen)
+                                ? 'bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-600'
+                                : 'bg-orange-600 hover:bg-orange-700 text-white dark:bg-orange-700 dark:hover:bg-orange-600'
+                        }`}
+                    >
+                        Upgrade Plan
+                    </button>
+                </div>
+            )}
+            {children}
+        </>
+    );
 }

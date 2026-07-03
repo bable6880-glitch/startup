@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { kitchens } from "@/lib/db/schema";
-import { eq, and, desc, sql, isNull } from "drizzle-orm";
+import { eq, and, desc, sql, isNull, or, ne, gt } from "drizzle-orm";
 import { slugify } from "@/config/constants";
 import { cached, invalidateCache, CacheKeys, CacheTTL, redis } from "@/lib/redis";
 import { sanitizeRichText } from "@/lib/utils/sanitize";
@@ -47,7 +47,10 @@ export async function createKitchen(ownerId: string, input: CreateKitchenInput) 
             contactEmail: input.contactEmail,
             cuisineTypes: input.cuisineTypes,
             dietaryTags: input.dietaryTags,
-            status: "INACTIVE", // Paid-first: kitchens start INACTIVE until Stripe payment
+            // Trial-first: kitchens start ACTIVE on a 15-day free trial
+            status: "ACTIVE",
+            planId: "trial" as any,
+            trialEndsAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
         })
         .returning();
 
@@ -120,6 +123,11 @@ export async function listKitchens(query: KitchenQueryInput) {
     const conditions = [
         eq(kitchens.status, "ACTIVE"),
         isNull(kitchens.deletedAt),
+        or(
+            isNull(kitchens.planId),
+            ne(kitchens.planId, 'trial'),
+            gt(kitchens.trialEndsAt, new Date())
+        )
     ];
 
     if (city) conditions.push(eq(kitchens.citySlug, slugify(city)));

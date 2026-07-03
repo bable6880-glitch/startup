@@ -10,6 +10,7 @@ export const createOrderSchema = z.object({
                 mealId: z.string().uuid("Invalid meal ID"),
                 quantity: z.number().int().min(1).max(50),
                 notes: z.string().max(500).optional(),
+                potluckDealId: z.string().uuid("Invalid deal ID").optional(),
             })
         )
         .min(1, "Order must have at least one item")

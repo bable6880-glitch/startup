@@ -9,9 +9,7 @@ import { IncomingOrderProvider } from "@/contexts/IncomingOrderContext";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const { user, getIdToken } = useAuth();
-    const [kitchenId, setKitchenId] = useState<string | null>(null);
-    const [kitchenName, setKitchenName] = useState<string>("Your Kitchen");
-    const [kitchenStatus, setKitchenStatus] = useState<string | null>(null);
+    const [kitchen, setKitchen] = useState<any>(null);
     const [kitchenFetchError, setKitchenFetchError] = useState(false);
 
     // ── Existing kitchen fetch — untouched logic ───────────────────────────────
@@ -28,9 +26,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 if (res.ok) {
                     const data = await res.json();
                     if (data.data && data.data.length > 0) {
-                        setKitchenId(data.data[0].id);
-                        setKitchenName(data.data[0].name);
-                        setKitchenStatus(data.data[0].status);
+                        setKitchen(data.data[0]);
                     }
                 }
             } catch (err) {
@@ -55,12 +51,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
             {/* ── Frest Dark Shell (visual only — wraps existing guards/providers) ── */}
             <DashboardShell
-                kitchenName={kitchenName}
+                kitchenName={kitchen?.name || "Your Kitchen"}
                 userName={userName}
                 userInitial={userInitial}
             >
-                <SubscriptionGuard kitchenStatus={kitchenStatus} fetchError={kitchenFetchError}>
-                    <IncomingOrderProvider kitchenId={kitchenId}>
+                <SubscriptionGuard kitchen={kitchen} fetchError={kitchenFetchError}>
+                    <IncomingOrderProvider kitchenId={kitchen?.id}>
                         {children}
                     </IncomingOrderProvider>
                 </SubscriptionGuard>

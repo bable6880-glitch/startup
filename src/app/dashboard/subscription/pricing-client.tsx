@@ -16,6 +16,20 @@ const PLAN_META: Record<string, {
     badge?: string;
     features: string[];
 }> = {
+    trial: {
+        gradient: 'from-emerald-500 to-teal-600',
+        textColor: 'text-emerald-700',
+        icon: '🎁',
+        tagline: 'Experience the platform',
+        billing: 'Free for 15 Days',
+        features: [
+            'Explore platform features',
+            'Unlimited menu items & orders',
+            'Basic analytics',
+            '0% commission during trial',
+            'Potluck & Khata disabled',
+        ],
+    },
     starter: {
         gradient: 'from-gray-600 to-gray-800',
         textColor: 'text-gray-700 dark:text-gray-300',
@@ -191,10 +205,26 @@ export function PricingClient({ plans }: { plans: any[] }) {
 
     const currentIdx = PLAN_ORDER.indexOf(data?.planId as string ?? '');
 
-    // Sort plans by order
-    const sorted = [...plans].sort((a, b) =>
-        PLAN_ORDER.indexOf(a.planId) - PLAN_ORDER.indexOf(b.planId)
-    );
+    // Optional: Sort plans based on PLAN_ORDER. We also inject the trial plan.
+    const allPlans = [...plans];
+    if (!allPlans.find(p => p.planId === 'trial')) {
+        allPlans.push({
+            planId: 'trial',
+            displayName: '15-Day Free Trial',
+            priceRs: 0,
+            interval: 'month',
+            intervalCount: 1,
+            isFree: true,
+            stripePriceId: 'trial', // bypass checkout logic
+            features: {}
+        });
+    }
+
+    const sorted = [...allPlans].sort((a, b) => {
+        const orderA = ['trial', ...PLAN_ORDER].indexOf(a.planId);
+        const orderB = ['trial', ...PLAN_ORDER].indexOf(b.planId);
+        return (orderA === -1 ? 99 : orderA) - (orderB === -1 ? 99 : orderB);
+    });
 
     return (
         <div className="space-y-16">
@@ -254,6 +284,10 @@ export function PricingClient({ plans }: { plans: any[] }) {
                                     <div className="w-full py-3 text-center text-sm font-bold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
                                         ✓ Current Plan
                                     </div>
+                                ) : plan.planId === 'trial' ? (
+                                    <button disabled className="w-full py-3 rounded-xl text-sm font-bold text-gray-500 bg-gray-100 dark:bg-neutral-800 cursor-not-allowed">
+                                        Automatically Applied
+                                    </button>
                                 ) : isDowngrade ? null : (!plan.stripePriceId || typeof plan.stripePriceId !== 'string' || plan.stripePriceId.trim() === '') ? (
                                     <button disabled className="w-full py-3 rounded-xl text-sm font-bold text-gray-500 bg-gray-100 dark:bg-neutral-800 cursor-not-allowed">
                                         Coming Soon
@@ -341,20 +375,21 @@ export function PricingClient({ plans }: { plans: any[] }) {
                         </thead>
                         <tbody className="text-sm">
                             {[
-                                ["Menu Items", ["7", "14", "15", "Unlimited"]],
-                                ["Monthly Orders", ["50", "200", "2,000", "Unlimited"]],
-                                ["Commission", ["5%", "3%", "0%", "0%"]],
-                                ["Group Deals", ["2/mo", "10/6mo", "12/yr", "Unlimited"]],
-                                ["Analytics", ["Basic", "Medium", "Advanced", "AI-Powered ✨"]],
-                                ["AI Chef Assistant", ["—", "✓", "✓", "✓"]],
-                                ["Digital Khata", ["—", "—", "✓", "✓"]],
-                                ["AI Pricing", ["—", "—", "—", "✓"]],
-                                ["Search Priority", ["Standard", "Limited", "High", "Top 👑"]],
-                                ["Account Manager", ["—", "—", "—", "24/7"]],
+                                ["Menu Items", ["Unlimited", "7", "14", "15", "Unlimited"]],
+                                ["Monthly Orders", ["Unlimited", "50", "200", "2,000", "Unlimited"]],
+                                ["Commission", ["0%", "5%", "3%", "0%", "0%"]],
+                                ["Group Deals", ["—", "2/mo", "10/6mo", "12/yr", "Unlimited"]],
+                                ["Analytics", ["Basic", "Basic", "Medium", "Advanced", "AI-Powered ✨"]],
+                                ["AI Chef Assistant", ["✓", "—", "✓", "✓", "✓"]],
+                                ["Digital Khata", ["—", "—", "—", "✓", "✓"]],
+                                ["AI Pricing", ["—", "—", "—", "—", "✓"]],
+                                ["Search Priority", ["Standard", "Standard", "Limited", "High", "Top 👑"]],
+                                ["Account Manager", ["—", "—", "—", "—", "24/7"]],
                             ].map(([label, values]) => (
                                 <tr key={label as string} className="border-b border-gray-50 dark:border-neutral-700 hover:bg-gray-50/50 dark:hover:bg-neutral-800/50 transition-colors">
                                     <td className="p-4 font-medium text-gray-600 dark:text-neutral-400 text-xs">{label as string}</td>
                                     {(values as string[]).map((val, i) => {
+                                        // `sorted` has 5 items now (trial, starter, growth, pro, elite)
                                         const planId = sorted[i]?.planId;
                                         const isCurrent = data?.planId === planId;
                                         return (

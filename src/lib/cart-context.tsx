@@ -20,6 +20,10 @@ export interface CartItem {
     price: number;
     imageUrl: string | null;
     quantity: number;
+    /** If set, this item was added from a potluck deal */
+    potluckDealId?: string;
+    /** Override price for potluck deals (discounted from regular) */
+    potluckPrice?: number;
 }
 
 export interface CartState {
@@ -173,7 +177,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     // ── Derived values (memoized) ─────────────────────────────────────────────
 
     const totalAmount = useMemo(
-        () => cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+        () => cart.items.reduce((sum, item) => {
+            const effectivePrice = item.potluckPrice ?? item.price;
+            return sum + effectivePrice * item.quantity;
+        }, 0),
         [cart.items]
     );
 
