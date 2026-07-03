@@ -90,6 +90,24 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  // Redirect vanity URLs to corresponding city pages to prevent content cannibalization
+  async redirects() {
+    return [
+      { source: '/tiffin-service-lahore', destination: '/city/lahore', permanent: true },
+      { source: '/tiffin-service-karachi', destination: '/city/karachi', permanent: true },
+      { source: '/tiffin-service-islamabad', destination: '/city/islamabad', permanent: true },
+      { source: '/tiffin-service-rawalpindi', destination: '/city/rawalpindi', permanent: true },
+      { source: '/tiffin-service-faisalabad', destination: '/city/faisalabad', permanent: true },
+      { source: '/tiffin-service-multan', destination: '/city/multan', permanent: true },
+      { source: '/tiffin-service-peshawar', destination: '/city/peshawar', permanent: true },
+      { source: '/tiffin-service-gujranwala', destination: '/city/gujranwala', permanent: true },
+      { source: '/tiffin-service-sialkot', destination: '/city/sialkot', permanent: true },
+      { source: '/homemade-food-delivery-lahore', destination: '/city/lahore', permanent: true },
+      { source: '/daily-lunch-delivery-lahore', destination: '/city/lahore', permanent: true },
+      { source: '/lunch-box-service-lahore', destination: '/city/lahore', permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

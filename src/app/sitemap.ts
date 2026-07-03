@@ -59,48 +59,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // ══ CITY PAGES ══
   // Primary local SEO targets — highest priority after homepage
-  const cityPages: MetadataRoute.Sitemap = SITEMAP_CITIES.map(city => ({
-    url: `${BASE_URL}/city/${city}`,
-    lastModified: new Date(),
-    changeFrequency: 'daily' as const,
-    priority: 0.85,
-  }))
-
-  // ══ VANITY KEYWORD PAGES ══
-  // Dedicated landing pages targeting exact-match searches like "tiffin service lahore"
-  const vanityPages: MetadataRoute.Sitemap = [
-    '/tiffin-service-lahore',
-    '/tiffin-service-karachi',
-    '/tiffin-service-islamabad',
-    '/tiffin-service-rawalpindi',
-    '/tiffin-service-faisalabad',
-    '/tiffin-service-multan',
-    '/tiffin-service-peshawar',
-    '/tiffin-service-gujranwala',
-    '/tiffin-service-sialkot',
-    '/homemade-food-delivery-lahore',
-    '/daily-lunch-delivery-lahore',
-    '/lunch-box-service-lahore',
-  ].map(path => ({
-    url: `${BASE_URL}${path}`,
-    lastModified: new Date('2025-06-01'),
-    changeFrequency: 'monthly' as const,
-    priority: 0.9, // High priority — exact keyword match pages
-  }))
-
-  // ══ KITCHEN PAGES ══
-  // Only ACTIVE kitchens — soft-404 protection
-  let kitchenPages: MetadataRoute.Sitemap = []
+  const activeCitiesSet = new Set<string>();
+  let kitchenPages: MetadataRoute.Sitemap = [];
 
   try {
     const activeKitchens = await db
       .select({
         id: kitchens.id,
         slug: kitchens.slug,
+        city: kitchens.city,
         updatedAt: kitchens.updatedAt,
       })
       .from(kitchens)
       .where(eq(kitchens.status, 'ACTIVE'))
+
+    activeKitchens.forEach(k => {
+      if (k.city) activeCitiesSet.add(k.city.toLowerCase());
+    });
 
     kitchenPages = activeKitchens
       .filter(k => k.id)
@@ -115,10 +90,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Sitemap still valid without kitchen pages
   }
 
+  const cityPages: MetadataRoute.Sitemap = SITEMAP_CITIES
+    .filter(city => activeCitiesSet.has(city.toLowerCase()))
+    .map(city => ({
+      url: `${BASE_URL}/city/${city}`,
+      lastModified: new Date(),
+      changeFrequency: 'daily' as const,
+      priority: 0.85,
+    }))
+
+  // ══ VANITY KEYWORD PAGES ══
+  // Removed to prevent cannibalization and doorway pages.
+
   return [
     ...staticPages,
     ...cityPages,
-    ...vanityPages,
     ...kitchenPages,
   ]
 }

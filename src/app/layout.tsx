@@ -10,22 +10,10 @@ import { buildWebsiteSchema, buildOrganizationSchema } from '@/lib/seo/schemas';
 export const metadata: Metadata = {
   metadataBase: new URL('https://smarttiffinfood.vercel.app'),
   title: {
-    default: 'Tiffin Service Lahore, Islamabad & Karachi | Homemade Food Delivery Pakistan | Smart Tiffin',
+    default: 'Smart Tiffin | Homemade Food Delivery Pakistan',
     template: '%s | Smart Tiffin',
   },
   description: 'Find trusted tiffin services, homemade food delivery, daily lunch plans, and monthly meal subscriptions in Lahore, Islamabad, Karachi, Rawalpindi, and across Pakistan.',
-  keywords: [
-    'tiffin service lahore',
-    'homemade food delivery pakistan',
-    'daily lunch delivery',
-    'tiffin service islamabad',
-    'tiffin service karachi',
-    'ghar ka khana',
-    'home cooked meals pakistan',
-    'monthly meal plans',
-    'lunch box service',
-    'home chef pakistan',
-  ],
   authors: [{ name: 'Smart Tiffin', url: 'https://smarttiffinfood.vercel.app' }],
   creator: 'Smart Tiffin',
   publisher: 'Smart Tiffin',

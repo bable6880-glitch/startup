@@ -15,20 +15,6 @@ import { buildFAQSchema } from "@/lib/seo/schemas";
 export const metadata: Metadata = {
   title: 'Smart Tiffin – Homemade Food & Daily Tiffin Service in Pakistan',
   description: 'Find trusted home cooks offering daily tiffin service, monthly lunch plans, and homemade food delivery across Pakistan. Serving students, professionals, and families in Lahore, Islamabad, Karachi, and more.',
-  keywords: [
-    'tiffin service Pakistan',
-    'homemade food delivery',
-    'daily tiffin service',
-    'tiffin service Lahore',
-    'tiffin service Islamabad',
-    'monthly lunch service',
-    'home cooked food delivery',
-    'ghar ka khana',
-    'student tiffin service',
-    'office lunch delivery',
-    'lunch box service',
-    'meal subscription Pakistan',
-  ],
   authors: [{ name: 'Smart Tiffin' }],
   creator: 'Smart Tiffin',
   publisher: 'Smart Tiffin',
@@ -323,37 +309,30 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── SEO Section 3: Find a Tiffin Service Near You ──────────────────────────── */}
+      {/* ── Popular Tiffin Cities ──────────────────────────── */}
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
           <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl dark:text-neutral-50">
-            Find a Tiffin Service Near You
+            Find Tiffin Services in Major Cities
           </h2>
-          <p className="mt-2 text-neutral-500 dark:text-neutral-400">
-            Many people search online for terms like:
+          <p className="mt-2 text-neutral-500 dark:text-neutral-400 max-w-2xl mx-auto">
+            Smart Tiffin connects you with local home cooks across Pakistan. Browse home-cooked meals in your city:
           </p>
         </div>
-        <div className="flex flex-wrap justify-center gap-3 mb-8">
-            {[
-              "Tiffin service near me",
-              "Home tiffin service",
-              "Food tiffin delivery",
-              "Daily lunch delivery",
-              "Lunch box service",
-              "Monthly lunch service",
-              "Daily tiffin service",
-              "Homemade food delivery",
-              "Mess services",
-              "Ghar ka khana"
-            ].map((term, idx) => (
-              <span key={idx} className="bg-white dark:bg-neutral-800 p-3 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm text-neutral-700 dark:text-neutral-300 font-medium text-sm">
-                {term}
-              </span>
-            ))}
+        <div className="flex flex-wrap justify-center gap-4 mb-8">
+            <Link href="/city/lahore" className="bg-white dark:bg-neutral-800 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm text-primary-600 dark:text-primary-400 hover:border-primary-400 transition-all font-medium">
+              Tiffin Service in Lahore
+            </Link>
+            <Link href="/city/karachi" className="bg-white dark:bg-neutral-800 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm text-primary-600 dark:text-primary-400 hover:border-primary-400 transition-all font-medium">
+              Tiffin Service in Karachi
+            </Link>
+            <Link href="/city/islamabad" className="bg-white dark:bg-neutral-800 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm text-primary-600 dark:text-primary-400 hover:border-primary-400 transition-all font-medium">
+              Tiffin Service in Islamabad
+            </Link>
+            <Link href="/city/rawalpindi" className="bg-white dark:bg-neutral-800 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm text-primary-600 dark:text-primary-400 hover:border-primary-400 transition-all font-medium">
+              Tiffin Service in Rawalpindi
+            </Link>
         </div>
-        <p className="text-center text-neutral-600 dark:text-neutral-400 max-w-3xl mx-auto">
-          Smart Tiffin helps connect these users with local food providers offering reliable homemade meal solutions. As more cooks join our platform, customers gain access to a wider variety of cuisines, meal plans, and delivery options.
-        </p>
       </section>
 
       {/* ── SEO Section 4: Remaining Content via FAQ-style layout ────────────────────────────────────── */}

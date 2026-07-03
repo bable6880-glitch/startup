@@ -119,14 +119,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
 
     const cityName = meta.displayName;
+    const kitchens = await fetchCityKitchens(cityName);
+    const hasKitchens = kitchens.length > 0;
 
     return {
-        title: `Tiffin Service in ${cityName} – Home Cooked Meals from PKR ${meta.priceFrom} | Smart Tiffin`,
+        title: `Tiffin Service in ${cityName} – Home Cooked Meals from PKR ${meta.priceFrom}`,
         description: meta.description,
         robots: {
-            index: true,
+            index: hasKitchens,
             follow: true,
-            googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
+            googleBot: { index: hasKitchens, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
         },
         alternates: {
             canonical: `${BASE_URL}/city/${city.toLowerCase()}`,
@@ -517,7 +519,9 @@ export default async function CityPage({ params }: Props) {
             </div>
 
             {/* SEO Article Content (800+ words, city-specific) */}
-            <CitySEOSection city={city} meta={meta} />
+            {kitchens.length > 0 && (
+                <CitySEOSection city={city} meta={meta} />
+            )}
         </div>
     );
 }
