@@ -7,6 +7,7 @@ import { stripe } from "@/lib/stripe";
 import { Redis } from "@upstash/redis";
 import { logger } from "@/lib/utils/logger";
 import { z } from "zod";
+import { isFreeModeActive } from "@/config/free-mode";
 
 const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
     ? new Redis({
@@ -20,6 +21,12 @@ const checkoutSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+    if (isFreeModeActive()) {
+        return NextResponse.json({
+            error: "Paid checkout is suspended during Free Mode promotion. Your kitchen already has full Elite access."
+        }, { status: 400 });
+    }
+
     try {
         const guard = await requireSeller(request);
         if (!guard.ok) return guard.response;

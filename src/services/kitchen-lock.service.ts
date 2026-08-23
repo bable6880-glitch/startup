@@ -13,6 +13,7 @@ import { db } from "@/lib/db";
 import { kitchens } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "@/lib/utils/logger";
+import { isFreeModeActive } from "@/config/free-mode";
 
 export type LockReason =
     | "ORDER_LIMIT_REACHED"
@@ -100,6 +101,10 @@ export async function getKitchenLockStatus(kitchenId: string): Promise<{
         return { isLocked: false, lockReason: null, lockedAt: null, lockedUntil: null };
     }
 
+    if (isFreeModeActive() && kitchen.lockReason !== "ADMIN_ACTION") {
+        return { isLocked: false, lockReason: null, lockedAt: null, lockedUntil: null };
+    }
+
     return {
         isLocked: kitchen.isLocked,
         lockReason: kitchen.lockReason,
@@ -114,6 +119,8 @@ export async function getKitchenLockStatus(kitchenId: string): Promise<{
  * If the kitchen has now reached its limit, lock it.
  */
 export async function checkAndLockIfLimitReached(kitchenId: string): Promise<boolean> {
+    if (isFreeModeActive()) return false;
+
     try {
         const { getKitchenPlanAccess } = await import("@/lib/plans/plan-access");
         const access = await getKitchenPlanAccess(kitchenId);

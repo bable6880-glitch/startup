@@ -1,9 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { usePlanAccess } from '@/hooks/use-plan-access';
 import { useAuth } from '@/lib/firebase/auth-context';
 import { cn } from '@/lib/utils';
+import { isFreeModeActive, freeModeEndDateLabel } from '@/config/free-mode';
+import { FreeModeBanner } from '@/components/plans/FreeModeBanner';
+import {
+    Crown, Sparkles, CheckCircle2, ArrowRight, ShieldCheck, Zap,
+    TrendingUp, UtensilsCrossed, Package, BookOpen, Bot, Percent,
+    Star, ArrowUpRight, MessageSquare, ChevronRight
+} from 'lucide-react';
 
 const PLAN_ORDER = ['starter', 'growth', 'pro', 'elite'];
 
@@ -225,6 +233,207 @@ export function PricingClient({ plans }: { plans: any[] }) {
         const orderB = ['trial', ...PLAN_ORDER].indexOf(b.planId);
         return (orderA === -1 ? 99 : orderA) - (orderB === -1 ? 99 : orderB);
     });
+
+    if (isFreeModeActive()) {
+        const elitePerks = [
+            {
+                icon: UtensilsCrossed,
+                title: "Unlimited Menu Items",
+                desc: "List your complete repertoire of daily specials, weekly subscriptions, and family feasts without item caps.",
+                badge: "Unlimited",
+            },
+            {
+                icon: Package,
+                title: "Uncapped Monthly Volume",
+                desc: "Scale to hundreds of daily orders without ever hitting artificial limits or kitchen lockouts.",
+                badge: "No Limits",
+            },
+            {
+                icon: TrendingUp,
+                title: "Unlimited Group Deals (Potluck)",
+                desc: "Create high-margin bulk subscription and office deals anytime to secure recurring weekly revenue.",
+                badge: "Full Access",
+            },
+            {
+                icon: BookOpen,
+                title: "Automated Digital Khata",
+                desc: "Automatic P&L ledger, expense recording, and customer credit management in one unified dashboard.",
+                badge: "Included",
+            },
+            {
+                icon: Bot,
+                title: "AI Chef & Culinary Insights",
+                desc: "AI-driven menu intelligence, cost optimization tips, and dish popularity forecasts for your kitchen.",
+                badge: "AI Powered",
+            },
+            {
+                icon: Percent,
+                title: "AI Dynamic Pricing Optimizer",
+                desc: "Smart pricing guidance that maximizes order conversion and healthy gross margins for home chefs.",
+                badge: "Smart Tool",
+            },
+            {
+                icon: Star,
+                title: "Top City Search Ranking",
+                desc: "Featured boost level active — your kitchen appears with priority placement in city discovery pages.",
+                badge: "Top Tier",
+            },
+            {
+                icon: MessageSquare,
+                title: "Instant WhatsApp Dispatch",
+                desc: "Automated real-time notifications sent directly to buyers and kitchen staff via WhatsApp.",
+                badge: "Automated",
+            },
+        ];
+
+        return (
+            <div className="space-y-12 max-w-6xl mx-auto pb-12">
+                {/* ── Top Floating Notification ── */}
+                <FreeModeBanner variant="inline" autoHideDuration={0} />
+
+                {/* ── Hero Presentation Card ── */}
+                <div className="relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-b from-[#131E29] via-[#0F1722] to-[#0A0F17] p-8 sm:p-12 shadow-[0_25px_60px_rgba(0,0,0,0.6)] backdrop-blur-2xl text-white">
+                    {/* Atmospheric background glows */}
+                    <div className="pointer-events-none absolute -left-28 -top-28 h-80 w-80 rounded-full bg-emerald-500/15 blur-[90px]" />
+                    <div className="pointer-events-none absolute -right-28 -top-28 h-80 w-80 rounded-full bg-teal-500/15 blur-[90px]" />
+                    <div className="pointer-events-none absolute left-1/2 -bottom-28 -translate-x-1/2 h-64 w-96 rounded-full bg-emerald-600/10 blur-[100px]" />
+
+                    <div className="relative z-10 text-center max-w-3xl mx-auto space-y-6">
+                        {/* Shimmering Badge */}
+                        <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-4 py-1.5 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                            <span className="relative flex h-2.5 w-2.5">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-300" />
+                            </span>
+                            <span className="text-xs font-black uppercase tracking-widest text-emerald-300">
+                                Special Promotion Active
+                            </span>
+                        </div>
+
+                        {/* Title & Tagline */}
+                        <div className="space-y-3">
+                            <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
+                                Smart Tiffin{" "}
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-amber-200">
+                                    Elite Tier
+                                </span>{" "}
+                                Unlocked
+                            </h1>
+                            <p className="text-sm sm:text-lg text-neutral-300/90 leading-relaxed max-w-2xl mx-auto">
+                                Every kitchen enjoys full, unrestricted access to our highest-tier commercial seller tools with zero subscription fees and 0% commission until{" "}
+                                <span className="text-emerald-300 font-bold underline decoration-emerald-500/40 underline-offset-4">
+                                    {freeModeEndDateLabel()}
+                                </span>.
+                            </p>
+                        </div>
+
+                        {/* Metric Highlights Ribbon */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 pt-4">
+                            {[
+                                { label: "Subscription Cost", value: "₨ 0 / mo", sub: "100% Free", icon: "💎" },
+                                { label: "Platform Commission", value: "0%", sub: "Keep all earnings", icon: "💰" },
+                                { label: "Monthly Orders", value: "Unlimited", sub: "Uncapped capacity", icon: "📦" },
+                                { label: "Search Priority", value: "Top Tier", sub: "Featured in city", icon: "⭐" },
+                            ].map((stat, idx) => (
+                                <div
+                                    key={idx}
+                                    className="rounded-2xl bg-white/[0.04] border border-white/[0.08] p-4 text-left backdrop-blur-md hover:border-emerald-500/30 transition-colors"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-medium text-neutral-400">{stat.label}</span>
+                                        <span className="text-base">{stat.icon}</span>
+                                    </div>
+                                    <div className="mt-2 text-xl font-extrabold text-white tracking-tight">{stat.value}</div>
+                                    <div className="text-[11px] font-semibold text-emerald-400 mt-0.5">{stat.sub}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Feature Grid ── */}
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-xl font-black text-neutral-900 dark:text-white tracking-tight">
+                                What&apos;s Included in Your Free Elite Access
+                            </h2>
+                            <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                Enterprise-grade tools engineered to grow your home food business effortlessly.
+                            </p>
+                        </div>
+                        <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-full">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> All 8 Capabilities Active
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {elitePerks.map((perk, idx) => {
+                            const Icon = perk.icon;
+                            return (
+                                <div
+                                    key={idx}
+                                    className="group relative flex flex-col justify-between rounded-2xl border border-neutral-200/80 dark:border-white/[0.08] bg-white dark:bg-[#121A26] p-5 shadow-sm hover:shadow-xl hover:border-emerald-500/40 dark:hover:border-emerald-500/40 transition-all duration-200 hover:-translate-y-1"
+                                >
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 group-hover:scale-105 transition-transform">
+                                                <Icon className="h-5 w-5" />
+                                            </div>
+                                            <span className="rounded-md bg-emerald-100 dark:bg-emerald-900/30 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50">
+                                                {perk.badge}
+                                            </span>
+                                        </div>
+
+                                        <div>
+                                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white tracking-tight">
+                                                {perk.title}
+                                            </h3>
+                                            <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed mt-1">
+                                                {perk.desc}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-4 mt-2 border-t border-neutral-100 dark:border-white/[0.04] flex items-center justify-between text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                        <span>Active & Unlocked</span>
+                                        <CheckCircle2 className="h-3.5 w-3.5" />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* ── Action & Navigation Footer ── */}
+                <div className="rounded-3xl border border-neutral-200/80 dark:border-white/[0.08] bg-gradient-to-r from-neutral-50 via-white to-neutral-50 dark:from-[#131D2A] dark:via-[#101824] dark:to-[#131D2A] p-6 sm:p-8 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
+                    <div className="space-y-1 text-center sm:text-left">
+                        <h4 className="text-base font-extrabold text-neutral-900 dark:text-white">
+                            Ready to make the most of your Elite Kitchen?
+                        </h4>
+                        <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
+                            Jump straight to your dashboard or explore in-depth AI insights and performance analytics.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-center sm:justify-end">
+                        <Link
+                            href="/dashboard/elite"
+                            className="inline-flex items-center gap-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-white/[0.08] dark:hover:bg-white/[0.12] border border-neutral-300/80 dark:border-white/10 px-5 py-3 text-xs font-bold text-neutral-900 dark:text-white transition-all active:scale-95"
+                        >
+                            Open Elite Analytics <ArrowUpRight className="h-4 w-4 text-emerald-500" />
+                        </Link>
+                        <Link
+                            href="/dashboard"
+                            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 px-6 py-3 text-xs font-black text-white shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95"
+                        >
+                            ← Back to Dashboard
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-16">

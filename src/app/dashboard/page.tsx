@@ -6,6 +6,7 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useKitchenSSE } from "@/hooks/use-kitchen-sse";
 import { PlanWidget } from "@/components/plans/PlanWidget";
+import { FreeModeBanner } from "@/components/plans/FreeModeBanner";
 import { usePlanAccess, isPlanAtLeast, broadcastPlanUpdate } from "@/hooks/use-plan-access";
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { CircularProgress } from "@/components/dashboard/CircularProgress";
@@ -201,6 +202,11 @@ function DashboardContent() {
         if ("Notification" in window && Notification.permission === "default") {
             Notification.requestPermission();
         }
+        if (typeof window !== "undefined" && window.location.search.includes("welcome=free_mode")) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("welcome");
+            window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+        }
     }, []);
 
     const loadDashboard = useCallback(async () => {
@@ -290,6 +296,9 @@ function DashboardContent() {
 
     return (
         <div className="mx-auto max-w-7xl p-6 sm:p-8 pb-20">
+
+            {/* ── Time-Boxed Free Mode Banner ── */}
+            <FreeModeBanner />
 
             {/* ── Real-time toast notification ── */}
             {realtimeToast && (

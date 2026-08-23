@@ -4,6 +4,7 @@ import { subscriptions, boosts, kitchens, orders, orderItems, users, adminAuditL
 import { eq, and, lt, sql, isNull } from "drizzle-orm";
 import { apiSuccess, apiUnauthorized, apiInternalError } from "@/lib/utils/api-response";
 import { timingSafeEqual } from "crypto";
+import { isFreeModeActive } from "@/config/free-mode";
 
 // CHANGED [H3]: Cron endpoint for subscription + boost expiry cleanup.
 // Call via Vercel Cron or external scheduler: GET /api/cron/cleanup
@@ -39,60 +40,65 @@ export async function GET(request: NextRequest) {
         let expiredBoosts = 0;
         let suspendedKitchens = 0;
 
-        // ── 1. Expire subscriptions past their period end ──────────────
-        console.log('[CRON:cleanup] Starting: subscription expiry');
-        const expiredSubs = await db.query.subscriptions.findMany({
-            where: and(
-                sql`${subscriptions.status} IN ('TRIALING', 'ACTIVE')`,
-                lt(subscriptions.currentPeriodEnd, now)
-            ),
-        });
+        // ── 1 & 2. Subscription expiry & suspension (bypassed during Free Mode) ──
+        if (isFreeModeActive(now)) {
+            console.log('[CRON:cleanup] Free Mode is active — skipping subscription expiry and kitchen lockouts.');
+        } else {
+            // ── 1. Expire subscriptions past their period end ──────────────
+            console.log('[CRON:cleanup] Starting: subscription expiry');
+            const expiredSubs = await db.query.subscriptions.findMany({
+                where: and(
+                    sql`${subscriptions.status} IN ('TRIALING', 'ACTIVE')`,
+                    lt(subscriptions.currentPeriodEnd, now)
+                ),
+            });
 
-        for (const sub of expiredSubs) {
-            await db
-                .update(subscriptions)
-                .set({ status: "EXPIRED", updatedAt: now })
-                .where(eq(subscriptions.id, sub.id));
-            
-            await db
-                .update(kitchens)
-                .set({ 
-                    status: "INACTIVE", 
-                    isLocked: true, 
-                    lockReason: "SUBSCRIPTION_EXPIRED", 
-                    lockedAt: now 
-                })
-                .where(eq(kitchens.id, sub.kitchenId));
+            for (const sub of expiredSubs) {
+                await db
+                    .update(subscriptions)
+                    .set({ status: "EXPIRED", updatedAt: now })
+                    .where(eq(subscriptions.id, sub.id));
+                
+                await db
+                    .update(kitchens)
+                    .set({ 
+                        status: "INACTIVE", 
+                        isLocked: true, 
+                        lockReason: "SUBSCRIPTION_EXPIRED", 
+                        lockedAt: now 
+                    })
+                    .where(eq(kitchens.id, sub.kitchenId));
 
-            const { invalidatePlanAccessCache } = await import("@/lib/plans/plan-access");
-            await invalidatePlanAccessCache(sub.kitchenId);
+                const { invalidatePlanAccessCache } = await import("@/lib/plans/plan-access");
+                await invalidatePlanAccessCache(sub.kitchenId);
 
-            expiredSubscriptions++;
+                expiredSubscriptions++;
+            }
+
+            // ── 2. Suspend kitchens with grace period expired ─────────────
+            const pastDueSubs = await db.query.subscriptions.findMany({
+                where: and(
+                    eq(subscriptions.status, "PAST_DUE"),
+                    lt(subscriptions.gracePeriodEndsAt, now)
+                ),
+            });
+
+            for (const sub of pastDueSubs) {
+                await db
+                    .update(subscriptions)
+                    .set({ status: "SUSPENDED", updatedAt: now })
+                    .where(eq(subscriptions.id, sub.id));
+
+                await db
+                    .update(kitchens)
+                    .set({ status: "SUSPENDED", updatedAt: now })
+                    .where(eq(kitchens.id, sub.kitchenId));
+
+                suspendedKitchens++;
+            }
+
+            console.log(`[CRON:cleanup] Expired ${expiredSubscriptions} subscriptions, suspended ${suspendedKitchens} kitchens`);
         }
-
-        // ── 2. Suspend kitchens with grace period expired ─────────────
-        const pastDueSubs = await db.query.subscriptions.findMany({
-            where: and(
-                eq(subscriptions.status, "PAST_DUE"),
-                lt(subscriptions.gracePeriodEndsAt, now)
-            ),
-        });
-
-        for (const sub of pastDueSubs) {
-            await db
-                .update(subscriptions)
-                .set({ status: "SUSPENDED", updatedAt: now })
-                .where(eq(subscriptions.id, sub.id));
-
-            await db
-                .update(kitchens)
-                .set({ status: "SUSPENDED", updatedAt: now })
-                .where(eq(kitchens.id, sub.kitchenId));
-
-            suspendedKitchens++;
-        }
-
-        console.log(`[CRON:cleanup] Expired ${expiredSubscriptions} subscriptions, suspended ${suspendedKitchens} kitchens`);
         // ── 3. Expire boosts past their expiry ────────────────────────
         const expiredBoostRecords = await db.query.boosts.findMany({
             where: and(

@@ -3,6 +3,7 @@ import { subscriptions, planConfigs, meals, kitchens } from "@/lib/db/schema";
 import { and, eq, isNull, inArray, count, sql } from "drizzle-orm";
 import { cached, invalidateCache, redis } from "@/lib/redis";
 import { logger } from "@/lib/utils/logger";
+import { isFreeModeActive } from "@/config/free-mode";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -90,6 +91,10 @@ export async function invalidatePlanAccessCache(kitchenId: string): Promise<void
 // ─── Main Entry Point ───────────────────────────────────────────────────────
 
 export async function getKitchenPlanAccess(kitchenId: string): Promise<PlanAccess> {
+    if (isFreeModeActive()) {
+        return buildUnlimitedFreeAccess();
+    }
+
     // Step 1: Cache only plain serializable data (no methods)
     // This prevents Redis JSON.stringify from stripping methods
     const rawData = await cached<CachedPlanData>(
@@ -219,6 +224,82 @@ function buildPlanAccess(sub: SubscriptionRow, config: PlanConfigRow): PlanAcces
         getMenuUsagePercent(currentCount: number): number | null {
             if (config.menuItemLimit === null) return null;
             return Math.round((currentCount / config.menuItemLimit) * 100);
+        },
+    };
+}
+
+// ─── Build Unlimited Free Access (Time-Boxed Free Mode) ────────────────────
+
+export function buildUnlimitedFreeAccess(): PlanAccess {
+    return {
+        planId: 'elite',
+        isActive: true,
+        isFree: false,
+        subscription: null,
+        planConfig: null,
+
+        canAddMenuItem(_currentCount: number): boolean {
+            return true;
+        },
+
+        canPlaceOrder(): boolean {
+            return true;
+        },
+
+        canCreatePotluck(): boolean {
+            return true;
+        },
+
+        hasFeature(_feature: PlanFeature): boolean {
+            return true;
+        },
+
+        getMenuLimit(): null {
+            return null; // Unlimited
+        },
+
+        getOrderLimit(): null {
+            return null; // Unlimited
+        },
+
+        getOrdersUsed(): number {
+            return 0;
+        },
+
+        getOrdersRemaining(): null {
+            return null; // Unlimited
+        },
+
+        getPotluckRemaining(): null {
+            return null; // Unlimited
+        },
+
+        getCommissionRate(): number {
+            return 0; // 0% commission (Elite rate)
+        },
+
+        getBoostLevel(): string {
+            return 'top';
+        },
+
+        getAnalyticsLevel(): string {
+            return 'ai_insights';
+        },
+
+        getAiSuggestionsLevel(): string {
+            return 'daily';
+        },
+
+        getBrandingLevel(): string {
+            return 'full';
+        },
+
+        getOrderUsagePercent(): null {
+            return null;
+        },
+
+        getMenuUsagePercent(_currentCount: number): null {
+            return null;
         },
     };
 }

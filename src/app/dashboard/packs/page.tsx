@@ -89,12 +89,29 @@ export default function PacksPage() {
 
             {/* Elite message */}
             {isElite && (
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-2xl p-8 text-center">
-                    <span className="text-5xl block mb-4">👑</span>
-                    <h2 className="text-xl font-bold text-purple-800 dark:text-purple-300 mb-2">
-                        Your Elite plan includes unlimited orders and group deals.
-                    </h2>
-                    <p className="text-purple-600 dark:text-purple-400">No top-ups needed!</p>
+                <div className="relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-b from-[#131E29] via-[#0F1722] to-[#0A0F17] p-8 sm:p-10 text-white shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl text-center">
+                    <div className="pointer-events-none absolute -left-20 -top-20 h-60 w-60 rounded-full bg-emerald-500/15 blur-3xl" />
+                    <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-teal-500/15 blur-3xl" />
+
+                    <div className="relative z-10 max-w-xl mx-auto space-y-4">
+                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 shadow-lg shadow-emerald-500/30 text-2xl">
+                            👑
+                        </div>
+                        <h2 className="text-2xl font-black text-white tracking-tight">
+                            Unlimited Capacity Active
+                        </h2>
+                        <p className="text-sm sm:text-base text-neutral-300/90 leading-relaxed">
+                            Your kitchen has full Elite privileges with unlimited monthly order volume and unlimited group deals. No capacity top-ups or add-on packs are required.
+                        </p>
+                        <div className="pt-2 flex items-center justify-center gap-3">
+                            <Link
+                                href="/dashboard"
+                                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-xs font-bold text-white shadow-md hover:scale-105 transition-all"
+                            >
+                                ← Return to Dashboard
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             )}
 

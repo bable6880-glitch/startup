@@ -20,6 +20,7 @@ function RefreshAfterDelay({ delayMs, onRefresh }: { delayMs: number; onRefresh?
 }
 
 import { isKitchenTrialLocked, trialDaysRemaining } from "@/lib/utils/trial-lock";
+import { isFreeModeActive } from "@/config/free-mode";
 
 interface SubscriptionGuardProps {
     children: ReactNode;
@@ -46,6 +47,12 @@ export function SubscriptionGuard({ children, kitchen, fetchError }: Subscriptio
     const justSubscribed = searchParams.get('subscribed') === 'true';
 
     useEffect(() => {
+        // If free mode is active, always allow dashboard access
+        if (isFreeModeActive()) {
+            setIsAllowed(true);
+            return;
+        }
+
         // If kitchen is not loaded yet, wait
         if (kitchen === null) {
             return;
@@ -175,7 +182,7 @@ export function SubscriptionGuard({ children, kitchen, fetchError }: Subscriptio
     return (
         <>
             {/* Trial Banner */}
-            {kitchen && kitchen.planId === 'trial' && (
+            {kitchen && kitchen.planId === 'trial' && !isFreeModeActive() && (
                 <div className={`px-6 py-3 border-b text-sm font-medium flex items-center justify-between ${
                     isKitchenTrialLocked(kitchen) 
                         ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/50' 

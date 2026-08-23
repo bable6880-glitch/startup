@@ -17,6 +17,7 @@ import {
 } from "@/lib/validations/subscription";
 import { logger } from "@/lib/utils/logger";
 import { NextRequest } from "next/server";
+import { isFreeModeActive } from "@/config/free-mode";
 
 // ─── Helper: Get seller context from cookies ────────────────────────────────
 
@@ -55,6 +56,10 @@ async function getSellerContext() {
 // ─── Create Checkout Session ────────────────────────────────────────────────
 
 export async function createCheckoutAction(formData: FormData) {
+    if (isFreeModeActive()) {
+        return { success: false, error: "Paid subscriptions are suspended during Free Mode promotion." };
+    }
+
     try {
         const { error, user, kitchen } = await getSellerContext();
         if (error || !user || !kitchen) {

@@ -8,6 +8,8 @@
  * This approach avoids brittle cron jobs — the lock is evaluated fresh on every read.
  */
 
+import { isFreeModeActive } from "@/config/free-mode";
+
 export interface TrialLockable {
     planId: string | null;
     trialEndsAt: Date | string | null;
@@ -20,6 +22,7 @@ export interface TrialLockable {
  * for trial-based locking, independent of the DB flag.
  */
 export function isKitchenTrialLocked(kitchen: TrialLockable): boolean {
+    if (isFreeModeActive()) return false;
     if (kitchen.planId !== "trial") return false;
     if (!kitchen.trialEndsAt) return true; // trial plan but no end date = locked
     const endsAt = typeof kitchen.trialEndsAt === "string"
@@ -46,6 +49,7 @@ export function trialDaysRemaining(kitchen: TrialLockable): number {
  * whether a kitchen should be blocked from receiving orders.
  */
 export function isKitchenEffectivelyLocked(kitchen: TrialLockable): boolean {
+    if (isFreeModeActive()) return false;
     if (kitchen.isLocked) return true;
     return isKitchenTrialLocked(kitchen);
 }

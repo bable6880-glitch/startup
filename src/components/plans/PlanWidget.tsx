@@ -6,6 +6,7 @@ import { usePlanAccess, SubscriptionData } from '@/hooks/use-plan-access';
 import { cn } from '@/lib/utils';
 import { PlanBadge } from '@/components/plans/PlanBadge';
 import { LimitWarningModal } from '@/components/plans/LimitWarningModal';
+import { isFreeModeActive } from '@/config/free-mode';
 
 export function PlanWidget() {
     const { data, loading, error } = usePlanAccess();
@@ -76,7 +77,7 @@ export function PlanWidget() {
                     )}
                     
                     {/* Potluck uses */}
-                    {data.usage.potluckLimit !== -1 && (
+                    {data.usage.potluckLimit !== -1 && !isFreeModeActive() && (
                         <div className="flex items-center justify-between text-[13px] bg-white/[0.02] rounded-lg p-3 border border-white/[0.04]">
                             <span className="text-[#82869A] flex items-center gap-2">
                                 <span>🫕</span> Group Deals remaining
@@ -91,14 +92,30 @@ export function PlanWidget() {
                             </span>
                         </div>
                     )}
+
+                    {/* Free Mode Unlimited Indicators */}
+                    {isFreeModeActive() && (
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
+                                <div className="text-[11px] text-[#82869A] font-medium">Orders Capacity</div>
+                                <div className="text-xs font-bold text-emerald-400 mt-0.5">∞ Unlimited</div>
+                            </div>
+                            <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-2.5 text-center">
+                                <div className="text-[11px] text-[#82869A] font-medium">Menu Dishes</div>
+                                <div className="text-xs font-bold text-emerald-400 mt-0.5">∞ Unlimited</div>
+                            </div>
+                        </div>
+                    )}
                     
                     {/* Renewal info */}
                     <div className="flex items-center justify-center pt-2">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.05] text-[11px] font-medium text-[#82869A]">
                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
-                            {data.subscription?.cancelAtPeriodEnd
-                                ? `Cancels on ${formatDate(data.subscription.currentPeriodEnd)}`
-                                : `Renews on ${formatDate(data.subscription?.currentPeriodEnd)}`
+                            {isFreeModeActive()
+                                ? `Free until ${formatDate(data.subscription?.currentPeriodEnd)}`
+                                : data.subscription?.cancelAtPeriodEnd
+                                    ? `Cancels on ${formatDate(data.subscription.currentPeriodEnd)}`
+                                    : `Renews on ${formatDate(data.subscription?.currentPeriodEnd)}`
                             }
                         </div>
                     </div>

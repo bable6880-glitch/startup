@@ -7,6 +7,7 @@ import { createOrderSchema } from "@/lib/validations/order";
 import { eq, inArray, desc, sql } from "drizzle-orm";
 import { sanitizeText } from "@/lib/utils/sanitize";
 import { isKitchenTrialLocked } from "@/lib/utils/trial-lock";
+import { isFreeModeActive } from "@/config/free-mode";
 
 /**
  * GET /api/orders
@@ -125,8 +126,12 @@ export async function POST(request: NextRequest) {
         }
 
         // Kitchen lock enforcement: HTTP 423 if kitchen is locked
-        // 423 = Locked (RFC 4918) — semantically correct for business-rule locks
-        if (kitchen.isLocked) {
+        // In Free Mode, bypass pre-existing limits/subscription locks unless explicitly locked by ADMIN_ACTION
+        const isLocked = isFreeModeActive()
+            ? (kitchen.isLocked && kitchen.lockReason === "ADMIN_ACTION")
+            : kitchen.isLocked;
+
+        if (isLocked) {
             return NextResponse.json(
                 {
                     success: false,

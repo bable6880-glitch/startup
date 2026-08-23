@@ -10,12 +10,15 @@ import { invalidatePlanAccessCache } from '@/lib/plans/plan-access';
 import { logger } from '@/lib/utils/logger';
 import { count } from 'drizzle-orm';
 
+import { isFreeModeActive, FREE_MODE_END_DATE } from '@/config/free-mode';
+
 export async function GET(req: NextRequest) {
     try {
         const guard = await requireSeller(req);
         if (!guard.ok) return guard.response;
 
         const access = await getKitchenPlanAccess(guard.kitchen.id);
+        const freeMode = isFreeModeActive();
         
         const menuCountResult = await db
             .select({ count: count() })
@@ -39,6 +42,14 @@ export async function GET(req: NextRequest) {
                 currentPeriodEnd: access.subscription.currentPeriodEnd,
                 cancelAtPeriodEnd: access.subscription.cancelAtPeriodEnd,
                 cancelledAt: access.subscription.cancelledAt,
+            } : freeMode ? {
+                id: 'free-mode-unlimited',
+                planId: 'elite',
+                status: 'ACTIVE',
+                currentPeriodStart: new Date(),
+                currentPeriodEnd: FREE_MODE_END_DATE,
+                cancelAtPeriodEnd: false,
+                cancelledAt: null,
             } : null,
             
             planConfig: access.planConfig ? {
@@ -48,6 +59,13 @@ export async function GET(req: NextRequest) {
                 menuItemLimit: access.planConfig.menuItemLimit,
                 monthlyOrderLimit: access.planConfig.monthlyOrderLimit,
                 potluckUsesPerPeriod: access.planConfig.potluckUsesPerPeriod,
+            } : freeMode ? {
+                displayName: 'Elite (Promotion)',
+                priceRs: 0,
+                billingPeriodMonths: 8,
+                menuItemLimit: null,
+                monthlyOrderLimit: null,
+                potluckUsesPerPeriod: -1,
             } : null,
             
             usage: {
@@ -70,8 +88,8 @@ export async function GET(req: NextRequest) {
             canCancel: !!(access.isActive && access.subscription && !access.subscription.cancelAtPeriodEnd),
 
             // Kitchen lock status (for KitchenLockedModal)
-            isKitchenLocked: !!(guard.kitchen as any).isLocked,
-            lockReason: (guard.kitchen as any).lockReason || null,
+            isKitchenLocked: freeMode ? false : !!(guard.kitchen as any).isLocked,
+            lockReason: freeMode ? null : ((guard.kitchen as any).lockReason || null),
         });
     } catch (error) {
         logger.error("Failed to fetch subscription management data", { error });

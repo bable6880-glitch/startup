@@ -11,6 +11,8 @@ import {
 } from "@/lib/validations/kitchen";
 import { CityCombobox } from "./CityCombobox";
 
+import { isFreeModeActive } from "@/config/free-mode";
+
 const cuisineOptions = [
     "Pakistani",
     "Chinese",
@@ -124,8 +126,13 @@ export default function BecomeACookPage() {
             // Force Firebase token refresh to pick up new COOK custom claims
             await refreshUser();
 
-            // Strict redirect to subscription page — payment required before dashboard access
-            router.push("/dashboard/subscription?onboarding=true");
+            // If free mode is active, skip payment redirect and go straight to dashboard
+            if (isFreeModeActive()) {
+                router.push("/dashboard?welcome=free_mode");
+            } else {
+                // Strict redirect to subscription page — payment required before dashboard access
+                router.push("/dashboard/subscription?onboarding=true");
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : "Something went wrong");
         } finally {

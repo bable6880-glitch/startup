@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { planConfigs } from '@/lib/db/schema';
 import { PricingClient } from './pricing-client';
+import { isFreeModeActive } from '@/config/free-mode';
 import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
@@ -11,6 +12,8 @@ export default async function PricingPage() {
         orderBy: (configs, { asc }) => [asc(configs.sortOrder)]
     });
 
+    const isFree = isFreeModeActive();
+
     return (
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <div className="mb-8">
@@ -20,11 +23,13 @@ export default async function PricingPage() {
             </div>
             
             <div className="mb-12 text-center max-w-3xl mx-auto">
-                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 mb-4">
-                    Simple, transparent pricing for every cook
+                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">
+                    {isFree ? "Free Promotion Active" : "Simple, transparent pricing for every cook"}
                 </h1>
-                <p className="text-lg text-gray-500">
-                    Whether you are just starting out or running a full-time kitchen, we have a plan that fits your needs.
+                <p className="text-lg text-gray-500 dark:text-gray-400">
+                    {isFree
+                        ? "All Smart Tiffin features are currently 100% unlocked for your kitchen."
+                        : "Whether you are just starting out or running a full-time kitchen, we have a plan that fits your needs."}
                 </p>
             </div>
 
